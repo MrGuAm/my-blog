@@ -3,6 +3,163 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 
+// Character eye component that follows mouse
+function CharacterEye({ isHovered, mouseX, mouseY, containerRef, eyeColor, pupilColor, size }: { isHovered: boolean; mouseX: number; mouseY: number; containerRef: React.RefObject<HTMLDivElement | null>; eyeColor: string; pupilColor: string; size: number }) {
+  const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!isHovered || !containerRef.current) {
+      setPupilOffset({ x: 0, y: 0 });
+      return;
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const deltaX = e.clientX - centerX;
+      const deltaY = e.clientY - centerY;
+      const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), size * 0.3);
+      const angle = Math.atan2(deltaY, deltaX);
+      setPupilOffset({
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+      });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [isHovered, containerRef, size]);
+
+  if (!isHovered) {
+    // Closed eyes - simple line
+    return (
+      <div className="relative" style={{ width: size, height: size * 0.4 }}>
+        <div className="absolute left-0 w-full h-0.5 bg-[#2D2D2D] rounded-full top-1/2 -translate-y-1/2" />
+      </div>
+    );
+  }
+
+  // Open eyes with pupil
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <div 
+        className="absolute rounded-full bg-white"
+        style={{ width: size * 0.8, height: size * 0.8, left: size * 0.1, top: size * 0.1 }}
+      >
+        <div 
+          className="absolute rounded-full"
+          style={{ 
+            width: size * 0.4, 
+            height: size * 0.4, 
+            backgroundColor: pupilColor,
+            left: '50%',
+            top: '50%',
+            transform: `translate(calc(-50% + ${pupilOffset.x}px), calc(-50% + ${pupilOffset.y}px))`,
+            transition: 'transform 0.1s ease-out'
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Full character component
+function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovered: boolean; mouseX: number; mouseY: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const configs = [
+    { bg: '#6C3FF5', width: 40, height: 60, eyeColor: 'white', pupilColor: '#2D2D2D', eyeSize: 8 },
+    { bg: '#2D2D2D', width: 32, height: 48, eyeColor: 'white', pupilColor: '#2D2D2D', eyeSize: 7 },
+    { bg: '#FF9B6B', width: 48, height: 28, eyeColor: '#2D2D2D', pupilColor: '#2D2D2D', eyeSize: 6 },
+    { bg: '#E8D754', width: 32, height: 40, eyeColor: '#2D2D2D', pupilColor: '#2D2D2D', eyeSize: 6 },
+  ];
+  const config = configs[type % configs.length];
+
+  return (
+    <div 
+      ref={ref}
+      className="relative rounded-lg"
+      style={{ 
+        width: config.width, 
+        height: config.height, 
+        backgroundColor: config.bg,
+      }}
+    >
+      <div className="absolute flex gap-2" style={{ 
+        left: type === 2 ? 8 : 6, 
+        top: type === 2 ? 6 : 8 
+      }}>
+        <CharacterEye 
+          isHovered={isHovered} 
+          mouseX={mouseX} 
+          mouseY={mouseY} 
+          containerRef={ref}
+          eyeColor={config.eyeColor}
+          pupilColor={config.pupilColor}
+          size={config.eyeSize}
+        />
+        <CharacterEye 
+          isHovered={isHovered} 
+          mouseX={mouseX} 
+          mouseY={mouseY} 
+          containerRef={ref}
+          eyeColor={config.eyeColor}
+          pupilColor={config.pupilColor}
+          size={config.eyeSize}
+        />
+      </div>
+      {/* Mouth for yellow character */}
+      {type === 3 && (
+        <div 
+          className="absolute h-0.5 bg-[#2D2D2D] rounded-full"
+          style={{ width: 12, left: 10, bottom: 8 }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Post card with character that follows mouse
+function PostCard({ post, characterType }: { post: typeof posts[0]; characterType: number }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  return (
+    <Link 
+      href={`/posts/${post.id}`}
+      className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+          {post.category}
+        </span>
+        <span className="text-xs text-muted-foreground">{post.date}</span>
+      </div>
+      <h2 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
+        {post.title}
+      </h2>
+      <p className="text-muted-foreground text-sm">{post.excerpt}</p>
+      <div className="mt-4 flex items-center gap-2 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+        Read more →
+      </div>
+      {/* Character decoration */}
+      <div className="absolute bottom-3 right-3 transition-all duration-300">
+        <Character 
+          type={characterType} 
+          isHovered={isHovered} 
+          mouseX={mousePos.x} 
+          mouseY={mousePos.y} 
+        />
+      </div>
+    </Link>
+  );
+}
+
 const posts = [
   {
     id: 1,
@@ -207,26 +364,8 @@ export default function HomePage() {
         <div className="flex gap-8 pb-20">
           {/* Blog Posts */}
           <main className="flex-1 space-y-6">
-            {posts.map((post) => (
-              <Link 
-                key={post.id} 
-                href={`/posts/${post.id}`}
-                className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                    {post.category}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{post.date}</span>
-                </div>
-                <h2 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
-                  {post.title}
-                </h2>
-                <p className="text-muted-foreground text-sm">{post.excerpt}</p>
-                <div className="mt-4 flex items-center gap-2 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                  Read more →
-                </div>
-              </Link>
+            {posts.map((post, index) => (
+              <PostCard key={post.id} post={post} characterType={index} />
             ))}
           </main>
 
@@ -289,12 +428,11 @@ export default function HomePage() {
                   </div>
 
                   {/* Progress Bar (on hover) */}
-                  {(isHovering || isDragging) && (
-                    <div 
-                      ref={progressBarRef}
-                      className="mt-3 pt-3 border-t border-border/40"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                  <div 
+                    ref={progressBarRef}
+                    className={`transition-all duration-300 ease-out overflow-hidden ${isHovering || isDragging ? 'mt-3 pt-3 border-t border-border/40 opacity-100 max-h-20' : 'mt-0 pt-0 border-t-0 opacity-0 max-h-0'}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div 
                       className="h-1.5 bg-secondary rounded-full overflow-hidden cursor-grab active:cursor-grabbing"
                       onMouseDown={handleMouseDown}
@@ -310,8 +448,7 @@ export default function HomePage() {
                       <span>{formatTime((progress / 100) * duration)}</span>
                       <span>{formatTime(duration)}</span>
                     </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
