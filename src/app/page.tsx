@@ -318,26 +318,7 @@ function LoginPage() {
 
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
- setError("");
- setIsLoading(true);
-
- // Simulate API delay (quick)
- await new Promise(resolve => setTimeout(resolve, 300));
-
- // Mock authentication - validate against dummy credentials
- if (email === "erik@gmail.com" && password === "1234") {
- console.log("✅ Login successful!");
- alert("Login successful! Welcome, Erik!");
- // In a real app, you would:
- // - Store auth token
- // - Redirect to dashboard
- // - Set user session
- } else {
- setError("Invalid email or password. Please try again.");
- console.log("❌ Login failed");
- }
-
- setIsLoading(false);
+ window.location.href = '/home';
  };
 
  return (
@@ -349,7 +330,7 @@ function LoginPage() {
  <div className={`size-8 rounded-lg backdrop-blur-sm flex items-center justify-center ${isDarkMode ? 'bg-black/10' : 'bg-primary-foreground/10'}`}>
  <Sparkles className={`size-4 ${isDarkMode ? 'text-black' : ''}`} />
  </div>
- <span className={`font-black ${isDarkMode ? 'text-black' : ''}`}>YourBrand</span>
+ <span className={`font-black ${isDarkMode ? 'text-black' : ''}`}>Champion&apos;s Blog</span>
  </div>
  </div>
 
@@ -558,33 +539,17 @@ function LoginPage() {
  <div className={`size-8 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-white/10' : 'bg-primary/10'}`}>
  <Sparkles className={`size-4 ${isDarkMode ? 'text-white' : 'text-primary'}`} />
  </div>
- <span className="font-black">YourBrand</span>
+ <span className="font-black">Champion&apos;s Blog</span>
  </div>
 
  {/* Header */}
  <div className="text-center mb-10">
- <h1 className={`text-3xl font-black tracking-tight mb-2 ${isDarkMode ? 'text-white' : ''}`}>Welcome back!</h1>
- <p className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-muted-foreground'}`}>Please enter your details</p>
+ <h1 className={`text-3xl font-black tracking-tight mb-2 ${isDarkMode ? 'text-white' : ''}`}>Welcome!</h1>
+ <p className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-muted-foreground'}`}>Enter password to continue</p>
  </div>
 
  {/* Login Form */}
  <form onSubmit={handleSubmit} className="space-y-5">
- <div className="space-y-2">
- <Label htmlFor="email" className={`text-sm font-medium ${isDarkMode ? 'text-white' : ''}`}>Email</Label>
- <Input
- id="email"
- type="email"
- placeholder="anna@gmail.com"
- value={email}
- autoComplete="off"
- onChange={(e) => setEmail(e.target.value)}
- onFocus={() => setIsTyping(true)}
- onBlur={() => setIsTyping(false)}
- required
- className={`h-12 border ${isDarkMode ? 'bg-black border-white/20 text-white placeholder:text-white/40' : 'bg-background border-border/60'} focus:border-primary`}
- />
- </div>
-
  <div className="space-y-2">
  <Label htmlFor="password" className={`text-sm font-medium ${isDarkMode ? 'text-white' : ''}`}>Password</Label>
  <div className="relative">
@@ -611,24 +576,6 @@ function LoginPage() {
  </div>
  </div>
 
- <div className="flex items-center justify-between">
- <div className="flex items-center space-x-2">
- <Checkbox id="remember" />
- <Label
- htmlFor="remember"
- className={`text-sm font-normal cursor-pointer ${isDarkMode ? 'text-white/60' : ''}`}
- >
- Remember for 30 days
- </Label>
- </div>
- <a
- href="#"
- className={`text-sm font-medium ${isDarkMode ? 'text-white hover:underline' : 'text-primary hover:underline'}`}
- >
- Forgot password?
- </a>
- </div>
-
  {error && (
  <div className={`p-3 text-sm border rounded-lg ${isDarkMode ? 'text-red-400 bg-red-400/10 border-red-400/30' : 'text-red-400 bg-red-950/20 border-red-900/30'}`}>
  {error}
@@ -637,7 +584,7 @@ function LoginPage() {
 
  <Button 
  type="submit" 
- className={`w-full h-12 text-base font-medium ${isDarkMode ? 'bg-white text-[#1a1a1a] hover:bg-white/90' : ''}`} 
+ className={`w-full h-12 text-base font-medium ${isDarkMode ? 'bg-white text-black hover:bg-white/90' : ''}`} 
  size="lg" 
  disabled={isLoading}
  >
@@ -645,24 +592,12 @@ function LoginPage() {
  </Button>
  </form>
 
- {/* Social Login */}
- <div className="mt-6">
- <Button 
- variant="outline" 
- className={`w-full h-12 border transition-colors ${isDarkMode ? 'bg-black border-white/20 text-white hover:bg-white/10' : 'bg-background border-border/60 hover:bg-accent'}`}
- type="button"
- >
- <Mail className="mr-2 size-5" />
- Log in with Google
- </Button>
- </div>
-
- {/* Sign Up Link */}
- <div className={`text-center text-sm mt-8 ${isDarkMode ? 'text-white/60' : 'text-muted-foreground'}`}>
- Don't have an account?{" "}
- <a href="#" className={`font-medium hover:underline ${isDarkMode ? 'text-white' : 'text-foreground'}`}>
- Sign Up
- </a>
+ {/* Cute cartoon decoration */}
+ <div className="flex justify-center items-center gap-8 mt-12">
+ <div className="w-14 h-14 rounded-full bg-[#6C3FF5] opacity-80" />
+ <div className="w-10 h-10 rounded-lg bg-[#2D2D2D] opacity-80" />
+ <div className="w-12 h-12 rounded-full bg-[#FF9B6B] opacity-80" />
+ <div className="w-8 h-8 rounded-full bg-[#E8D754] opacity-80" />
  </div>
  </div>
  </div>
