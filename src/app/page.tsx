@@ -318,7 +318,12 @@ function LoginPage() {
 
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
+ if (password === '82520720zxc') {
+ document.cookie = 'authenticated=true; path=/';
  window.location.href = '/home';
+ } else {
+ setError('Incorrect password');
+ }
  };
 
  return (
@@ -577,7 +582,7 @@ function LoginPage() {
  </div>
 
  {error && (
- <div className={`p-3 text-sm border rounded-lg ${isDarkMode ? 'text-red-400 bg-red-400/10 border-red-400/30' : 'text-red-400 bg-red-950/20 border-red-900/30'}`}>
+ <div className={`p-3 text-sm border rounded-lg ${isDarkMode ? 'text-red-400 bg-red-400/10 border-red-400/30' : 'text-red-600 bg-red-50 border-red-200'}`}>
  {error}
  </div>
  )}
