@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
 
 // Character eye component that follows mouse
@@ -199,12 +199,13 @@ export default function HomePage() {
   const [isDragging, setIsDragging] = useState(false)
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [dragProgress, setDragProgress] = useState<number | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
+  const progressBarRectRef = useRef<DOMRect | null>(null)
   const dragStartXRef = useRef(0)
   const dragStartProgressRef = useRef(0)
-  const progressBarRectRef = useRef<DOMRect | null>(null)
 
   const togglePlay = () => {
     if (!audioRef.current) return
@@ -225,6 +226,12 @@ export default function HomePage() {
       setShowList(false)
       setProgress(0)
       setIsPlaying(true)
+      // Reset drag state when switching tracks
+      setIsDragging(false)
+      setDragProgress(null)
+      isDraggingRef.current = false
+      window.removeEventListener('mousemove', handleWindowMouseMove)
+      window.removeEventListener('mouseup', handleWindowMouseUp)
       setTimeout(() => {
         audioRef.current?.play()
       }, 100)
@@ -239,36 +246,43 @@ export default function HomePage() {
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
     audioRef.current.currentTime = pct * audioRef.current.duration
     setProgress(pct * 100)
+    setDragProgress(null)
   }
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
+    if (!progressBarRef.current) return
     isDraggingRef.current = true
     setIsDragging(true)
+    progressBarRectRef.current = progressBarRef.current.getBoundingClientRect()
+    dragStartXRef.current = e.clientX
+    dragStartProgressRef.current = progress
     window.addEventListener('mousemove', handleWindowMouseMove)
     window.addEventListener('mouseup', handleWindowMouseUp)
-  }
+  }, [progress]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleWindowMouseMove = (e: MouseEvent) => {
-    if (!isDraggingRef.current || !progressBarRef.current) return
-    const rect = progressBarRef.current.getBoundingClientRect()
+  const handleWindowMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDraggingRef.current || !progressBarRectRef.current) return
+    const rect = progressBarRectRef.current
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-    setProgress(pct * 100)
-  }
+    setDragProgress(pct * 100)
+  }, [])
 
-  const handleWindowMouseUp = (e: MouseEvent) => {
-    if (isDraggingRef.current && progressBarRef.current && audioRef.current) {
-      const rect = progressBarRef.current.getBoundingClientRect()
+  const handleWindowMouseUp = useCallback((e: MouseEvent) => {
+    if (isDraggingRef.current && progressBarRectRef.current && audioRef.current) {
+      const rect = progressBarRectRef.current
       const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
       if (audioRef.current.duration) {
         audioRef.current.currentTime = pct * audioRef.current.duration
+        setProgress(pct * 100)
       }
+      setDragProgress(null)
     }
     isDraggingRef.current = false
     setIsDragging(false)
     window.removeEventListener('mousemove', handleWindowMouseMove)
     window.removeEventListener('mouseup', handleWindowMouseUp)
-  }
+  }, [handleWindowMouseMove])
 
   const handleMouseMove = (e: React.MouseEvent) => {
     // Ignore - all drag handling via window listeners
@@ -278,13 +292,13 @@ export default function HomePage() {
     // Window listener handles the real work
   }
 
-  const handleTimeUpdate = () => {
+  const handleTimeUpdate = useCallback(() => {
     if (audioRef.current && audioRef.current.duration && !isDraggingRef.current) {
       const pct = (audioRef.current.currentTime / audioRef.current.duration) * 100
       setProgress(pct || 0)
       setDuration(audioRef.current.duration || 0)
     }
-  }
+  }, [])
 
   // Cleanup global listeners on unmount
   useEffect(() => {
@@ -292,7 +306,7 @@ export default function HomePage() {
       window.removeEventListener('mousemove', handleWindowMouseMove)
       window.removeEventListener('mouseup', handleWindowMouseUp)
     }
-  })
+  }, [handleWindowMouseMove, handleWindowMouseUp])
 
   const handleTrackEnd = () => {
     // Loop: play next track or restart from beginning
@@ -408,7 +422,7 @@ export default function HomePage() {
               ) : (
                 /* Compact Player */
                 <div 
-                  className="p-3 cursor-pointer"
+                  className="p-3 cursor-pointer relative"
                   onClick={() => setShowList(true)}
                 >
                   <div className="flex items-center gap-3">
@@ -427,28 +441,41 @@ export default function HomePage() {
                     </button>
                   </div>
 
-                  {/* Progress Bar (on hover) */}
+                  {/* Progress Bar */}
+                  {/* Progress Bar */}
                   <div 
                     ref={progressBarRef}
                     className={`transition-all duration-300 ease-out overflow-hidden ${isHovering || isDragging ? 'mt-3 pt-3 border-t border-border/40 opacity-100 max-h-20' : 'mt-0 pt-0 border-t-0 opacity-0 max-h-0'}`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div 
-                      className="h-1.5 bg-secondary rounded-full overflow-hidden cursor-grab active:cursor-grabbing"
-                      onMouseDown={handleMouseDown}
-                      onMouseUp={handleMouseUp}
+                      className="h-1.5 bg-secondary rounded-full relative cursor-pointer" 
+                      onMouseDown={handleMouseDown} 
                       onClick={handleProgressClick}
                     >
                       <div 
-                        className="h-full bg-primary rounded-full transition-none"
-                        style={{ width: `${progress}%` }}
+                        className="absolute top-0 left-0 h-full bg-primary rounded-full"
+                        style={{ width: `${dragProgress !== null ? dragProgress : progress}%` }}
+                      />
+                      <div 
+                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full shadow-lg"
+                        style={{ left: `${dragProgress !== null ? dragProgress : progress}%` }}
                       />
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span>{formatTime((progress / 100) * duration)}</span>
+                      <span>{formatTime(((dragProgress !== null ? dragProgress : progress) / 100) * duration)}</span>
                       <span>{formatTime(duration)}</span>
                     </div>
                   </div>
+                  {/* Always visible thin progress line when NOT hovering - at the bottom */}
+                  {!isHovering && !isDragging && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary/60 overflow-hidden cursor-pointer" onClick={handleProgressClick} style={{ borderRadius: '0 0 0.5rem 0.5rem' }}>
+                      <div 
+                        className="h-full bg-primary/70 rounded-full transition-none"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
