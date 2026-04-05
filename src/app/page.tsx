@@ -335,7 +335,7 @@ function LoginPage() {
  <div className={`size-8 rounded-lg backdrop-blur-sm flex items-center justify-center ${isDarkMode ? 'bg-black/10' : 'bg-primary-foreground/10'}`}>
  <Sparkles className={`size-4 ${isDarkMode ? 'text-black' : ''}`} />
  </div>
- <span className={`font-black ${isDarkMode ? 'text-black' : ''}`}>Champion&apos;s Blog</span>
+ <span className={`font-black ${isDarkMode ? 'text-gray-900' : ''}`}>Champion&apos;s Blog</span>
  </div>
  </div>
 
