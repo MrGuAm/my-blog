@@ -318,7 +318,7 @@ function LoginPage() {
 
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
- if (password === '82520720zxc') {
+ if (password === process.env.NEXT_PUBLIC_PASSWORD) {
  document.cookie = 'authenticated=true; path=/';
  window.location.href = '/home';
  } else {
