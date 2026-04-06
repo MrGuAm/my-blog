@@ -2,7 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { posts } from "@/lib/posts"
+import { Post } from "@/lib/posts"
+
+interface HomeClientProps {
+  posts: Post[]
+  allTags: string[]
+}
 
 // Simple marquee text using CSS
 function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
@@ -139,7 +144,7 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
 }
 
 // Post card with character that follows mouse
-function PostCard({ post, characterType, onTagClick }: { post: typeof posts[0]; characterType: number; onTagClick: (tag: string) => void }) {
+function PostCard({ post, characterType, onTagClick }: { post: Post; characterType: number; onTagClick: (tag: string) => void }) {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -195,7 +200,7 @@ const musicPlaylist = [
   { title: "这，就是爱", artist: "张杰", src: "/music/张杰 - 这，就是爱.mp3" },
 ]
 
-export default function HomeClient() {
+export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTrack, setCurrentTrack] = useState(0)
   const [showList, setShowList] = useState(false)
@@ -337,8 +342,6 @@ export default function HomeClient() {
     post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))) &&
     (selectedTag === null || post.tags.includes(selectedTag))
   )
-
-  const allTags = Array.from(new Set(posts.flatMap(post => post.tags))).sort()
 
   return (
     <div className="min-h-screen bg-background">

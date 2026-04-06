@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { getAllPosts, getAllTags } from "@/lib/posts"
 import HomeClient from "./HomeClient"
 
 export const metadata: Metadata = {
@@ -11,5 +12,7 @@ export const metadata: Metadata = {
 }
 
 export default function HomePage() {
-  return <HomeClient />
+  const posts = getAllPosts()
+  const allTags = getAllTags()
+  return <HomeClient posts={posts} allTags={allTags} />
 }

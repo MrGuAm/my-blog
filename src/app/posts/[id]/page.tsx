@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { posts, getPost } from "@/lib/posts"
+import { getAllPosts, getPost, getPostContent, getAllTags } from "@/lib/posts"
 import PostClient from "./PostClient"
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  const post = getPost(Number(id))
+  const post = getPost(id)
   
   if (!post) {
     return {
@@ -38,18 +38,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export async function generateStaticParams() {
+  const posts = getAllPosts()
   return posts.map((post) => ({
-    id: String(post.id),
+    id: post.id,
   }))
 }
 
 export default async function PostPage({ params }: Props) {
   const { id } = await params
-  const post = getPost(Number(id))
+  const post = getPost(id)
   
   if (!post) {
     notFound()
   }
 
-  return <PostClient />
+  const content = await getPostContent(id)
+
+  return <PostClient post={post} content={content} />
 }

@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
-import { posts } from "@/lib/posts"
+import { Post } from "@/lib/posts"
 
-export default function PostClient() {
-  const params = useParams()
-  const id = Number(params.id)
-  const post = posts.find(p => p.id === id)
+interface PostClientProps {
+  post: Post
+  content: string
+}
+
+export default function PostClient({ post, content }: PostClientProps) {
   const [isDarkMode, setIsDarkMode] = useState(false)
 
   useEffect(() => {
@@ -18,19 +19,6 @@ export default function PostClient() {
     mediaQuery.addEventListener('change', handleChange)
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
-
-  if (!post) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">文章不存在</h1>
-          <Link href="/home" className="text-primary hover:underline">
-            返回首页
-          </Link>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,9 +72,10 @@ export default function PostClient() {
             <h1 className="text-3xl font-black tracking-tight">{post.title}</h1>
           </header>
 
-          <div className="prose prose-lg max-w-none text-muted-foreground whitespace-pre-wrap">
-            {post.content}
-          </div>
+          <div
+            className="prose prose-lg max-w-none text-muted-foreground"
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
         </article>
 
         {/* Decorative Line */}
