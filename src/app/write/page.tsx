@@ -45,7 +45,7 @@ export default function WritePage() {
 
       if (res.ok) {
         setMessage("发布成功！")
-        setTimeout(() => router.push("/home"), 1000)
+        setTimeout(() => router.push("/"), 1000)
       } else {
         const data = await res.json()
         setMessage(data.error || "发布失败")

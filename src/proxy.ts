@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 
 export function proxy(request: NextRequest) {
   if (
+    request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/write') ||
     request.nextUrl.pathname.startsWith('/api/posts')
   ) {
@@ -17,5 +18,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/home/:path*', '/write/:path*'],
+  matcher: ['/login/:path*', '/write/:path*', '/api/posts/:path*'],
 }
