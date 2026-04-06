@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Champion's Blog
 
-## Getting Started
+一个简约有趣的博客网站，带有可爱的卡通角色和音乐播放器 🎵
 
-First, run the development server:
+## 功能特点
+
+- 🎨 **卡通角色**：登录页和文章卡片都有动态卡通角色
+- 🎵 **音乐播放器**：侧边栏播放器，支持播放列表、进度条拖拽
+- 🌙 **主题切换**：支持浅色/深色模式自动切换
+- 📱 **响应式设计**：适配各种屏幕尺寸
+
+## 开始使用
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 启动开发服务器
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 打开页面
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+访问 [http://localhost:3000](http://localhost:3000)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 项目结构
 
-## Learn More
+```
+src/
+├── app/
+│   ├── home/        # 主页（博客文章列表 + 音乐播放器）
+│   ├── page.tsx     # 登录页
+│   └── layout.tsx   # 全局布局
+├── components/       # UI 组件
+└── proxy.ts         # 路由保护（验证登录）
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 技术栈
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Next.js 16** - React 框架
+- **Tailwind CSS** - 样式设计
+- **TypeScript** - 类型安全
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 音乐文件
 
-## Deploy on Vercel
+将音乐文件放入 `public/music/` 目录，文件名将自动匹配播放列表。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 部署
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+推荐部署到 Vercel：
+
+```bash
+npm run build
+```
+
+然后将项目导入 Vercel 即可。
+
+---
+
+*Made with ❤️ by Champion*
