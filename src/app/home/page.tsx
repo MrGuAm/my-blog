@@ -216,6 +216,7 @@ export default function HomePage() {
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [dragProgress, setDragProgress] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
@@ -339,6 +340,13 @@ export default function HomePage() {
 
   const track = musicPlaylist[currentTrack]
 
+  const filteredPosts = posts.filter(post =>
+    searchQuery === "" ||
+    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.category.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hidden Audio Element */}
@@ -360,7 +368,25 @@ export default function HomePage() {
               </div>
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="搜索文章..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-48 px-3 py-1.5 pl-8 text-sm bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-muted-foreground"
+                />
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">🔍</span>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <Link href="/home" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                 Home
               </Link>
@@ -394,9 +420,21 @@ export default function HomePage() {
         <div className="flex gap-8 pb-20">
           {/* Blog Posts */}
           <main className="flex-1 space-y-6">
-            {posts.map((post, index) => (
-              <PostCard key={post.id} post={post} characterType={index} />
-            ))}
+            {filteredPosts.length > 0 ? (
+              filteredPosts.map((post, index) => (
+                <PostCard key={post.id} post={post} characterType={index % 4} />
+              ))
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground mb-2">没有找到匹配的文章</p>
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-sm text-primary hover:underline"
+                >
+                  清除搜索
+                </button>
+              </div>
+            )}
           </main>
 
           {/* Sidebar */}
@@ -507,19 +545,23 @@ export default function HomePage() {
               <div className="px-3 pb-3 pt-3">
                 <h3 className="text-sm font-semibold mb-2">最新文章</h3>
                 <div className="space-y-2">
-                  {[...posts]
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .slice(0, 3)
-                    .map((post) => (
-                      <Link
-                        key={post.id}
-                        href={`/posts/${post.id}`}
-                        className="block text-sm hover:text-primary transition-colors group"
-                      >
-                        <p className="truncate group-hover:text-primary">{post.title}</p>
-                        <p className="text-xs text-muted-foreground">{post.date}</p>
-                      </Link>
-                    ))}
+                  {filteredPosts.length > 0 ? (
+                    [...filteredPosts]
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 3)
+                      .map((post) => (
+                        <Link
+                          key={post.id}
+                          href={`/posts/${post.id}`}
+                          className="block text-sm hover:text-primary transition-colors group"
+                        >
+                          <p className="truncate group-hover:text-primary">{post.title}</p>
+                          <p className="text-xs text-muted-foreground">{post.date}</p>
+                        </Link>
+                      ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground">暂无文章</p>
+                  )}
                 </div>
               </div>
             </div>
