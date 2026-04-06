@@ -21,7 +21,7 @@ function getPostSlugs(): string[] {
 }
 
 function getPostBySlug(slug: string): Post | undefined {
-  const fullPath = path.join(postsDirectory, `${slug}.md`)
+  const fullPath = path.join(postsDirectory, slug)
   if (!fs.existsSync(fullPath)) return undefined
 
   const fileContents = fs.readFileSync(fullPath, 'utf8')
@@ -31,7 +31,7 @@ function getPostBySlug(slug: string): Post | undefined {
     id: slug.replace(/\.md$/, ''),
     title: data.title || '',
     excerpt: data.excerpt || '',
-    date: data.date || '',
+    date: typeof data.date === 'string' ? data.date : (data.date as Date)?.toISOString?.()?.split('T')[0] || '',
     category: data.category || '',
     tags: data.tags || [],
     content,
