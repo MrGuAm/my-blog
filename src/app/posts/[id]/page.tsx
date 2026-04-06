@@ -11,6 +11,7 @@ const posts = [
     excerpt: "这是我的第一篇博客文章，记录了我开始写博客的心情和想法...",
     date: "2026-04-01",
     category: "随笔",
+    tags: ["随笔", "新博客", "记录"],
     content: `
 欢迎来到 Champion 的博客！
 
@@ -29,6 +30,7 @@ const posts = [
     excerpt: "React Hooks 是 React 16.8 引入的新特性，它让我们可以在函数组件中使用状态和其他 React 特性...",
     date: "2026-04-03",
     category: "技术",
+    tags: ["React", "Hooks", "前端"],
     content: `
 # React Hooks 入门指南
 
@@ -65,6 +67,7 @@ useContext 用于在组件树中传递数据，避免层层传递 props。
     excerpt: "在这个信息爆炸的时代，保持专注变得越来越困难。这篇文章分享了一些我的经验...",
     date: "2026-04-05",
     category: "生活",
+    tags: ["效率", "专注", "方法论"],
     content: `
 # 如何保持专注
 
@@ -151,11 +154,21 @@ export default function PostPage() {
         {/* Article */}
         <article className="bg-card rounded-xl border border-border/60 p-8">
           <header className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
               <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
                 {post.category}
               </span>
               <span className="text-sm text-muted-foreground">{post.date}</span>
+              <div className="flex gap-1.5 ml-auto">
+                {post.tags.map(tag => (
+                  <span
+                    key={tag}
+                    className="text-xs px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
             </div>
             <h1 className="text-3xl font-black tracking-tight">{post.title}</h1>
           </header>

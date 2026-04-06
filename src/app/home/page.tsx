@@ -138,7 +138,7 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
 }
 
 // Post card with character that follows mouse
-function PostCard({ post, characterType }: { post: typeof posts[0]; characterType: number }) {
+function PostCard({ post, characterType, onTagClick }: { post: typeof posts[0]; characterType: number; onTagClick: (tag: string) => void }) {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -150,11 +150,22 @@ function PostCard({ post, characterType }: { post: typeof posts[0]; characterTyp
       onMouseLeave={() => setIsHovered(false)}
       onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
     >
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
         <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
           {post.category}
         </span>
         <span className="text-xs text-muted-foreground">{post.date}</span>
+        <div className="flex gap-1.5 ml-auto">
+          {post.tags.map(tag => (
+            <button
+              key={tag}
+              onClick={(e) => { e.preventDefault(); onTagClick(tag); }}
+              className="text-xs px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+            >
+              #{tag}
+            </button>
+          ))}
+        </div>
       </div>
       <h2 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
         {post.title}
@@ -182,21 +193,24 @@ const posts = [
     title: "欢迎来到 Champion 的博客",
     excerpt: "这是我的第一篇博客文章,记录了我开始写博客的心情和想法...",
     date: "2026-04-01",
-    category: "随笔"
+    category: "随笔",
+    tags: ["随笔", "新博客", "记录"]
   },
   {
     id: 2,
     title: "React Hooks 入门指南",
     excerpt: "React Hooks 是 React 16.8 引入的新特性,它让我们可以在函数组件中使用状态和其他 React 特性...",
     date: "2026-04-03",
-    category: "技术"
+    category: "技术",
+    tags: ["React", "Hooks", "前端"]
   },
   {
     id: 3,
     title: "如何保持专注",
     excerpt: "在这个信息爆炸的时代,保持专注变得越来越困难。这篇文章分享了一些我的经验...",
     date: "2026-04-05",
-    category: "生活"
+    category: "生活",
+    tags: ["效率", "专注", "方法论"]
   },
 ]
 
@@ -217,6 +231,7 @@ export default function HomePage() {
   const [duration, setDuration] = useState(0)
   const [dragProgress, setDragProgress] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
@@ -341,11 +356,15 @@ export default function HomePage() {
   const track = musicPlaylist[currentTrack]
 
   const filteredPosts = posts.filter(post =>
-    searchQuery === "" ||
+    (searchQuery === "" ||
     post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.category.toLowerCase().includes(searchQuery.toLowerCase())
+    post.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))) &&
+    (selectedTag === null || post.tags.includes(selectedTag))
   )
+
+  const allTags = Array.from(new Set(posts.flatMap(post => post.tags))).sort()
 
   return (
     <div className="min-h-screen bg-background">
@@ -372,21 +391,26 @@ export default function HomePage() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="搜索文章..."
+                  placeholder="搜索文章或标签..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-48 px-3 py-1.5 pl-8 text-sm bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-muted-foreground"
                 />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">🔍</span>
-                {searchQuery && (
+                {(searchQuery || selectedTag) && (
                   <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                    onClick={() => { setSearchQuery(""); setSelectedTag(null); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs flex items-center gap-1"
                   >
                     ✕
                   </button>
                 )}
               </div>
+              {selectedTag && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  #{selectedTag}
+                </span>
+              )}
               <Link href="/home" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                 Home
               </Link>
@@ -422,16 +446,16 @@ export default function HomePage() {
           <main className="flex-1 space-y-6">
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post, index) => (
-                <PostCard key={post.id} post={post} characterType={index % 4} />
+                <PostCard key={post.id} post={post} characterType={index % 4} onTagClick={setSelectedTag} />
               ))
             ) : (
               <div className="text-center py-16">
                 <p className="text-muted-foreground mb-2">没有找到匹配的文章</p>
                 <button
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => { setSearchQuery(""); setSelectedTag(null); }}
                   className="text-sm text-primary hover:underline"
                 >
-                  清除搜索
+                  清除筛选
                 </button>
               </div>
             )}
@@ -562,6 +586,28 @@ export default function HomePage() {
                   ) : (
                     <p className="text-xs text-muted-foreground">暂无文章</p>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
+              <div className="px-3 pb-3 pt-3">
+                <h3 className="text-sm font-semibold mb-2">标签</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {allTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                      className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
+                        selectedTag === tag
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary/60 text-muted-foreground hover:bg-primary/10 hover:text-primary'
+                      }`}
+                    >
+                      #{tag}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
