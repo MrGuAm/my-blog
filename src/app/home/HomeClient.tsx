@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 
 interface HomeClientProps {
@@ -144,24 +145,31 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
 }
 
 // Post card with character that follows mouse
-function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePin }: { post: Post; characterType: number; onTagClick: (tag: string) => void; isAuthenticated?: boolean; onTogglePin?: (id: string, pinned: boolean) => void }) {
+function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePin, onEdit }: { post: Post; characterType: number; onTagClick: (tag: string) => void; isAuthenticated?: boolean; onTogglePin?: (id: string, pinned: boolean) => void; onEdit?: (id: string) => void }) {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   return (
-    <Link
-      href={`/posts/${post.id}`}
+    <div
       className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
     >
-      {post.pinned && (
+      {isAuthenticated && isHovered && (
+        <button
+          onClick={() => onEdit && onEdit(post.id)}
+          className="absolute top-3 right-3 z-10 text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+        >
+          编辑
+        </button>
+      )}
+      {post.pinned && !isHovered && (
         <div className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
           置顶
         </div>
       )}
-      {post.draft && (
+      {post.draft && !isHovered && (
         <div className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">
           草稿
         </div>
@@ -173,7 +181,7 @@ function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePi
         <span className="text-xs text-muted-foreground">{post.date}</span>
         {isAuthenticated && onTogglePin && (
           <button
-            onClick={(e) => { e.preventDefault(); onTogglePin(post.id, !post.pinned); }}
+            onClick={(e) => { e.stopPropagation(); onTogglePin(post.id, !post.pinned); }}
             className={`text-xs px-2 py-0.5 rounded-full transition-colors ${post.pinned ? 'bg-primary text-primary-foreground' : 'bg-secondary/60 text-muted-foreground hover:bg-primary/10 hover:text-primary'}`}
           >
             {post.pinned ? '取消置顶' : '置顶'}
@@ -183,7 +191,7 @@ function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePi
           {post.tags.map(tag => (
             <button
               key={tag}
-              onClick={(e) => { e.preventDefault(); onTagClick(tag); }}
+              onClick={(e) => { e.stopPropagation(); onTagClick(tag); }}
               className="text-xs px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
             >
               #{tag}
@@ -191,13 +199,15 @@ function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePi
           ))}
         </div>
       </div>
-      <h2 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
-        {post.title}
-      </h2>
-      <p className="text-muted-foreground text-sm">{post.excerpt}</p>
-      <div className="mt-4 flex items-center gap-2 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-        Read more →
-      </div>
+      <Link href={`/posts/${post.id}`}>
+        <h2 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
+          {post.title}
+        </h2>
+        <p className="text-muted-foreground text-sm">{post.excerpt}</p>
+        <div className="mt-4 flex items-center gap-2 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+          Read more →
+        </div>
+      </Link>
       {/* Character decoration */}
       <div className="absolute bottom-3 right-3 transition-all duration-300">
         <Character
@@ -207,7 +217,7 @@ function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePi
           mouseY={mousePos.y}
         />
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -219,6 +229,7 @@ const musicPlaylist = [
 ]
 
 export default function HomeClient({ posts, allTags }: HomeClientProps) {
+  const router = useRouter()
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTrack, setCurrentTrack] = useState(0)
   const [showList, setShowList] = useState(false)
@@ -488,7 +499,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
           <main className="flex-1 space-y-6">
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post, index) => (
-                <PostCard key={post.id} post={post} characterType={index % 4} onTagClick={setSelectedTag} isAuthenticated={isAuthenticated} onTogglePin={handleTogglePin} />
+                <PostCard key={post.id} post={post} characterType={index % 4} onTagClick={setSelectedTag} isAuthenticated={isAuthenticated} onTogglePin={handleTogglePin} onEdit={(id) => router.push(`/write/${id}`)} />
               ))
             ) : (
               <div className="text-center py-16">

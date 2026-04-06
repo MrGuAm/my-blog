@@ -13,6 +13,29 @@ function writePosts(data: { posts: any[] }) {
   fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
 }
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!request.cookies.get('authenticated')) {
+    return NextResponse.json({ error: '请先登录' }, { status: 401 })
+  }
+
+  try {
+    const { id } = await params
+    const data = readPosts()
+    const post = data.posts.find((p: any) => p.id === id)
+
+    if (!post) {
+      return NextResponse.json({ error: '文章不存在' }, { status: 404 })
+    }
+
+    return NextResponse.json(post)
+  } catch {
+    return NextResponse.json({ error: '读取失败' }, { status: 500 })
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,5 +63,31 @@ export async function PATCH(
     return NextResponse.json(data.posts[postIndex])
   } catch {
     return NextResponse.json({ error: '更新失败' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!request.cookies.get('authenticated')) {
+    return NextResponse.json({ error: '请先登录' }, { status: 401 })
+  }
+
+  try {
+    const { id } = await params
+    const data = readPosts()
+    const postIndex = data.posts.findIndex((p: any) => p.id === id)
+
+    if (postIndex === -1) {
+      return NextResponse.json({ error: '文章不存在' }, { status: 404 })
+    }
+
+    data.posts.splice(postIndex, 1)
+    writePosts(data)
+
+    return NextResponse.json({ success: true })
+  } catch {
+    return NextResponse.json({ error: '删除失败' }, { status: 500 })
   }
 }
