@@ -124,6 +124,9 @@ export default function AboutClient() {
               <Link href="/about" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                 About
               </Link>
+              <Link href="/write" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                写文章
+              </Link>
             </div>
           </div>
         </div>
