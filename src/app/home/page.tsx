@@ -3,7 +3,23 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
 
-// Character eye component that follows mouse
+// Simple marquee text using CSS
+function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
+  if (text.length <= charCount) {
+    return <span className="truncate">{text}</span>;
+  }
+
+  return (
+    <span className="inline-block overflow-hidden">
+      <span
+        className={`inline-block ${isActive ? 'animate-marquee' : ''}`}
+        style={{ whiteSpace: 'nowrap' }}
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
 function CharacterEye({ isHovered, mouseX, mouseY, containerRef, eyeColor, pupilColor, size }: { isHovered: boolean; mouseX: number; mouseY: number; containerRef: React.RefObject<HTMLDivElement | null>; eyeColor: string; pupilColor: string; size: number }) {
   const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
 
@@ -44,15 +60,15 @@ function CharacterEye({ isHovered, mouseX, mouseY, containerRef, eyeColor, pupil
   // Open eyes with pupil
   return (
     <div className="relative" style={{ width: size, height: size }}>
-      <div 
+      <div
         className="absolute rounded-full bg-white"
         style={{ width: size * 0.8, height: size * 0.8, left: size * 0.1, top: size * 0.1 }}
       >
-        <div 
+        <div
           className="absolute rounded-full"
-          style={{ 
-            width: size * 0.4, 
-            height: size * 0.4, 
+          style={{
+            width: size * 0.4,
+            height: size * 0.4,
             backgroundColor: pupilColor,
             left: '50%',
             top: '50%',
@@ -78,32 +94,32 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
   const config = configs[type % configs.length];
 
   return (
-    <div 
+    <div
       ref={ref}
       className="relative rounded-lg"
-      style={{ 
-        width: config.width, 
-        height: config.height, 
+      style={{
+        width: config.width,
+        height: config.height,
         backgroundColor: config.bg,
       }}
     >
-      <div className="absolute flex gap-2" style={{ 
-        left: type === 2 ? 8 : 6, 
-        top: type === 2 ? 6 : 8 
+      <div className="absolute flex gap-2" style={{
+        left: type === 2 ? 8 : 6,
+        top: type === 2 ? 6 : 8
       }}>
-        <CharacterEye 
-          isHovered={isHovered} 
-          mouseX={mouseX} 
-          mouseY={mouseY} 
+        <CharacterEye
+          isHovered={isHovered}
+          mouseX={mouseX}
+          mouseY={mouseY}
           containerRef={ref}
           eyeColor={config.eyeColor}
           pupilColor={config.pupilColor}
           size={config.eyeSize}
         />
-        <CharacterEye 
-          isHovered={isHovered} 
-          mouseX={mouseX} 
-          mouseY={mouseY} 
+        <CharacterEye
+          isHovered={isHovered}
+          mouseX={mouseX}
+          mouseY={mouseY}
           containerRef={ref}
           eyeColor={config.eyeColor}
           pupilColor={config.pupilColor}
@@ -112,7 +128,7 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
       </div>
       {/* Mouth for yellow character */}
       {type === 3 && (
-        <div 
+        <div
           className="absolute h-0.5 bg-[#2D2D2D] rounded-full"
           style={{ width: 12, left: 10, bottom: 8 }}
         />
@@ -127,7 +143,7 @@ function PostCard({ post, characterType }: { post: typeof posts[0]; characterTyp
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   return (
-    <Link 
+    <Link
       href={`/posts/${post.id}`}
       className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
@@ -149,11 +165,11 @@ function PostCard({ post, characterType }: { post: typeof posts[0]; characterTyp
       </div>
       {/* Character decoration */}
       <div className="absolute bottom-3 right-3 transition-all duration-300">
-        <Character 
-          type={characterType} 
-          isHovered={isHovered} 
-          mouseX={mousePos.x} 
-          mouseY={mousePos.y} 
+        <Character
+          type={characterType}
+          isHovered={isHovered}
+          mouseX={mousePos.x}
+          mouseY={mousePos.y}
         />
       </div>
     </Link>
@@ -164,21 +180,21 @@ const posts = [
   {
     id: 1,
     title: "欢迎来到 Champion 的博客",
-    excerpt: "这是我的第一篇博客文章，记录了我开始写博客的心情和想法...",
+    excerpt: "这是我的第一篇博客文章,记录了我开始写博客的心情和想法...",
     date: "2026-04-01",
     category: "随笔"
   },
   {
     id: 2,
     title: "React Hooks 入门指南",
-    excerpt: "React Hooks 是 React 16.8 引入的新特性，它让我们可以在函数组件中使用状态和其他 React 特性...",
+    excerpt: "React Hooks 是 React 16.8 引入的新特性,它让我们可以在函数组件中使用状态和其他 React 特性...",
     date: "2026-04-03",
     category: "技术"
   },
   {
     id: 3,
     title: "如何保持专注",
-    excerpt: "在这个信息爆炸的时代，保持专注变得越来越困难。这篇文章分享了一些我的经验...",
+    excerpt: "在这个信息爆炸的时代,保持专注变得越来越困难。这篇文章分享了一些我的经验...",
     date: "2026-04-05",
     category: "生活"
   },
@@ -326,7 +342,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hidden Audio Element */}
-      <audio 
+      <audio
         ref={audioRef}
         src={track.src}
         onTimeUpdate={handleTimeUpdate}
@@ -363,7 +379,7 @@ export default function HomePage() {
             Welcome to my blog
           </h1>
           <p className="text-muted-foreground text-lg">
-            记录生活，分享想法
+            记录生活,分享想法
           </p>
         </section>
 
@@ -383,19 +399,21 @@ export default function HomePage() {
             ))}
           </main>
 
-          {/* Sidebar Music Player */}
+          {/* Sidebar */}
           <aside className="w-56 flex-shrink-0">
-            <div 
-              className="sticky top-24 bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => { if (!isDragging) setIsHovering(false) }}
-            >
+            <div className="sticky top-24 space-y-4">
+              {/* Player */}
+              <div
+                className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden"
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => { if (!isDragging) setIsHovering(false) }}
+              >
               {/* Song List */}
               {showList ? (
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium">播放列表</span>
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); setShowList(false) }}
                       className="text-muted-foreground hover:text-foreground"
                     >
@@ -408,8 +426,8 @@ export default function HomePage() {
                         key={index}
                         onClick={() => selectTrack(index)}
                         className={`w-full text-left p-2 rounded-lg transition-colors ${
-                          currentTrack === index 
-                            ? 'bg-primary/10 text-primary' 
+                          currentTrack === index
+                            ? 'bg-primary/10 text-primary'
                             : 'hover:bg-accent/50'
                         }`}
                       >
@@ -421,7 +439,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 /* Compact Player */
-                <div 
+                <div
                   className="p-3 cursor-pointer relative"
                   onClick={() => setShowList(true)}
                 >
@@ -430,8 +448,12 @@ export default function HomePage() {
                       <span className="text-lg">🎵</span>
                     </div>
                     <div className="flex-1 min-w-0 overflow-hidden">
-                      <p className={`text-sm font-medium ${track.title.length > 12 && isPlaying ? 'animate-marquee whitespace-nowrap' : 'truncate'}`}>{track.title}</p>
-                      <p className={`text-xs text-muted-foreground ${track.artist.length > 12 && isPlaying ? 'animate-marquee whitespace-nowrap' : 'truncate'}`}>{track.artist}</p>
+                      <p className="text-sm font-medium">
+                        <MarqueeText key={track.title} text={track.title} isActive={isPlaying} charCount={6} />
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        <MarqueeText key={track.artist + track.title} text={track.artist} isActive={isPlaying} charCount={6} />
+                      </p>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); togglePlay() }}
@@ -443,21 +465,21 @@ export default function HomePage() {
 
                   {/* Progress Bar */}
                   {/* Progress Bar */}
-                  <div 
+                  <div
                     ref={progressBarRef}
                     className={`transition-all duration-300 ease-out overflow-hidden ${isHovering || isDragging ? 'mt-3 pt-3 border-t border-border/40 opacity-100 max-h-20' : 'mt-0 pt-0 border-t-0 opacity-0 max-h-0'}`}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div 
-                      className="h-1.5 bg-secondary rounded-full relative cursor-pointer" 
-                      onMouseDown={handleMouseDown} 
+                    <div
+                      className="h-1.5 bg-secondary rounded-full relative cursor-grab active:cursor-grabbing"
+                      onMouseDown={handleMouseDown}
                       onClick={handleProgressClick}
                     >
-                      <div 
+                      <div
                         className="absolute top-0 left-0 h-full bg-primary rounded-full"
                         style={{ width: `${dragProgress !== null ? dragProgress : progress}%` }}
                       />
-                      <div 
+                      <div
                         className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full shadow-lg"
                         style={{ left: `${dragProgress !== null ? dragProgress : progress}%` }}
                       />
@@ -470,7 +492,7 @@ export default function HomePage() {
                   {/* Always visible thin progress line when NOT hovering - at the bottom */}
                   {!isHovering && !isDragging && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary/60 overflow-hidden cursor-pointer" onClick={handleProgressClick} style={{ borderRadius: '0 0 0.5rem 0.5rem' }}>
-                      <div 
+                      <div
                         className="h-full bg-primary/70 rounded-full transition-none"
                         style={{ width: `${progress}%` }}
                       />
@@ -478,6 +500,29 @@ export default function HomePage() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Latest Posts */}
+            <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
+              <div className="px-3 pb-3 pt-3">
+                <h3 className="text-sm font-semibold mb-2">最新文章</h3>
+                <div className="space-y-2">
+                  {[...posts]
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .slice(0, 3)
+                    .map((post) => (
+                      <Link
+                        key={post.id}
+                        href={`/posts/${post.id}`}
+                        className="block text-sm hover:text-primary transition-colors group"
+                      >
+                        <p className="truncate group-hover:text-primary">{post.title}</p>
+                        <p className="text-xs text-muted-foreground">{post.date}</p>
+                      </Link>
+                    ))}
+                </div>
+              </div>
+            </div>
             </div>
           </aside>
         </div>
@@ -497,8 +542,7 @@ export default function HomePage() {
           100% { transform: translateX(-100%); }
         }
         .animate-marquee {
-          animation: marquee 6s linear infinite;
-          display: inline-block;
+          animation: marquee 20s linear infinite;
         }
       `}</style>
     </div>
