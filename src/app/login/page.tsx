@@ -606,12 +606,6 @@ function LoginPage() {
  </Button>
  </form>
 
- <div className="text-center mt-4">
- <Link href="/" className={`text-sm hover:underline ${isDarkMode ? 'text-white/60 hover:text-white' : 'text-muted-foreground hover:text-foreground'}`}>
- 随便看看 →
- </Link>
- </div>
-
  {/* Cute cartoon decoration */}
  <div className="flex justify-center items-center gap-8 mt-12">
  <div className="w-14 h-14 rounded-full bg-[#6C3FF5] opacity-80" />
