@@ -29,13 +29,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { title, excerpt, content, category, tags } = body
+    const { title, excerpt, content, category, tags, draft } = body
 
     if (!title || !content) {
       return NextResponse.json({ error: '标题和内容不能为空' }, { status: 400 })
     }
 
-    const id = title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-')
+    const id = title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-') + '-' + Date.now()
     const date = new Date().toISOString().split('T')[0]
 
     const newPost = {
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       tags: tags || [],
       content,
       pinned: false,
+      draft: draft === true,
     }
 
     const data = readPosts()

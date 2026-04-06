@@ -24,7 +24,7 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { pinned } = body
+    const { pinned, draft } = body
 
     const data = readPosts()
     const postIndex = data.posts.findIndex((p: any) => p.id === id)
@@ -33,7 +33,8 @@ export async function PATCH(
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })
     }
 
-    data.posts[postIndex].pinned = pinned
+    if (pinned !== undefined) data.posts[postIndex].pinned = pinned
+    if (draft !== undefined) data.posts[postIndex].draft = draft
     writePosts(data)
 
     return NextResponse.json(data.posts[postIndex])

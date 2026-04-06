@@ -12,6 +12,7 @@ export interface Post {
   tags: string[]
   content: string
   pinned?: boolean
+  draft?: boolean
 }
 
 function readPosts(): Post[] {
@@ -36,7 +37,7 @@ export function getPost(id: string): Post | undefined {
 }
 
 export function getAllTags(): string[] {
-  return Array.from(new Set(readPosts().flatMap(p => p.tags))).sort()
+  return Array.from(new Set(readPosts().filter(p => !p.draft).flatMap(p => p.tags))).sort()
 }
 
 export function getPostContent(id: string): string {

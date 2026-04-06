@@ -160,6 +160,34 @@ export default function WritePage() {
             >
               {isSubmitting ? "发布中..." : "发布文章"}
             </button>
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={async () => {
+                setIsSubmitting(true)
+                setMessage("")
+                try {
+                  const res = await fetch("/api/posts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), draft: true }),
+                  })
+                  if (res.ok) {
+                    setMessage("草稿已保存！")
+                    setTimeout(() => router.push("/"), 1000)
+                  } else {
+                    setMessage("保存失败")
+                  }
+                } catch {
+                  setMessage("网络错误")
+                } finally {
+                  setIsSubmitting(false)
+                }
+              }}
+              className="px-6 py-3 rounded-xl border border-border/60 bg-card text-foreground font-medium hover:bg-accent transition-colors disabled:opacity-50"
+            >
+              保存草稿
+            </button>
             {message && (
               <span className={message.includes("成功") ? "text-green-500" : "text-red-500"}>
                 {message}

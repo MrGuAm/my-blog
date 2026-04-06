@@ -161,6 +161,11 @@ function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePi
           置顶
         </div>
       )}
+      {post.draft && (
+        <div className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">
+          草稿
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
           {post.category}
@@ -224,10 +229,19 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [dragProgress, setDragProgress] = useState<number | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [localPosts, setLocalPosts] = useState(posts)
+  const [showDrafts, setShowDrafts] = useState(false)
 
   useEffect(() => {
-    setIsAuthenticated(document.cookie.includes('authenticated='))
-    setLocalPosts(posts)
+    const auth = document.cookie.includes('authenticated=')
+    setIsAuthenticated(auth)
+    if (auth) {
+      fetch('/api/posts')
+        .then(r => r.json())
+        .then(apiPosts => setLocalPosts(apiPosts))
+        .catch(() => setLocalPosts(posts))
+    } else {
+      setLocalPosts(posts)
+    }
   }, [posts])
 
   const handleTogglePin = async (id: string, pinned: boolean) => {
@@ -374,6 +388,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const track = musicPlaylist[currentTrack]
 
   const filteredPosts = localPosts.filter(post =>
+    (showDrafts || !post.draft) &&
     (searchQuery === "" ||
     post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -436,6 +451,14 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
               <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 写文章
               </Link>
+              {isAuthenticated && (
+                <button
+                  onClick={() => setShowDrafts(!showDrafts)}
+                  className={`text-sm font-medium transition-colors ${showDrafts ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                >
+                  {showDrafts ? '隐藏草稿' : '显示草稿'}
+                </button>
+              )}
             </div>
           </div>
         </div>
