@@ -47,7 +47,7 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { pinned, draft } = body
+    const { pinned, draft, title, excerpt, content, category, tags } = body
 
     const data = readPosts()
     const postIndex = data.posts.findIndex((p: any) => p.id === id)
@@ -58,6 +58,11 @@ export async function PATCH(
 
     if (pinned !== undefined) data.posts[postIndex].pinned = pinned
     if (draft !== undefined) data.posts[postIndex].draft = draft
+    if (title !== undefined) data.posts[postIndex].title = title
+    if (excerpt !== undefined) data.posts[postIndex].excerpt = excerpt
+    if (content !== undefined) data.posts[postIndex].content = content
+    if (category !== undefined) data.posts[postIndex].category = category
+    if (tags !== undefined) data.posts[postIndex].tags = tags
     writePosts(data)
 
     return NextResponse.json(data.posts[postIndex])
