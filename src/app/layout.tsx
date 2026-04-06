@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     description: "记录生活，分享想法 - Champion 的个人博客",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.svg",
         width: 1200,
         height: 630,
         alt: "Champion's Blog",
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Champion's Blog",
     description: "记录生活，分享想法 - Champion 的个人博客",
-    images: ["/og-image.png"],
+    images: ["/og-image.svg"],
     creator: "@champion",
   },
   icons: {
