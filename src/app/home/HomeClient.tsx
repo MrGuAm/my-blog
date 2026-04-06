@@ -144,7 +144,7 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
 }
 
 // Post card with character that follows mouse
-function PostCard({ post, characterType, onTagClick }: { post: Post; characterType: number; onTagClick: (tag: string) => void }) {
+function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePin }: { post: Post; characterType: number; onTagClick: (tag: string) => void; isAuthenticated?: boolean; onTogglePin?: (id: string, pinned: boolean) => void }) {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -156,11 +156,24 @@ function PostCard({ post, characterType, onTagClick }: { post: Post; characterTy
       onMouseLeave={() => setIsHovered(false)}
       onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
     >
+      {post.pinned && (
+        <div className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
+          置顶
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
           {post.category}
         </span>
         <span className="text-xs text-muted-foreground">{post.date}</span>
+        {isAuthenticated && onTogglePin && (
+          <button
+            onClick={(e) => { e.preventDefault(); onTogglePin(post.id, !post.pinned); }}
+            className={`text-xs px-2 py-0.5 rounded-full transition-colors ${post.pinned ? 'bg-primary text-primary-foreground' : 'bg-secondary/60 text-muted-foreground hover:bg-primary/10 hover:text-primary'}`}
+          >
+            {post.pinned ? '取消置顶' : '置顶'}
+          </button>
+        )}
         <div className="flex gap-1.5 ml-auto">
           {post.tags.map(tag => (
             <button
@@ -209,6 +222,32 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [dragProgress, setDragProgress] = useState<number | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [localPosts, setLocalPosts] = useState(posts)
+
+  useEffect(() => {
+    setIsAuthenticated(document.cookie.includes('authenticated='))
+    setLocalPosts(posts)
+  }, [posts])
+
+  const handleTogglePin = async (id: string, pinned: boolean) => {
+    try {
+      const res = await fetch(`/api/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned }),
+      })
+      if (res.ok) {
+        setLocalPosts(prev =>
+          prev.map(p => p.id === id ? { ...p, pinned } : p).sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1
+            if (!a.pinned && b.pinned) return 1
+            return new Date(b.date).getTime() - new Date(a.date).getTime()
+          })
+        )
+      }
+    } catch {}
+  }
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -334,7 +373,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
 
   const track = musicPlaylist[currentTrack]
 
-  const filteredPosts = posts.filter(post =>
+  const filteredPosts = localPosts.filter(post =>
     (searchQuery === "" ||
     post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -426,7 +465,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
           <main className="flex-1 space-y-6">
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post, index) => (
-                <PostCard key={post.id} post={post} characterType={index % 4} onTagClick={setSelectedTag} />
+                <PostCard key={post.id} post={post} characterType={index % 4} onTagClick={setSelectedTag} isAuthenticated={isAuthenticated} onTogglePin={handleTogglePin} />
               ))
             ) : (
               <div className="text-center py-16">

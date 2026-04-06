@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       category: category || '未分类',
       tags: tags || [],
       content,
+      pinned: false,
     }
 
     const data = readPosts()

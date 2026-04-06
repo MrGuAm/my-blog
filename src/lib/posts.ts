@@ -11,6 +11,7 @@ export interface Post {
   category: string
   tags: string[]
   content: string
+  pinned?: boolean
 }
 
 function readPosts(): Post[] {
@@ -23,7 +24,11 @@ function readPosts(): Post[] {
 }
 
 export function getAllPosts(): Post[] {
-  return readPosts().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return readPosts().sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    return new Date(b.date).getTime() - new Date(a.date).getTime()
+  })
 }
 
 export function getPost(id: string): Post | undefined {
