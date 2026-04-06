@@ -3,14 +3,13 @@ import type { NextRequest } from 'next/server'
 
 export function proxy(request: NextRequest) {
   if (
-    request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/write') ||
     request.nextUrl.pathname.startsWith('/api/posts')
   ) {
     const isAuthenticated = request.cookies.get('authenticated')
 
     if (!isAuthenticated) {
-      return NextResponse.redirect(new URL('/', request.url))
+      return NextResponse.redirect(new URL('/login', request.url))
     }
   }
 
@@ -18,5 +17,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/login/:path*', '/write/:path*', '/api/posts/:path*'],
+  matcher: ['/write/:path*', '/api/posts/:path*'],
 }

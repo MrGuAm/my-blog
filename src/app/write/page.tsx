@@ -16,7 +16,7 @@ export default function WritePage() {
 
   useEffect(() => {
     if (!document.cookie.includes('authenticated=')) {
-      router.push('/')
+      router.push('/login')
     }
   }, [router])
 
