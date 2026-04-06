@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -596,6 +597,12 @@ function LoginPage() {
  {isLoading ? "Signing in..." : "Log in"}
  </Button>
  </form>
+
+ <div className="text-center mt-4">
+ <Link href="/home" className={`text-sm hover:underline ${isDarkMode ? 'text-white/60 hover:text-white' : 'text-muted-foreground hover:text-foreground'}`}>
+ 随便看看 →
+ </Link>
+ </div>
 
  {/* Cute cartoon decoration */}
  <div className="flex justify-center items-center gap-8 mt-12">

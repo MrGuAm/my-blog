@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 
 export function proxy(request: NextRequest) {
   if (
-    request.nextUrl.pathname.startsWith('/home') ||
     request.nextUrl.pathname.startsWith('/write') ||
     request.nextUrl.pathname.startsWith('/api/posts')
   ) {
