@@ -23,6 +23,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!request.cookies.get('authenticated')) {
+    return NextResponse.json({ error: '请先登录' }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
     const { title, excerpt, content, category, tags } = body
