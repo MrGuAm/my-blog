@@ -13,6 +13,7 @@ export default function WritePage() {
   const [tags, setTags] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState("")
+  const [pinned, setPinned] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
@@ -117,6 +118,7 @@ export default function WritePage() {
           content,
           category,
           tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+          pinned,
         }),
       })
 
@@ -322,6 +324,19 @@ export default function WritePage() {
             </div>
           )}
 
+          {/* Pin toggle */}
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={pinned}
+                onChange={(e) => setPinned(e.target.checked)}
+                className="w-4 h-4 rounded border-border"
+              />
+              <span className="text-sm">置顶文章</span>
+            </label>
+          </div>
+
           {/* Submit */}
           <div className="flex items-center gap-4">
             <button
@@ -341,7 +356,7 @@ export default function WritePage() {
                   const res = await fetch("/api/posts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ title, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), draft: true }),
+                    body: JSON.stringify({ title, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), draft: true, pinned }),
                   })
                   if (res.ok) {
                     setMessage("草稿已保存！")
