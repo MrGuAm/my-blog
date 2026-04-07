@@ -6,8 +6,8 @@ const commentsFile = path.join(process.cwd(), 'data/comments.json')
 
 function ensureDataDir() {
   const dir = path.dirname(commentsFile)
-  if (!require('fs').existsSync(dir)) {
-    require('fs').mkdirSync(dir, { recursive: true })
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
   }
 }
 
@@ -69,6 +69,7 @@ export async function POST(
   if (!data.comments[postId]) {
     data.comments[postId] = []
   }
+  writeComments(data)
 
   const newComment: Comment = {
     id: Date.now().toString(),
