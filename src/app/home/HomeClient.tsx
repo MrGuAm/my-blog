@@ -150,7 +150,7 @@ function PostCard({ post, characterType, onTagClick }: { post: Post; characterTy
   const [isHovered, setIsHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  const postHref = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.id}`
+  const postHref = post.draft && document.cookie.includes('authenticated=') ? `/write/${post.id}` : `/posts/${post.id}`
   return (
     <div
       className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
