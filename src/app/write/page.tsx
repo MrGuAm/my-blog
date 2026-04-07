@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -13,6 +13,10 @@ export default function WritePage() {
   const [tags, setTags] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState("")
+  const [isDragging, setIsDragging] = useState(false)
+  const [imageDialogOpen, setImageDialogOpen] = useState(false)
+  const [imageUrl, setImageUrl] = useState("")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (!document.cookie.includes('authenticated=')) {
@@ -24,6 +28,73 @@ export default function WritePage() {
    document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
    router.push('/home');
  };
+
+  // Handle paste - image as base64
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+          const file = item.getAsFile()
+          if (!file) return
+
+          const reader = new FileReader()
+          reader.onload = (ev) => {
+            const base64 = ev.target?.result as string
+            const imgTag = `\n<img src="${base64}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
+            insertTextAtCursor(imgTag)
+          }
+          reader.readAsDataURL(file)
+          return
+        }
+      }
+    }
+
+    textarea.addEventListener('paste', handlePaste)
+    return () => textarea.removeEventListener('paste', handlePaste)
+  }, [])
+
+  const insertTextAtCursor = (text: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const before = content.substring(0, start)
+    const after = content.substring(end)
+    setContent(before + text + after)
+
+    // Move cursor after the inserted text
+    requestAnimationFrame(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + text.length
+      textarea.focus()
+    })
+  }
+
+  const handleInsertImage = () => {
+    if (!imageUrl.trim()) return
+    const imgTag = `\n<img src="${imageUrl}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
+    insertTextAtCursor(imgTag)
+    setImageUrl("")
+    setImageDialogOpen(false)
+  }
+
+  // Toolbar insert helpers
+  const insertFormat = (before: string, after: string = before) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selected = content.substring(start, end)
+    const newText = `${before}${selected || '文字'}${after}`
+    insertTextAtCursor(newText)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,7 +163,7 @@ export default function WritePage() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight mb-2">写文章</h1>
-          <p className="text-muted-foreground">记录你的想法</p>
+          <p className="text-muted-foreground">记录你的想法 · 支持直接粘贴图片</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -147,17 +218,79 @@ export default function WritePage() {
             </div>
           </div>
 
-          {/* Content */}
+          {/* Content Toolbar */}
           <div>
             <label className="block text-sm font-medium mb-2">内容</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="写下你的内容... 支持 HTML 标签如 &lt;strong&gt;, &lt;pre&gt;, &lt;code&gt;"
-              rows={15}
-              className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none font-mono text-sm"
-            />
+            <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
+              {/* Toolbar */}
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-border/40 bg-secondary/20 flex-wrap">
+                <button type="button" onClick={() => insertFormat('<strong>', '</strong>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-bold" title="加粗">B</button>
+                <button type="button" onClick={() => insertFormat('<em>', '</em>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors italic" title="斜体">I</button>
+                <button type="button" onClick={() => insertFormat('<h2>', '</h2>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-bold" title="二级标题">H2</button>
+                <button type="button" onClick={() => insertFormat('<h3>', '</h3>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-bold" title="三级标题">H3</button>
+                <div className="w-px h-5 bg-border/40 mx-1" />
+                <button type="button" onClick={() => insertFormat('<pre><code>', '</code></pre>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-mono" title="代码块">{"</>"}</button>
+                <button type="button" onClick={() => insertFormat('<code>', '</code>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-mono" title="行内代码">`</button>
+                <div className="w-px h-5 bg-border/40 mx-1" />
+                <button type="button" onClick={() => insertFormat('<a href="">', '</a>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors" title="链接">🔗</button>
+                <button type="button" onClick={() => insertFormat('<blockquote>', '</blockquote>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors" title="引用">❝</button>
+                <button type="button" onClick={() => insertFormat('<ul><li>', '</li></ul>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors" title="无序列表">•</button>
+                <div className="w-px h-5 bg-border/40 mx-1" />
+                <button
+                  type="button"
+                  onClick={() => setImageDialogOpen(true)}
+                  className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors flex items-center gap-1"
+                  title="插入图片"
+                >
+                  🖼️ 图片
+                </button>
+                <span className="text-xs text-muted-foreground ml-2">· 粘贴 (Ctrl/Cmd+V) 直接插入图片</span>
+              </div>
+
+              {/* Textarea */}
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={"写下你的内容...\n\n💡 提示：\n- 选中文字后点击工具栏按钮可快速格式化\n- 直接 Ctrl/Cmd+V 粘贴图片\n- 点击 🖼️ 图片 按钮输入图片链接"}
+                rows={15}
+                className="w-full px-4 py-3 bg-transparent focus:outline-none transition-all resize-none text-sm leading-relaxed"
+              />
+            </div>
           </div>
+
+          {/* Image URL Dialog */}
+          {imageDialogOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setImageDialogOpen(false)}>
+              <div className="bg-card rounded-xl border border-border/60 p-6 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-bold mb-4">插入图片</h3>
+                <p className="text-sm text-muted-foreground mb-4">输入图片链接，图片将显示在文章中</p>
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background mb-4 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleInsertImage()}
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleInsertImage}
+                    className="flex-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    插入
+                  </button>
+                  <button
+                    onClick={() => setImageDialogOpen(false)}
+                    className="px-4 py-2 rounded-lg border border-border/60 hover:bg-accent transition-colors"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Submit */}
           <div className="flex items-center gap-4">
