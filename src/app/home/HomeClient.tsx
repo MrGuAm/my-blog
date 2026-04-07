@@ -11,6 +11,14 @@ interface HomeClientProps {
   allTags: string[]
 }
 
+interface RecentComment {
+  id: string
+  postId: string
+  author: string
+  content: string
+  date: string
+}
+
 // Simple marquee text using CSS
 function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
   if (text.length <= charCount) {
@@ -230,6 +238,15 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [localPosts, setLocalPosts] = useState(posts)
   const [showDrafts, setShowDrafts] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [recentComments, setRecentComments] = useState<RecentComment[]>([])
+
+  // Fetch recent comments
+  useEffect(() => {
+    fetch('/api/comments')
+      .then(r => r.json())
+      .then(data => setRecentComments(data.comments || []))
+      .catch(() => {})
+  }, [])
 
   const handleLogout = () => {
     document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
@@ -659,6 +676,27 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                 </div>
               </div>
             </div>
+
+            {/* Latest Comments */}
+            {recentComments.length > 0 && (
+              <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
+                <div className="px-3 pb-3 pt-3">
+                  <h3 className="text-sm font-semibold mb-2">最新评论</h3>
+                  <div className="space-y-2">
+                    {recentComments.slice(0, 3).map(comment => (
+                      <Link
+                        key={comment.id}
+                        href={`/posts/${comment.postId}`}
+                        className="block text-xs hover:text-primary transition-colors group"
+                      >
+                        <p className="truncate group-hover:text-primary">{comment.content}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{comment.author} · {comment.date}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tags */}
             <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">

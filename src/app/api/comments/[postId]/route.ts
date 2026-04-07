@@ -69,7 +69,6 @@ export async function POST(
   if (!data.comments[postId]) {
     data.comments[postId] = []
   }
-  writeComments(data)
 
   const newComment: Comment = {
     id: Date.now().toString(),
