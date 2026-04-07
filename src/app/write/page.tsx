@@ -148,7 +148,7 @@ export default function WritePage() {
             </div>
             <div className="flex items-center gap-6">
               <Link href="/home" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                Home
+                ← 返回
               </Link>
               <button
                 onClick={handleLogout}
