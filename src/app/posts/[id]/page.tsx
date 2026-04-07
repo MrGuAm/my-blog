@@ -50,7 +50,8 @@ export async function generateStaticParams() {
 
 export default async function PostPage({ params }: Props) {
   const { id } = await params
-  const post = getPost(id)
+  const decodedId = decodeURIComponent(id)
+  const post = getPost(decodedId)
 
   if (!post) {
     notFound()
@@ -67,7 +68,7 @@ export default async function PostPage({ params }: Props) {
     redirect(`/write/${post.id}`)
   }
 
-  const content = await getPostContent(id)
+  const content = await getPostContent(decodedId)
 
   // 给标题注入 ID，便于目录跳转
   const contentWithIds = content.replace(/<h([23])([^>]*)>([^<]+)<\/h([23])>/gi, (match, level, attrs, text, closeLevel) => {
