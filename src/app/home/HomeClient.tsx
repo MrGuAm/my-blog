@@ -150,6 +150,7 @@ function PostCard({ post, characterType, onTagClick }: { post: Post; characterTy
   const [isHovered, setIsHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+  const postHref = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.id}`
   return (
     <div
       className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
@@ -186,13 +187,13 @@ function PostCard({ post, characterType, onTagClick }: { post: Post; characterTy
           ))}
         </div>
       </div>
-      <Link href={`/posts/${post.id}`}>
+      <Link href={postHref}>
         <h2 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
           {post.title}
         </h2>
         <p className="text-muted-foreground text-sm">{post.excerpt}</p>
         <div className="mt-4 flex items-center gap-2 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-          Read more →
+          {post.draft ? "编辑 →" : "Read more →"}
         </div>
       </Link>
       {/* Character decoration */}
