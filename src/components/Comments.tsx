@@ -3,6 +3,31 @@
 import { useState, useEffect } from "react"
 import { Post } from "@/lib/posts"
 
+function parseMarkdown(text: string): string {
+  const escape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+  // Escape HTML first, then apply safe markdown
+  const escaped = escape(text)
+
+  // Code blocks (```code```)
+  const withCode = escaped.replace(/```([\s\S]*?)```/g, (_, code) => {
+    return `<pre class="bg-secondary/80 text-xs rounded-lg p-3 my-2 overflow-x-auto"><code>${code.trim()}</code></pre>`
+  })
+  // Inline code (`code`)
+  const withInlineCode = withCode.replace(/`([^`]+)`/g, '<code class="bg-secondary/80 px-1.5 py-0.5 rounded text-xs">$1</code>')
+  // Bold (**text**)
+  const withBold = withInlineCode.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  // Italic (*text*)
+  const withItalic = withBold.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  // Links [text](url)
+  const withLinks = withItalic.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener">$1</a>')
+  // Line breaks
+  const withBreaks = withLinks.replace(/\n/g, '<br/>')
+
+  return withBreaks
+}
+
 interface Comment {
   id: string
   postId: string
@@ -66,8 +91,28 @@ export default function Comments({ post }: CommentsProps) {
         💬 评论 <span className="text-sm font-normal text-muted-foreground">({comments.length})</span>
       </h2>
 
+      {/* Comments List */}
+      {comments.length > 0 ? (
+        <div className="space-y-4 mb-8">
+          {comments.map(comment => (
+            <div key={comment.id} className="p-4 bg-card rounded-xl border border-border/40">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-medium text-sm">{comment.author}</span>
+                <span className="text-xs text-muted-foreground">·</span>
+                <span className="text-xs text-muted-foreground">{comment.date}</span>
+              </div>
+              <p className="text-sm text-muted-foreground"><span dangerouslySetInnerHTML={{ __html: parseMarkdown(comment.content) }} /></p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-center text-sm text-muted-foreground py-8 mb-8">
+          还没有评论，来抢沙发吧～
+        </p>
+      )}
+
       {/* Comment Form */}
-      <form onSubmit={handleSubmit} className="mb-8 p-4 bg-card rounded-xl border border-border/40">
+      <form onSubmit={handleSubmit} className="p-4 bg-card rounded-xl border border-border/40">
         <div className="mb-3">
           <label className="block text-sm font-medium mb-1">昵称</label>
           <input
@@ -105,26 +150,6 @@ export default function Comments({ post }: CommentsProps) {
           )}
         </div>
       </form>
-
-      {/* Comments List */}
-      {comments.length > 0 ? (
-        <div className="space-y-4">
-          {comments.map(comment => (
-            <div key={comment.id} className="p-4 bg-card rounded-xl border border-border/40">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-medium text-sm">{comment.author}</span>
-                <span className="text-xs text-muted-foreground">·</span>
-                <span className="text-xs text-muted-foreground">{comment.date}</span>
-              </div>
-              <p className="text-sm text-muted-foreground">{comment.content}</p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-center text-sm text-muted-foreground py-8">
-          还没有评论，来抢沙发吧～
-        </p>
-      )}
     </div>
   )
 }

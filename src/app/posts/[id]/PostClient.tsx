@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post, TocItem } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
 import Comments from "@/components/Comments"
+import hljs from "highlight.js"
+import "highlight.js/styles/github-dark.css"
 
 interface PostClientProps {
   post: Post
@@ -21,6 +23,23 @@ export default function PostClient({ post, content, readingTime, headings, relat
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [views, setViews] = useState(post.views || 0)
+  const [showBackToTop, setShowBackToTop] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // Back to top & code highlight
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 400)
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  // Code syntax highlighting
+  useEffect(() => {
+    if (!contentRef.current) return
+    contentRef.current.querySelectorAll("pre code").forEach((block) => {
+      hljs.highlightElement(block as HTMLElement)
+    })
+  }, [content])
 
   useEffect(() => {
     const auth = document.cookie.includes('authenticated=')
@@ -116,90 +135,109 @@ export default function PostClient({ post, content, readingTime, headings, relat
           ← 返回首页
         </Link>
 
-        {/* Article */}
-        <article className="bg-card rounded-xl border border-border/60 p-8">
-          <header className="mb-8">
-            <div className="flex items-center gap-3 mb-4 flex-wrap">
-              <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                {post.category}
-              </span>
-              <span className="text-sm text-muted-foreground">{post.date}</span>
-              <span className="text-sm text-muted-foreground">·</span>
-              <span className="text-sm text-muted-foreground">{readingTime} 分钟阅读</span>
-              <span className="text-sm text-muted-foreground">·</span>
-              <span className="text-sm text-muted-foreground">{views} 次阅读</span>
-              <div className="flex gap-1.5 ml-auto">
-                {post.tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="text-xs px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground"
-                  >
-                    #{tag}
+        <div className="flex gap-8 items-start">
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Article */}
+            <article className="bg-card rounded-xl border border-border/60 p-8">
+              <header className="mb-8">
+                <div className="flex items-center gap-3 mb-4 flex-wrap">
+                  <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                    {post.category}
                   </span>
+                  <span className="text-sm text-muted-foreground">{post.date}</span>
+                  <span className="text-sm text-muted-foreground">·</span>
+                  <span className="text-sm text-muted-foreground">{readingTime} 分钟阅读</span>
+                  <span className="text-sm text-muted-foreground">·</span>
+                  <span className="text-sm text-muted-foreground">{views} 次阅读</span>
+                  <div className="flex gap-1.5 ml-auto">
+                    {post.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="text-xs px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <h1 className="text-3xl font-black tracking-tight">{post.title}</h1>
+              </header>
+
+              {/* Table of Contents */}
+              {headings.length > 0 && (
+                <div className="mb-8 p-4 bg-secondary/30 rounded-xl border border-border/40">
+                  <h3 className="text-sm font-semibold mb-3 text-foreground">目录</h3>
+                  <nav className="space-y-1">
+                    {headings.map(h => (
+                      <a
+                        key={h.id}
+                        href={`#${h.id}`}
+                        className={`block text-sm text-muted-foreground hover:text-primary transition-colors ${h.level === 3 ? 'pl-4' : ''}`}
+                      >
+                        {h.text}
+                      </a>
+                    ))}
+                  </nav>
+                </div>
+              )}
+
+              <div
+                ref={contentRef}
+                className="prose prose-lg max-w-none text-muted-foreground"
+                dangerouslySetInnerHTML={{ __html: content }}
+              />
+            </article>
+
+            {/* Decorative Line */}
+            <div className="flex items-center gap-4 mt-8">
+              <div className="w-12 h-1 rounded-full bg-gradient-to-r from-[#6C3FF5] to-[#FF9B6B]" />
+              <div className="w-3 h-3 rounded-full bg-[#E8D754]" />
+              <div className="w-2 h-2 rounded-full bg-[#2D2D2D]" />
+            </div>
+
+            {/* Comments */}
+            <div className="mt-8">
+              <Comments post={post} />
+            </div>
+          </div>
+
+          {/* Related Posts Sidebar */}
+          {relatedPosts.length > 0 && (
+            <div className="w-full md:w-72 flex-shrink-0">
+              <h3 className="text-sm font-semibold mb-4 text-muted-foreground">相关文章</h3>
+              <div className="space-y-3">
+                {relatedPosts.map(rp => (
+                  <Link
+                    key={rp.id}
+                    href={`/posts/${rp.id}`}
+                    className="block p-3 rounded-xl border border-border/60 bg-card hover:border-primary/50 hover:bg-accent/30 transition-all"
+                  >
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium mb-2 inline-block">
+                      {rp.category}
+                    </span>
+                    <h4 className="font-semibold text-sm hover:text-primary transition-colors line-clamp-2">
+                      {rp.title}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">{rp.date}</p>
+                  </Link>
                 ))}
               </div>
             </div>
-            <h1 className="text-3xl font-black tracking-tight">{post.title}</h1>
-          </header>
-
-          {/* Table of Contents */}
-          {headings.length > 0 && (
-            <div className="mb-8 p-4 bg-secondary/30 rounded-xl border border-border/40">
-              <h3 className="text-sm font-semibold mb-3 text-foreground">目录</h3>
-              <nav className="space-y-1">
-                {headings.map(h => (
-                  <a
-                    key={h.id}
-                    href={`#${h.id}`}
-                    className={`block text-sm text-muted-foreground hover:text-primary transition-colors ${h.level === 3 ? 'pl-4' : ''}`}
-                  >
-                    {h.text}
-                  </a>
-                ))}
-              </nav>
-            </div>
           )}
-
-          <div
-            className="prose prose-lg max-w-none text-muted-foreground"
-            dangerouslySetInnerHTML={{ __html: content }}
-          />
-        </article>
-
-        {/* Decorative Line */}
-        <div className="flex items-center gap-4 mt-12">
-          <div className="w-12 h-1 rounded-full bg-gradient-to-r from-[#6C3FF5] to-[#FF9B6B]" />
-          <div className="w-3 h-3 rounded-full bg-[#E8D754]" />
-          <div className="w-2 h-2 rounded-full bg-[#2D2D2D]" />
         </div>
-
-        {/* Related Posts */}
-        {relatedPosts.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-xl font-bold mb-6">相关文章</h2>
-            <div className="grid gap-4 md:grid-cols-3">
-              {relatedPosts.map(rp => (
-                <Link
-                  key={rp.id}
-                  href={`/posts/${rp.id}`}
-                  className="block p-4 rounded-xl border border-border/60 bg-card hover:border-primary/50 hover:bg-accent/30 transition-all"
-                >
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium mb-2 inline-block">
-                    {rp.category}
-                  </span>
-                  <h3 className="font-semibold text-sm hover:text-primary transition-colors line-clamp-2">
-                    {rp.title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1">{rp.date}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Comments */}
-        <Comments post={post} />
       </div>
+
+      {/* Back to Top Button */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className={`fixed bottom-6 right-6 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center text-lg z-40 ${
+          showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+        aria-label="回到顶部"
+      >
+        ↑
+      </button>
 
       {/* Login Modal */}
       <LoginModal
