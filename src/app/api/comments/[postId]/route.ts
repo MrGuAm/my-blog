@@ -4,6 +4,13 @@ import path from 'path'
 
 const commentsFile = path.join(process.cwd(), 'data/comments.json')
 
+function ensureDataDir() {
+  const dir = path.dirname(commentsFile)
+  if (!require('fs').existsSync(dir)) {
+    require('fs').mkdirSync(dir, { recursive: true })
+  }
+}
+
 interface Comment {
   id: string
   postId: string
@@ -58,6 +65,7 @@ export async function POST(
   }
 
   const data = readComments()
+  ensureDataDir()
   if (!data.comments[postId]) {
     data.comments[postId] = []
   }
