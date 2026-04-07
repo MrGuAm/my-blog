@@ -1,17 +1,18 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { SpeedInsights } from '@vercel/speed-insights/next';
-import "./globals.css";
+import type { Metadata } from "next"
+import { Geist, Geist_Mono } from "next/font/google"
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import { MusicProvider } from "@/context/MusicContext"
+import "./globals.css"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-});
+})
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://my-blog-amber-chi.vercel.app"),
@@ -30,14 +31,7 @@ export const metadata: Metadata = {
     siteName: "Champion's Blog",
     title: "Champion's Blog",
     description: "记录生活，分享想法 - Champion 的个人博客",
-    images: [
-      {
-        url: "/og-image.svg",
-        width: 1200,
-        height: 630,
-        alt: "Champion's Blog",
-      },
-    ],
+    images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Champion's Blog" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -54,22 +48,17 @@ export const metadata: Metadata = {
       "application/rss+xml": "/api/feed",
     },
   },
-};
+}
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        {children}
+        <MusicProvider>
+          {children}
+        </MusicProvider>
         <SpeedInsights />
       </body>
     </html>
-  );
+  )
 }
