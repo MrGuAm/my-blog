@@ -58,18 +58,27 @@ export default function EditPostPage() {
       if (!items) return
 
       for (const item of items) {
-        if (item.type.startsWith('image/')) {
+        if (item.type === "image/heic" || item.type === "image/heif" || item.type.startsWith("image/")) {
           e.preventDefault()
           const file = item.getAsFile()
           if (!file) return
 
-          const reader = new FileReader()
-          reader.onload = (ev) => {
-            const base64 = ev.target?.result as string
-            const imgTag = `\n<img src="${base64}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
-            insertTextAtCursor(imgTag)
+          const processFile = async (f: File) => {
+            let blob: Blob = f
+            if (f.type === "image/heic" || f.type === "image/heif") {
+              const heic = (await import("heic2any")).default
+              blob = (await heic({ blob: f, toType: "image/jpeg", quality: 0.85 })) as Blob
+            }
+            const reader = new FileReader()
+            reader.onload = (ev) => {
+              const base64 = ev.target?.result as string
+              const imgTag = `\n<img src="${base64}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
+              insertTextAtCursor(imgTag)
+            }
+            reader.readAsDataURL(blob)
           }
-          reader.readAsDataURL(file)
+
+          processFile(file)
           return
         }
       }
@@ -310,16 +319,31 @@ export default function EditPostPage() {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => {
+            onChange={async (e) => {
               const file = e.target.files?.[0]
               if (!file) return
-              const reader = new FileReader()
-              reader.onload = (ev) => {
-                const base64 = ev.target?.result as string
-                const imgTag = `\n<img src="${base64}" alt="${file.name}" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
-                insertTextAtCursor(imgTag)
+              try {
+                let blob: Blob = file
+                if (file.type === "image/heic" || file.type === "image/heif") {
+                  const heic = (await import("heic2any")).default
+                  blob = (await heic({ blob: file, toType: "image/jpeg", quality: 0.85 })) as Blob
+                }
+                const reader = new FileReader()
+                reader.onload = (ev) => {
+                  const base64 = ev.target?.result as string
+                  const imgTag = `\n<img src="${base64}" alt="${file.name}" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
+                  insertTextAtCursor(imgTag)
+                }
+                reader.readAsDataURL(blob)
+              } catch {
+                const reader = new FileReader()
+                reader.onload = (ev) => {
+                  const base64 = ev.target?.result as string
+                  const imgTag = `\n<img src="${base64}" alt="${file.name}" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
+                  insertTextAtCursor(imgTag)
+                }
+                reader.readAsDataURL(file)
               }
-              reader.readAsDataURL(file)
               e.target.value = ''
             }}
           />
