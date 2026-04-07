@@ -17,23 +17,21 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  const data = readPosts()
+  const post = data.posts.find((p: any) => p.id === id)
+
+  if (!post) {
+    return NextResponse.json({ error: '文章不存在' }, { status: 404 })
+  }
+
   if (!request.cookies.get('authenticated')) {
-    return NextResponse.json({ error: '请先登录' }, { status: 401 })
+    // 访客：只返回基本信息，不含 content
+    const { content, ...publicPost } = post
+    return NextResponse.json(publicPost)
   }
 
-  try {
-    const { id } = await params
-    const data = readPosts()
-    const post = data.posts.find((p: any) => p.id === id)
-
-    if (!post) {
-      return NextResponse.json({ error: '文章不存在' }, { status: 404 })
-    }
-
-    return NextResponse.json(post)
-  } catch {
-    return NextResponse.json({ error: '读取失败' }, { status: 500 })
-  }
+  return NextResponse.json(post)
 }
 
 export async function PATCH(

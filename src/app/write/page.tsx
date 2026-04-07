@@ -20,6 +20,11 @@ export default function WritePage() {
     }
   }, [router])
 
+  const handleLogout = () => {
+   document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+   router.push('/home');
+ };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !content) {
@@ -73,9 +78,12 @@ export default function WritePage() {
               <Link href="/home" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Home
               </Link>
-              <Link href="/write" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
-                写文章
-              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
+              >
+                退出
+              </button>
             </div>
           </div>
         </div>

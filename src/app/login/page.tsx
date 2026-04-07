@@ -195,12 +195,20 @@ function LoginPage() {
  const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
  const [isPurplePeeking, setIsPurplePeeking] = useState(false);
  const [isDarkMode, setIsDarkMode] = useState(false);
+ const [isAuthenticated, setIsAuthenticated] = useState(false);
 
  useEffect(() => {
-   if (document.cookie.includes('authenticated=')) {
-     router.push('/write')
+   const auth = document.cookie.includes('authenticated=');
+   setIsAuthenticated(auth);
+   if (auth) {
+     router.push('/write');
    }
- }, [router])
+ }, [router]);
+
+ const handleLogout = () => {
+   document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+   setIsAuthenticated(false);
+ };
 
  // Detect system color scheme preference
  useEffect(() => {
@@ -541,13 +549,27 @@ function LoginPage() {
  {/* Right Login Section */}
  <div className={`flex items-center justify-center p-8 ${isDarkMode ? 'bg-black' : 'bg-background'}`}>
  <div className="w-full max-w-[420px]">
- {/* Theme Toggle Button - Top Right */}
+ {/* Theme Toggle Button & Auth - Top Right */}
+ <div className="absolute top-4 right-4 flex items-center gap-2">
+ {isAuthenticated ? (
+ <>
+ <span className={`text-sm px-3 py-1.5 rounded-lg ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>已登录</span>
+ <button
+ onClick={handleLogout}
+ className={`p-2 rounded-lg backdrop-blur-sm transition-colors ${isDarkMode ? 'bg-gray-700/50 hover:bg-gray-700 text-white' : 'bg-primary/10 hover:bg-primary/20 text-primary'}`}
+ >
+ 退出
+ </button>
+ </>
+ ) : (
  <button
  onClick={() => setIsDarkMode(!isDarkMode)}
- className={`absolute top-4 right-4 p-2 rounded-lg backdrop-blur-sm transition-colors ${isDarkMode ? 'bg-gray-700/50 hover:bg-gray-700 text-white' : 'bg-primary/10 hover:bg-primary/20 text-primary'}`}
+ className={`p-2 rounded-lg backdrop-blur-sm transition-colors ${isDarkMode ? 'bg-gray-700/50 hover:bg-gray-700 text-white' : 'bg-primary/10 hover:bg-primary/20 text-primary'}`}
  >
  {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
  </button>
+ )}
+ </div>
  {/* Mobile Logo */}
  <div className="lg:hidden flex items-center justify-center gap-2 text-lg font-semibold mb-12">
  <div className={`size-8 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-white/10' : 'bg-primary/10'}`}>
@@ -558,8 +580,12 @@ function LoginPage() {
 
  {/* Header */}
  <div className="text-center mb-10">
- <h1 className={`text-3xl font-black tracking-tight mb-2 ${isDarkMode ? 'text-white' : ''}`}>Welcome!</h1>
- <p className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-muted-foreground'}`}>Enter password to continue</p>
+ <h1 className={`text-3xl font-black tracking-tight mb-2 ${isDarkMode ? 'text-white' : ''}`}>
+ {isAuthenticated ? 'Welcome back!' : 'Welcome!'}
+ </h1>
+ <p className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-muted-foreground'}`}>
+ {isAuthenticated ? 'You are logged in' : 'Enter password to continue'}
+ </p>
  </div>
 
  {/* Login Form */}

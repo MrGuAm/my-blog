@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
+import LoginModal from "@/components/LoginModal"
 
 interface HomeClientProps {
   posts: Post[]
@@ -145,7 +146,7 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
 }
 
 // Post card with character that follows mouse
-function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePin, onEdit }: { post: Post; characterType: number; onTagClick: (tag: string) => void; isAuthenticated?: boolean; onTogglePin?: (id: string, pinned: boolean) => void; onEdit?: (id: string) => void }) {
+function PostCard({ post, characterType, onTagClick }: { post: Post; characterType: number; onTagClick: (tag: string) => void }) {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -156,37 +157,23 @@ function PostCard({ post, characterType, onTagClick, isAuthenticated, onTogglePi
       onMouseLeave={() => setIsHovered(false)}
       onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
     >
-      {isAuthenticated && isHovered && (
-        <button
-          onClick={() => onEdit && onEdit(post.id)}
-          className="absolute top-3 right-3 z-10 text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-        >
-          编辑
-        </button>
-      )}
-      {post.pinned && !isHovered && (
-        <div className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
-          置顶
-        </div>
-      )}
-      {post.draft && !isHovered && (
-        <div className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">
-          草稿
-        </div>
-      )}
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
           {post.category}
         </span>
-        <span className="text-xs text-muted-foreground">{post.date}</span>
-        {isAuthenticated && onTogglePin && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onTogglePin(post.id, !post.pinned); }}
-            className={`text-xs px-2 py-0.5 rounded-full transition-colors ${post.pinned ? 'bg-primary text-primary-foreground' : 'bg-secondary/60 text-muted-foreground hover:bg-primary/10 hover:text-primary'}`}
-          >
-            {post.pinned ? '取消置顶' : '置顶'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{post.date}</span>
+          {post.pinned && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
+              置顶
+            </span>
+          )}
+          {post.draft && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">
+              草稿
+            </span>
+          )}
+        </div>
         <div className="flex gap-1.5 ml-auto">
           {post.tags.map(tag => (
             <button
@@ -241,6 +228,13 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [localPosts, setLocalPosts] = useState(posts)
   const [showDrafts, setShowDrafts] = useState(false)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+
+  const handleLogout = () => {
+    document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    setIsAuthenticated(false);
+    router.push('/home');
+  };
 
   useEffect(() => {
     const auth = document.cookie.includes('authenticated=')
@@ -406,7 +400,11 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
     post.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
     post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))) &&
     (selectedTag === null || post.tags.includes(selectedTag))
-  )
+  ).sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    return new Date(b.date).getTime() - new Date(a.date).getTime()
+  })
 
   return (
     <div className="min-h-screen bg-background">
@@ -459,9 +457,21 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
               <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 About
               </Link>
-              <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                写文章
-              </Link>
+              {isAuthenticated ? (
+                <button
+                  onClick={handleLogout}
+                  className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
+                >
+                  退出
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  登录
+                </button>
+              )}
               {isAuthenticated && (
                 <button
                   onClick={() => setShowDrafts(!showDrafts)}
@@ -499,7 +509,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
           <main className="flex-1 space-y-6">
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post, index) => (
-                <PostCard key={post.id} post={post} characterType={index % 4} onTagClick={setSelectedTag} isAuthenticated={isAuthenticated} onTogglePin={handleTogglePin} onEdit={(id) => router.push(`/write/${id}`)} />
+                <PostCard key={post.id} post={post} characterType={index % 4} onTagClick={setSelectedTag} />
               ))
             ) : (
               <div className="text-center py-16">
@@ -668,6 +678,13 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
           </aside>
         </div>
       </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSuccess={() => setIsAuthenticated(true)}
+      />
 
       {/* Footer */}
       <footer className="border-t border-border/50 py-8">

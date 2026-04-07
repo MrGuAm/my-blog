@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import LoginModal from "@/components/LoginModal"
 
 // Character component with eyes that follow mouse
 function Character({ bgColor, width, height, borderRadius, eyeSize, mouth, mouseX, mouseY }: { bgColor: string; width: number; height: number; borderRadius: string; eyeSize: number; mouth?: boolean; mouseX: number; mouseY: number }) {
@@ -90,6 +91,18 @@ function Character({ bgColor, width, height, borderRadius, eyeSize, mouth, mouse
 export default function AboutClient() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+
+  useEffect(() => {
+    const auth = document.cookie.includes('authenticated=')
+    setIsAuthenticated(auth)
+  }, [])
+
+  const handleLogout = () => {
+    document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    setIsAuthenticated(false);
+  };
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -109,7 +122,7 @@ export default function AboutClient() {
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60 flex items-center justify-center">
@@ -124,15 +137,27 @@ export default function AboutClient() {
               <Link href="/about" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                 About
               </Link>
-              <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                写文章
-              </Link>
+              {isAuthenticated ? (
+                <button
+                  onClick={handleLogout}
+                  className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
+                >
+                  退出
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  登录
+                </button>
+              )}
             </div>
           </div>
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-16">
+      <div className="max-w-6xl mx-auto px-6 py-16">
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl font-black tracking-tight mb-4">
@@ -192,9 +217,16 @@ export default function AboutClient() {
         </div>
       </div>
 
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSuccess={() => setIsAuthenticated(true)}
+      />
+
       {/* Footer */}
       <footer className="border-t border-border/50 py-8">
-        <div className="max-w-4xl mx-auto px-6 text-center text-sm text-muted-foreground">
+        <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
           © 2026 Champion&apos;s Blog
         </div>
       </footer>

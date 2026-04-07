@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getAllPosts, getPost, getPostContent, getAllTags } from "@/lib/posts"
+import { getAllPosts, getPost, getPostContent, getAllTags, calculateReadingTime, extractHeadings, getRelatedPosts } from "@/lib/posts"
 import PostClient from "./PostClient"
 
 interface Props {
@@ -37,6 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+export const dynamic = 'force-dynamic'
+
 export async function generateStaticParams() {
   const posts = getAllPosts()
   return posts.map((post) => ({
@@ -47,12 +49,22 @@ export async function generateStaticParams() {
 export default async function PostPage({ params }: Props) {
   const { id } = await params
   const post = getPost(id)
-  
+
   if (!post) {
     notFound()
   }
 
   const content = await getPostContent(id)
 
-  return <PostClient post={post} content={content} />
+  // 给标题注入 ID，便于目录跳转
+  const contentWithIds = content.replace(/<h([23])([^>]*)>([^<]+)<\/h([23])>/gi, (match, level, attrs, text, closeLevel) => {
+    const headingId = text.trim().toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    return `<h${level}${attrs} id="${headingId}">${text}</h${closeLevel}>`
+  })
+
+  const readingTime = calculateReadingTime(content)
+  const headings = extractHeadings(contentWithIds)
+  const relatedPosts = getRelatedPosts(post)
+
+  return <PostClient post={post} content={contentWithIds} readingTime={readingTime} headings={headings} relatedPosts={relatedPosts} />
 }
