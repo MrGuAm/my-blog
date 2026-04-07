@@ -32,7 +32,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [dragProgress, setDragProgress] = useState<number | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
@@ -56,8 +56,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setShowList(false)
     setProgress(0)
     setIsPlaying(true)
-    setIsDragging(false)
-    setIsDragging(false)
+    setDragging(false)
     setDragProgress(null)
     isDraggingRef.current = false
     window.removeEventListener("mousemove", handleWindowMouseMove)
@@ -76,15 +75,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setDragProgress(null)
   }, [])
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!progressBarRef.current) return
-    isDraggingRef.current = true
-    progressBarRectRef.current = progressBarRef.current.getBoundingClientRect()
-    window.addEventListener("mousemove", handleWindowMouseMove)
-    window.addEventListener("mouseup", handleWindowMouseUp)
-  }, [])
-
   const handleWindowMouseMove = useCallback((e: MouseEvent) => {
     if (!isDraggingRef.current || !progressBarRectRef.current) return
     const pct = Math.max(0, Math.min(1, (e.clientX - progressBarRectRef.current.left) / progressBarRectRef.current.width))
@@ -100,10 +90,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       }
       setDragProgress(null)
     }
-    setIsDragging(false)
     isDraggingRef.current = false
+    setDragging(false)
     window.removeEventListener("mousemove", handleWindowMouseMove)
     window.removeEventListener("mouseup", handleWindowMouseUp)
+  }, [handleWindowMouseMove])
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!progressBarRef.current) return
+    isDraggingRef.current = true
+    progressBarRectRef.current = progressBarRef.current.getBoundingClientRect()
+    window.addEventListener("mousemove", handleWindowMouseMove)
+    window.addEventListener("mouseup", handleWindowMouseUp)
   }, [handleWindowMouseMove])
 
   useEffect(() => {
@@ -114,8 +113,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [handleWindowMouseMove, handleWindowMouseUp])
 
   const handleTrackEnd = () => {
-    const nextIndex = (currentTrack + 1) % musicPlaylist.length
-    selectTrack(nextIndex)
+    const next = (currentTrack + 1) % musicPlaylist.length
+    selectTrack(next)
   }
 
   const handleTimeUpdate = useCallback(() => {
@@ -124,6 +123,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       setDuration(audioRef.current.duration || 0)
     }
   }, [])
+
+  const setDragging = (v: boolean) => { isDraggingRef.current = v }
 
   const formatTime = (seconds: number) => {
     if (!seconds || isNaN(seconds)) return "0:00"
@@ -140,68 +141,89 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         onEnded={handleTrackEnd}
       />
 
-      {/* Fixed bottom-right mini player */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <div className="bg-card rounded-xl border border-border/60 shadow-xl overflow-hidden w-72">
-          {showList ? (
-            <div className="p-3">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold">播放列表</span>
-                <button onClick={() => setShowList(false)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
-              </div>
-              <div className="space-y-1">
-                {musicPlaylist.map((song, index) => (
-                  <button
-                    key={index}
-                    onClick={() => selectTrack(index)}
-                    className={`w-full text-left p-2 rounded-lg transition-colors ${currentTrack === index ? "bg-primary/10 text-primary" : "hover:bg-accent/50"}`}
-                  >
-                    <p className="text-sm font-medium truncate">{song.title}</p>
-                    <p className="text-xs text-muted-foreground">{song.artist}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="p-3 cursor-pointer" onClick={() => setShowList(true)}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] flex items-center justify-center flex-shrink-0 ${isPlaying ? "animate-pulse" : ""}`}>
-                  <span className="text-lg">🎵</span>
-                </div>
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <p className="text-sm font-medium truncate">{track.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); togglePlay() }}
-                  className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0"
-                >
-                  {isPlaying ? <span className="text-sm">⏸</span> : <span className="text-sm ml-0.5">▶</span>}
-                </button>
-              </div>
+      {/* Fixed bottom-right player */}
+      <div
+        className="fixed bottom-6 right-6 z-50"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
+        {/* Small dot — always visible */}
+        <div
+          className={`w-12 h-12 rounded-full bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] shadow-lg flex items-center justify-center cursor-pointer ${isPlaying ? "animate-spin" : ""}`}
+          style={{ animationDuration: isPlaying ? "3s" : "0s" }}
+        >
+          <span className="text-lg">🎵</span>
+        </div>
 
-              {/* Progress bar */}
-              <div
-                ref={progressBarRef}
-                className="mt-2 overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div
-                  className="h-1.5 bg-secondary rounded-full relative cursor-pointer"
-                  onClick={handleProgressClick}
-                >
-                  <div
-                    className="absolute top-0 left-0 h-full bg-primary rounded-full"
-                    style={{ width: `${dragProgress ?? progress}%` }}
-                  />
+        {/* Expanded panel — show on hover */}
+        <div
+          className={`absolute bottom-0 right-0 transition-all duration-300 origin-bottom-right pointer-events-none ${
+            isHovering ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95 pointer-events-none"
+          }`}
+          style={{ width: "288px" }}
+        >
+          <div className="bg-card rounded-xl border border-border/60 shadow-xl overflow-hidden">
+            {showList ? (
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold">播放列表</span>
+                  <button onClick={() => setShowList(false)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                  <span>{formatTime(((dragProgress ?? progress) / 100) * duration)}</span>
-                  <span>{formatTime(duration)}</span>
+                <div className="space-y-1">
+                  {musicPlaylist.map((song, i) => (
+                    <button
+                      key={i}
+                      onClick={() => selectTrack(i)}
+                      className={`w-full text-left p-2 rounded-lg transition-colors ${currentTrack === i ? "bg-primary/10 text-primary" : "hover:bg-accent/50"}`}
+                    >
+                      <p className="text-sm font-medium truncate">{song.title}</p>
+                      <p className="text-xs text-muted-foreground">{song.artist}</p>
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div>
+                <div className="flex items-center gap-3 p-3">
+                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] flex items-center justify-center ${isPlaying ? "animate-pulse" : ""}`}>
+                    <span className="text-lg">🎵</span>
+                  </div>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <p className="text-sm font-medium truncate">{track.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); togglePlay() }}
+                    className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0"
+                  >
+                    {isPlaying ? <span className="text-sm">⏸</span> : <span className="text-sm ml-0.5">▶</span>}
+                  </button>
+                </div>
+
+                {/* Progress */}
+                <div className="px-3 pb-2" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="h-1.5 bg-secondary rounded-full relative cursor-pointer"
+                    onClick={handleMouseDown}
+                  >
+                    <div
+                      className="absolute top-0 left-0 h-full bg-primary rounded-full"
+                      style={{ width: `${dragProgress ?? progress}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground px-3 pb-1">
+                  <span>{formatTime((progress / 100) * duration)}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowList(true) }}
+                    className="hover:text-foreground transition-colors"
+                  >
+                    播放列表 →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
