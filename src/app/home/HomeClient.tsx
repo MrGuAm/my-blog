@@ -458,26 +458,32 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                 About
               </Link>
               {isAuthenticated ? (
-                <button
-                  onClick={handleLogout}
-                  className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
-                >
-                  退出
-                </button>
+                <>
+                  <Link
+                    href="/write"
+                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    写文章
+                  </Link>
+                  <button
+                    onClick={() => setShowDrafts(!showDrafts)}
+                    className={`text-sm font-medium transition-colors ${showDrafts ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                  >
+                    {showDrafts ? '隐藏草稿' : '显示草稿'}
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
+                  >
+                    退出
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={() => setIsLoginModalOpen(true)}
                   className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                 >
                   登录
-                </button>
-              )}
-              {isAuthenticated && (
-                <button
-                  onClick={() => setShowDrafts(!showDrafts)}
-                  className={`text-sm font-medium transition-colors ${showDrafts ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
-                >
-                  {showDrafts ? '隐藏草稿' : '显示草稿'}
                 </button>
               )}
             </div>

@@ -97,6 +97,12 @@ export default function PostClient({ post, content, readingTime, headings, relat
               </Link>
               {isAuthenticated ? (
                 <>
+                  <Link
+                    href="/write"
+                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    写文章
+                  </Link>
                   <button
                     onClick={() => router.push(`/write/${post.id}`)}
                     className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
