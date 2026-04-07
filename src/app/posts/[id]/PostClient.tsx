@@ -210,7 +210,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
 
           {/* Related Posts Sidebar */}
           {relatedPosts.length > 0 && (
-            <div className="w-full md:w-72 flex-shrink-0">
+            <aside className="w-full md:w-72 flex-shrink-0 sticky top-24">
               <h3 className="text-sm font-semibold mb-4 text-muted-foreground">相关文章</h3>
               <div className="space-y-3">
                 {relatedPosts.map(rp => (
@@ -229,7 +229,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
                   </Link>
                 ))}
               </div>
-            </div>
+            </aside>
           )}
         </div>
       </div>
