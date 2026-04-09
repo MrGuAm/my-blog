@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from "react"
 
-const musicPlaylist = [
+export const musicPlaylist = [
   { title: "最美的太阳", artist: "张杰", src: "/music/张杰 - 最美的太阳.mp3" },
   { title: "着魔", artist: "张杰", src: "/music/张杰 - 着魔.mp3" },
   { title: "这里是神奇的赛尔号", artist: "张杰", src: "/music/张杰 - 这里是神奇的赛尔号（《赛尔号》动画插曲）.mp3" },
@@ -11,6 +11,7 @@ const musicPlaylist = [
 
 interface MusicContextValue {
   isPlaying: boolean
+  isHovering: boolean
   currentTrack: number
   track: typeof musicPlaylist[number]
   togglePlay: () => void
@@ -25,6 +26,7 @@ interface MusicContextValue {
 
 const MusicContext = createContext<MusicContextValue>({
   isPlaying: false,
+  isHovering: false,
   currentTrack: 0,
   track: musicPlaylist[0],
   togglePlay: () => {},
@@ -49,7 +51,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const keepOpenUntilRef = useRef(0)
   const audioRef = useRef<HTMLAudioElement>(null)
-  const progressBarRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
   const didDragRef = useRef(false)
   const progressBarRectRef = useRef<DOMRect | null>(null)
@@ -174,7 +175,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <MusicContext.Provider value={{ isPlaying, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime }}>
+    <MusicContext.Provider value={{ isPlaying, isHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime }}>
       <audio
         ref={audioRef}
         src={track.src}
@@ -193,8 +194,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         <div
           className={`w-12 h-12 rounded-full bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] shadow-lg flex items-center justify-center cursor-pointer ${isPlaying ? "animate-spin" : ""}`}
           style={{ animationDuration: isPlaying ? "3s" : "0s", opacity: mounted && !isHovering ? 1 : 0, transition: "opacity 0.5s" }}
-          onMouseEnter={() => { clearLeaveTimer(); setIsHovering(true) }}
-          onMouseLeave={() => { if (Date.now() > keepOpenUntilRef.current) startLeaveTimer() }}
         >
           <span className="text-lg">🎵</span>
         </div>
@@ -205,8 +204,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             isHovering ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95 pointer-events-none"
           }`}
           style={{ width: "14rem" }}
-          onMouseEnter={() => { clearLeaveTimer(); setIsHovering(true) }}
-          onMouseLeave={() => { if (Date.now() > keepOpenUntilRef.current) startLeaveTimer() }}
         >
           <div className="bg-card rounded-xl border border-border/60 shadow-xl overflow-hidden">
             {showList ? (
@@ -249,7 +246,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                 {/* Progress */}
                 <div className="px-3 pb-2">
                   <div
-                    ref={progressBarRef}
                     className="h-1.5 bg-secondary rounded-full relative cursor-pointer group"
                     onMouseDown={handleMouseDown}
                     onClick={handleProgressClick}

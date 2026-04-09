@@ -14,7 +14,6 @@ export default function WritePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState("")
   const [pinned, setPinned] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)

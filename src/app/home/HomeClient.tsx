@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
-import { useMusic } from "@/context/MusicContext"
+import { useMusic, musicPlaylist } from "@/context/MusicContext"
 
 interface HomeClientProps {
   posts: Post[]
@@ -37,7 +37,7 @@ function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive
     </span>
   );
 }
-function CharacterEye({ isHovered, mouseX, mouseY, containerRef, eyeColor, pupilColor, size }: { isHovered: boolean; mouseX: number; mouseY: number; containerRef: React.RefObject<HTMLDivElement | null>; eyeColor: string; pupilColor: string; size: number }) {
+function CharacterEye({ isHovered, containerRef, eyeColor, pupilColor, size }: { isHovered: boolean; containerRef: React.RefObject<HTMLDivElement | null>; eyeColor: string; pupilColor: string; size: number }) {
   const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -99,7 +99,7 @@ function CharacterEye({ isHovered, mouseX, mouseY, containerRef, eyeColor, pupil
 }
 
 // Full character component
-function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovered: boolean; mouseX: number; mouseY: number }) {
+function Character({ type, isHovered }: { type: number; isHovered: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const configs = [
@@ -126,8 +126,6 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
       }}>
         <CharacterEye
           isHovered={isHovered}
-          mouseX={mouseX}
-          mouseY={mouseY}
           containerRef={ref}
           eyeColor={config.eyeColor}
           pupilColor={config.pupilColor}
@@ -135,8 +133,6 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
         />
         <CharacterEye
           isHovered={isHovered}
-          mouseX={mouseX}
-          mouseY={mouseY}
           containerRef={ref}
           eyeColor={config.eyeColor}
           pupilColor={config.pupilColor}
@@ -157,7 +153,6 @@ function Character({ type, isHovered, mouseX, mouseY }: { type: number; isHovere
 // Post card with character that follows mouse
 function PostCard({ post, characterType, onTagClick }: { post: Post; characterType: number; onTagClick: (tag: string) => void }) {
   const [isHovered, setIsHovered] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const postHref = post.draft && document.cookie.includes('authenticated=') ? `/write/${post.id}` : `/posts/${post.id}`
   return (
@@ -165,7 +160,6 @@ function PostCard({ post, characterType, onTagClick }: { post: Post; characterTy
       className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
     >
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
@@ -210,36 +204,35 @@ function PostCard({ post, characterType, onTagClick }: { post: Post; characterTy
         <Character
           type={characterType}
           isHovered={isHovered}
-          mouseX={mousePos.x}
-          mouseY={mousePos.y}
         />
       </div>
     </div>
   );
 }
 
-const musicPlaylist = [
-  { title: "最美的太阳", artist: "张杰", src: "/music/张杰 - 最美的太阳.mp3" },
-  { title: "着魔", artist: "张杰", src: "/music/张杰 - 着魔.mp3" },
-  { title: "这里是神奇的赛尔号", artist: "张杰", src: "/music/张杰 - 这里是神奇的赛尔号（《赛尔号》动画插曲）.mp3" },
-  { title: "这，就是爱", artist: "张杰", src: "/music/张杰 - 这，就是爱.mp3" },
-]
-
 export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const router = useRouter()
-  const { isPlaying, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime } = useMusic()
+  const { isPlaying, isHovering: floatingHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime } = useMusic()
 
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [localPosts, setLocalPosts] = useState(posts)
   const [showDrafts, setShowDrafts] = useState(false)
+  const [showBackToTop, setShowBackToTop] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [recentComments, setRecentComments] = useState<RecentComment[]>([])
   const [showList, setShowList] = useState(false)
-  const [isHovering, setIsHovering] = useState(false)
+  const [isSidebarHovering, setIsSidebarHovering] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+
+  // Scroll listener for back to top
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 400)
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   // Close sidebar playlist when track changes
   useEffect(() => {
@@ -272,25 +265,6 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
       setLocalPosts(posts)
     }
   }, [posts])
-
-  const handleTogglePin = async (id: string, pinned: boolean) => {
-    try {
-      const res = await fetch(`/api/posts/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pinned }),
-      })
-      if (res.ok) {
-        setLocalPosts(prev =>
-          prev.map(p => p.id === id ? { ...p, pinned } : p).sort((a, b) => {
-            if (a.pinned && !b.pinned) return -1
-            if (!a.pinned && b.pinned) return 1
-            return new Date(b.date).getTime() - new Date(a.date).getTime()
-          })
-        )
-      }
-    } catch {}
-  }
 
   const filteredPosts = localPosts.filter(post =>
     (showDrafts || !post.draft) &&
@@ -427,8 +401,8 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
               {/* Player */}
               <div
                 className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden"
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => { if (!isDragging) setIsHovering(false) }}
+                onMouseEnter={() => setIsSidebarHovering(true)}
+                onMouseLeave={() => { if (!isDragging) setIsSidebarHovering(false) }}
               >
               {/* Song List */}
               {showList ? (
@@ -487,7 +461,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
 
                   {/* Progress Bar */}
                   <div
-                    className={`transition-all duration-300 ease-out overflow-hidden ${isHovering || isDragging ? 'mt-3 pt-3 border-t border-border/40 opacity-100 max-h-20' : 'mt-0 pt-0 border-t-0 opacity-0 max-h-0'}`}
+                    className={`transition-all duration-300 ease-out overflow-visible ${isSidebarHovering || isDragging ? 'mt-3 pt-3 border-t border-border/40 opacity-100 max-h-20' : 'mt-0 pt-0 border-t-0 opacity-0 max-h-0'}`}
                   >
                     <div
                       className="h-1.5 bg-secondary rounded-full relative cursor-grab active:cursor-grabbing"
@@ -509,9 +483,9 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     </div>
                   </div>
                   {/* Always visible thin progress line when NOT hovering - at the bottom */}
-                  {!isHovering && !isDragging && (
+                  {!isSidebarHovering && !isDragging && (
                     <div
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary/60 overflow-hidden cursor-pointer"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary/60 overflow-visible cursor-pointer"
                       onClick={(e) => { handleProgressClick(e); setTimeout(() => setIsDragging(false), 0); }}
                       style={{ borderRadius: '0 0 0.5rem 0.5rem' }}
                     >
@@ -531,10 +505,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                 <h3 className="text-sm font-semibold mb-2">最新文章</h3>
                 <div className="space-y-2">
                   {filteredPosts.length > 0 ? (
-                    [...filteredPosts]
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                      .slice(0, 3)
-                      .map((post) => (
+                    filteredPosts.slice(0, 3).map((post) => (
                         <Link
                           key={post.id}
                           href={`/posts/${post.id}`}
@@ -622,6 +593,17 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
           animation: marquee 20s linear infinite;
         }
       `}</style>
+
+      {/* Back to Top Button */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className={`fixed bottom-6 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center text-lg z-40 ${
+          showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+        } ${floatingHovering ? "right-[17rem]" : "right-[80px]"}`}
+        aria-label="回到顶部"
+      >
+        ↑
+      </button>
     </div>
   )
 }

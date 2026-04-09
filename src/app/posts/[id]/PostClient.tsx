@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import { useMusic } from "@/context/MusicContext"
 import { useRouter } from "next/navigation"
+import { useState, useEffect, useRef } from "react"
 import { Post, TocItem } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
 import Comments from "@/components/Comments"
 import hljs from "highlight.js"
+
 import "highlight.js/styles/github-dark.css"
 
 interface PostClientProps {
@@ -25,6 +27,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
   const [views, setViews] = useState(post.views || 0)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+  const { isHovering } = useMusic()
 
   // Back to top & code highlight
   useEffect(() => {
@@ -237,9 +240,9 @@ export default function PostClient({ post, content, readingTime, headings, relat
       {/* Back to Top Button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`fixed bottom-6 right-6 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center text-lg z-40 ${
+        className={`fixed bottom-6 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center text-lg z-40 ${
           showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        }`}
+        } ${isHovering ? "right-[17rem]" : "right-[80px]"}`}
         aria-label="回到顶部"
       >
         ↑
