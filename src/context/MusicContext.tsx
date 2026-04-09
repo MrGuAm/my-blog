@@ -64,12 +64,17 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }
 
   const startLeaveTimer = (long = false) => {
-    if (long) keepOpenUntilRef.current = Date.now() + 10000
-    clearLeaveTimer()
-    leaveTimerRef.current = setTimeout(() => {
+    if (long) {
+      keepOpenUntilRef.current = Date.now() + 10000
+      clearLeaveTimer()
+    } else {
       keepOpenUntilRef.current = 0
-      setIsHovering(false)
-    }, long ? 10000 : 400)
+      clearLeaveTimer()
+      leaveTimerRef.current = setTimeout(() => {
+        keepOpenUntilRef.current = 0
+        setIsHovering(false)
+      }, 400)
+    }
   }
 
   const track = musicPlaylist[currentTrack]
