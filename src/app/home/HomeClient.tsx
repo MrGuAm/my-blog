@@ -420,7 +420,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     {musicPlaylist.map((song, index) => (
                       <button
                         key={index}
-                        onClick={() => selectTrack(index, false)}
+                        onClick={() => { setShowList(false); if (currentTrack !== index) selectTrack(index, false) }}
                         className={`w-full text-left p-2 rounded-lg transition-colors ${
                           currentTrack === index
                             ? 'bg-primary/10 text-primary'

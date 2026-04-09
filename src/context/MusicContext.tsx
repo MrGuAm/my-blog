@@ -174,6 +174,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`
   }
 
+  // Simple marquee text using CSS
+  function MarqueeText({ text, isActive, charCount = 5 }: { text: string; isActive: boolean; charCount?: number }) {
+    if (text.length <= charCount) return <span>{text}</span>
+    if (!isActive) return <span className="whitespace-nowrap">{text}</span>
+    return (
+      <span className="inline-block overflow-hidden">
+        <span className="animate-marquee" style={{ whiteSpace: "nowrap", display: "inline-block" }}>
+          {text}
+        </span>
+      </span>
+    )
+  }
+
   return (
     <MusicContext.Provider value={{ isPlaying, isHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime }}>
       <audio
@@ -216,7 +229,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                   {musicPlaylist.map((song, i) => (
                     <button
                       key={i}
-                      onClick={() => selectTrack(i)}
+                      onClick={() => { setShowList(false); if (currentTrack !== i) selectTrack(i, false) }}
                       className={`w-full text-left p-2 rounded-lg transition-colors ${currentTrack === i ? "bg-primary/10 text-primary" : "hover:bg-accent/50"}`}
                     >
                       <p className="text-sm font-medium truncate">{song.title}</p>
@@ -232,7 +245,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                     <span className="text-lg">🎵</span>
                   </div>
                   <div className="flex-1 min-w-0 overflow-hidden">
-                    <p className="text-sm font-medium truncate">{track.title}</p>
+                    <p className="text-sm font-medium">
+                      <MarqueeText text={track.title} isActive={isPlaying} />
+                    </p>
                     <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
                   </div>
                   <button
@@ -278,6 +293,17 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
+
+      {/* Marquee Animation */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-100%); }
+        }
+        .animate-marquee {
+          animation: marquee 20s linear infinite;
+        }
+      ` }} />
 
       {children}
     </MusicContext.Provider>
