@@ -14,7 +14,13 @@ interface MusicContextValue {
   currentTrack: number
   track: typeof musicPlaylist[number]
   togglePlay: () => void
-  selectTrack: (index: number) => void
+  selectTrack: (index: number, openPanel?: boolean) => void
+  progress: number
+  duration: number
+  dragProgress: number | null
+  handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void
+  handleProgressClick: (e: React.MouseEvent<HTMLDivElement>) => void
+  formatTime: (seconds: number) => string
 }
 
 const MusicContext = createContext<MusicContextValue>({
@@ -23,6 +29,12 @@ const MusicContext = createContext<MusicContextValue>({
   track: musicPlaylist[0],
   togglePlay: () => {},
   selectTrack: () => {},
+  progress: 0,
+  duration: 0,
+  dragProgress: null,
+  handleMouseDown: () => {},
+  handleProgressClick: () => {},
+  formatTime: () => "0:00",
 })
 
 export function MusicProvider({ children }: { children: ReactNode }) {
@@ -33,10 +45,32 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [duration, setDuration] = useState(0)
   const [dragProgress, setDragProgress] = useState<number | null>(null)
   const [isHovering, setIsHovering] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const keepOpenUntilRef = useRef(0)
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
+  const didDragRef = useRef(false)
   const progressBarRectRef = useRef<DOMRect | null>(null)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  const clearLeaveTimer = () => {
+    if (leaveTimerRef.current !== null) {
+      clearTimeout(leaveTimerRef.current)
+      leaveTimerRef.current = null
+    }
+  }
+
+  const startLeaveTimer = (long = false) => {
+    if (long) keepOpenUntilRef.current = Date.now() + 10000
+    clearLeaveTimer()
+    leaveTimerRef.current = setTimeout(() => {
+      keepOpenUntilRef.current = 0
+      setIsHovering(false)
+    }, long ? 10000 : 400)
+  }
 
   const track = musicPlaylist[currentTrack]
 
@@ -47,7 +81,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setIsPlaying(!isPlaying)
   }, [isPlaying])
 
-  const selectTrack = useCallback((index: number) => {
+  const selectTrack = useCallback((index: number, openPanel = true) => {
     if (!audioRef.current) return
     audioRef.current.pause()
     audioRef.current.src = musicPlaylist[index].src
@@ -56,27 +90,21 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setShowList(false)
     setProgress(0)
     setIsPlaying(true)
-    setDragging(false)
     setDragProgress(null)
     isDraggingRef.current = false
+    didDragRef.current = false
     window.removeEventListener("mousemove", handleWindowMouseMove)
     window.removeEventListener("mouseup", handleWindowMouseUp)
     setTimeout(() => audioRef.current?.play(), 100)
-  }, [])
-
-  const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation()
-    if (!audioRef.current || !audioRef.current.duration) return
-    const rect = progressBarRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-    audioRef.current.currentTime = pct * audioRef.current.duration
-    setProgress(pct * 100)
-    setDragProgress(null)
-  }, [])
+    if (openPanel) {
+      startLeaveTimer(true)
+      setIsHovering(true)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleWindowMouseMove = useCallback((e: MouseEvent) => {
     if (!isDraggingRef.current || !progressBarRectRef.current) return
+    didDragRef.current = true
     const pct = Math.max(0, Math.min(1, (e.clientX - progressBarRectRef.current.left) / progressBarRectRef.current.width))
     setDragProgress(pct * 100)
   }, [])
@@ -91,19 +119,30 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       setDragProgress(null)
     }
     isDraggingRef.current = false
-    setDragging(false)
     window.removeEventListener("mousemove", handleWindowMouseMove)
     window.removeEventListener("mouseup", handleWindowMouseUp)
-  }, [handleWindowMouseMove])
+  }, [handleWindowMouseMove]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
-    if (!progressBarRef.current) return
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+    progressBarRectRef.current = rect
     isDraggingRef.current = true
-    progressBarRectRef.current = progressBarRef.current.getBoundingClientRect()
+    didDragRef.current = false
     window.addEventListener("mousemove", handleWindowMouseMove)
     window.addEventListener("mouseup", handleWindowMouseUp)
-  }, [handleWindowMouseMove])
+  }, [handleWindowMouseMove, handleWindowMouseUp])
+
+  const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (didDragRef.current) { didDragRef.current = false; return }
+    e.stopPropagation()
+    if (!audioRef.current?.duration) return
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    audioRef.current.currentTime = pct * audioRef.current.duration
+    setProgress(pct * 100)
+    setDragProgress(null)
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -124,15 +163,13 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const setDragging = (v: boolean) => { isDraggingRef.current = v }
-
   const formatTime = (seconds: number) => {
     if (!seconds || isNaN(seconds)) return "0:00"
     return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`
   }
 
   return (
-    <MusicContext.Provider value={{ isPlaying, currentTrack, track, togglePlay, selectTrack }}>
+    <MusicContext.Provider value={{ isPlaying, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime }}>
       <audio
         ref={audioRef}
         src={track.src}
@@ -144,23 +181,27 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       {/* Fixed bottom-right player */}
       <div
         className="fixed bottom-6 right-6 z-50"
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
+        onMouseEnter={() => { clearLeaveTimer(); setIsHovering(true) }}
+        onMouseLeave={() => { if (Date.now() > keepOpenUntilRef.current) startLeaveTimer() }}
       >
         {/* Small dot — always visible */}
         <div
           className={`w-12 h-12 rounded-full bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] shadow-lg flex items-center justify-center cursor-pointer ${isPlaying ? "animate-spin" : ""}`}
-          style={{ animationDuration: isPlaying ? "3s" : "0s" }}
+          style={{ animationDuration: isPlaying ? "3s" : "0s", opacity: mounted && !isHovering ? 1 : 0, transition: "opacity 0.5s" }}
+          onMouseEnter={() => { clearLeaveTimer(); setIsHovering(true) }}
+          onMouseLeave={() => { if (Date.now() > keepOpenUntilRef.current) startLeaveTimer() }}
         >
           <span className="text-lg">🎵</span>
         </div>
 
-        {/* Expanded panel — show on hover */}
+        {/* Expanded panel — show on hover, covers dot */}
         <div
-          className={`absolute bottom-0 right-0 transition-all duration-300 origin-bottom-right pointer-events-none ${
+          className={`absolute bottom-0 right-0 transition-all duration-500 origin-bottom-right ${
             isHovering ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95 pointer-events-none"
           }`}
-          style={{ width: "288px" }}
+          style={{ width: "14rem" }}
+          onMouseEnter={() => { clearLeaveTimer(); setIsHovering(true) }}
+          onMouseLeave={() => { if (Date.now() > keepOpenUntilRef.current) startLeaveTimer() }}
         >
           <div className="bg-card rounded-xl border border-border/60 shadow-xl overflow-hidden">
             {showList ? (
@@ -201,14 +242,24 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                 </div>
 
                 {/* Progress */}
-                <div className="px-3 pb-2" onClick={(e) => e.stopPropagation()}>
+                <div className="px-3 pb-2">
                   <div
-                    className="h-1.5 bg-secondary rounded-full relative cursor-pointer"
-                    onClick={handleMouseDown}
+                    ref={progressBarRef}
+                    className="h-1.5 bg-secondary rounded-full relative cursor-pointer group"
+                    onMouseDown={handleMouseDown}
+                    onClick={handleProgressClick}
                   >
                     <div
                       className="absolute top-0 left-0 h-full bg-primary rounded-full"
                       style={{ width: `${dragProgress ?? progress}%` }}
+                    />
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-primary rounded-full shadow-md pointer-events-none"
+                      style={{
+                        left: `calc(${dragProgress ?? progress}% - 7px)`,
+                        opacity: mounted ? 1 : 0,
+                        transition: "opacity 0.3s"
+                      }}
                     />
                   </div>
                 </div>
@@ -218,7 +269,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                     onClick={(e) => { e.stopPropagation(); setShowList(true) }}
                     className="hover:text-foreground transition-colors"
                   >
-                    播放列表 →
+                    播放列表 ›
                   </button>
                 </div>
               </div>

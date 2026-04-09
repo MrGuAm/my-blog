@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
+import { useMusic } from "@/context/MusicContext"
 
 interface HomeClientProps {
   posts: Post[]
@@ -226,19 +227,24 @@ const musicPlaylist = [
 
 export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const router = useRouter()
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTrack, setCurrentTrack] = useState(0)
-  const [showList, setShowList] = useState(false)
-  const [isHovering, setIsHovering] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [dragProgress, setDragProgress] = useState<number | null>(null)
+  const { isPlaying, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime } = useMusic()
+
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [localPosts, setLocalPosts] = useState(posts)
   const [showDrafts, setShowDrafts] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [recentComments, setRecentComments] = useState<RecentComment[]>([])
+  const [showList, setShowList] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+
+  // Close sidebar playlist when track changes
+  useEffect(() => {
+    setShowList(false)
+  }, [currentTrack])
 
   // Fetch recent comments
   useEffect(() => {
@@ -285,130 +291,6 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
       }
     } catch {}
   }
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const progressBarRef = useRef<HTMLDivElement>(null)
-  const isDraggingRef = useRef(false)
-  const progressBarRectRef = useRef<DOMRect | null>(null)
-  const dragStartXRef = useRef(0)
-  const dragStartProgressRef = useRef(0)
-
-  const togglePlay = () => {
-    if (!audioRef.current) return
-    if (isPlaying) {
-      audioRef.current.pause()
-    } else {
-      audioRef.current.play()
-    }
-    setIsPlaying(!isPlaying)
-  }
-
-  const selectTrack = (index: number) => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.src = musicPlaylist[index].src
-      audioRef.current.load()
-      setCurrentTrack(index)
-      setShowList(false)
-      setProgress(0)
-      setIsPlaying(true)
-      // Reset drag state when switching tracks
-      setIsDragging(false)
-      setDragProgress(null)
-      isDraggingRef.current = false
-      window.removeEventListener('mousemove', handleWindowMouseMove)
-      window.removeEventListener('mouseup', handleWindowMouseUp)
-      setTimeout(() => {
-        audioRef.current?.play()
-      }, 100)
-    }
-  }
-
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation()
-    if (!audioRef.current || !audioRef.current.duration) return
-    const rect = progressBarRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-    audioRef.current.currentTime = pct * audioRef.current.duration
-    setProgress(pct * 100)
-    setDragProgress(null)
-  }
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!progressBarRef.current) return
-    isDraggingRef.current = true
-    setIsDragging(true)
-    progressBarRectRef.current = progressBarRef.current.getBoundingClientRect()
-    dragStartXRef.current = e.clientX
-    dragStartProgressRef.current = progress
-    window.addEventListener('mousemove', handleWindowMouseMove)
-    window.addEventListener('mouseup', handleWindowMouseUp)
-  }, [progress]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleWindowMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDraggingRef.current || !progressBarRectRef.current) return
-    const rect = progressBarRectRef.current
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-    setDragProgress(pct * 100)
-  }, [])
-
-  const handleWindowMouseUp = useCallback((e: MouseEvent) => {
-    if (isDraggingRef.current && progressBarRectRef.current && audioRef.current) {
-      const rect = progressBarRectRef.current
-      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-      if (audioRef.current.duration) {
-        audioRef.current.currentTime = pct * audioRef.current.duration
-        setProgress(pct * 100)
-      }
-      setDragProgress(null)
-    }
-    isDraggingRef.current = false
-    setIsDragging(false)
-    window.removeEventListener('mousemove', handleWindowMouseMove)
-    window.removeEventListener('mouseup', handleWindowMouseUp)
-  }, [handleWindowMouseMove])
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    // Ignore - all drag handling via window listeners
-  }
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    // Window listener handles the real work
-  }
-
-  const handleTimeUpdate = useCallback(() => {
-    if (audioRef.current && audioRef.current.duration && !isDraggingRef.current) {
-      const pct = (audioRef.current.currentTime / audioRef.current.duration) * 100
-      setProgress(pct || 0)
-      setDuration(audioRef.current.duration || 0)
-    }
-  }, [])
-
-  // Cleanup global listeners on unmount
-  useEffect(() => {
-    return () => {
-      window.removeEventListener('mousemove', handleWindowMouseMove)
-      window.removeEventListener('mouseup', handleWindowMouseUp)
-    }
-  }, [handleWindowMouseMove, handleWindowMouseUp])
-
-  const handleTrackEnd = () => {
-    // Loop: play next track or restart from beginning
-    const nextIndex = (currentTrack + 1) % musicPlaylist.length
-    selectTrack(nextIndex)
-  }
-
-  const formatTime = (seconds: number) => {
-    if (!seconds || isNaN(seconds)) return "0:00"
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  const track = musicPlaylist[currentTrack]
 
   const filteredPosts = localPosts.filter(post =>
     (showDrafts || !post.draft) &&
@@ -426,15 +308,6 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hidden Audio Element */}
-      <audio
-        ref={audioRef}
-        src={track.src}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
-        onEnded={handleTrackEnd}
-      />
-
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="max-w-6xl mx-auto px-6 py-4">
@@ -564,7 +437,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     <span className="text-sm font-medium">播放列表</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowList(false) }}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground hover:text-foreground text-xs"
                     >
                       ✕
                     </button>
@@ -573,7 +446,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     {musicPlaylist.map((song, index) => (
                       <button
                         key={index}
-                        onClick={() => selectTrack(index)}
+                        onClick={() => selectTrack(index, false)}
                         className={`w-full text-left p-2 rounded-lg transition-colors ${
                           currentTrack === index
                             ? 'bg-primary/10 text-primary'
@@ -590,7 +463,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                 /* Compact Player */
                 <div
                   className="p-3 cursor-pointer relative"
-                  onClick={() => setShowList(true)}
+                  onClick={() => { if (!isDragging) setShowList(true) }}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] flex items-center justify-center flex-shrink-0 ${isPlaying ? 'animate-pulse' : ''}`}>
@@ -613,16 +486,13 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   </div>
 
                   {/* Progress Bar */}
-                  {/* Progress Bar */}
                   <div
-                    ref={progressBarRef}
                     className={`transition-all duration-300 ease-out overflow-hidden ${isHovering || isDragging ? 'mt-3 pt-3 border-t border-border/40 opacity-100 max-h-20' : 'mt-0 pt-0 border-t-0 opacity-0 max-h-0'}`}
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <div
                       className="h-1.5 bg-secondary rounded-full relative cursor-grab active:cursor-grabbing"
-                      onMouseDown={handleMouseDown}
-                      onClick={handleProgressClick}
+                      onMouseDown={(e) => { setIsDragging(true); handleMouseDown(e); }}
+                      onClick={(e) => { handleProgressClick(e); setTimeout(() => setIsDragging(false), 0); }}
                     >
                       <div
                         className="absolute top-0 left-0 h-full bg-primary rounded-full"
@@ -640,7 +510,11 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   </div>
                   {/* Always visible thin progress line when NOT hovering - at the bottom */}
                   {!isHovering && !isDragging && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary/60 overflow-hidden cursor-pointer" onClick={handleProgressClick} style={{ borderRadius: '0 0 0.5rem 0.5rem' }}>
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary/60 overflow-hidden cursor-pointer"
+                      onClick={(e) => { handleProgressClick(e); setTimeout(() => setIsDragging(false), 0); }}
+                      style={{ borderRadius: '0 0 0.5rem 0.5rem' }}
+                    >
                       <div
                         className="h-full bg-primary/70 rounded-full transition-none"
                         style={{ width: `${progress}%` }}
