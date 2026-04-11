@@ -39,6 +39,22 @@ npm install
 npm run dev
 ```
 
+### 登录环境变量
+
+登录页和登录弹窗会校验下面这个环境变量：
+
+```bash
+NEXT_PUBLIC_PASSWORD=your-password
+```
+
+推荐在项目根目录创建 `.env.local`：
+
+```bash
+NEXT_PUBLIC_PASSWORD=your-password
+```
+
+修改环境变量后，重新启动开发服务器即可生效。
+
 代码检查：
 
 ```bash
