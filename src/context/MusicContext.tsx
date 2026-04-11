@@ -175,12 +175,11 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }
 
   // Simple marquee text using CSS
-  function MarqueeText({ text, isActive, charCount = 5 }: { text: string; isActive: boolean; charCount?: number }) {
-    if (text.length <= charCount) return <span>{text}</span>
-    if (!isActive) return <span className="whitespace-nowrap">{text}</span>
+  function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
+    if (text.length <= charCount) return <span className="truncate">{text}</span>
     return (
       <span className="inline-block overflow-hidden">
-        <span className="animate-marquee" style={{ whiteSpace: "nowrap", display: "inline-block" }}>
+        <span className={`inline-block ${isActive ? "animate-marquee" : ""}`} style={{ whiteSpace: "nowrap" }}>
           {text}
         </span>
       </span>
