@@ -9,6 +9,23 @@ export const musicPlaylist = [
   { title: "这，就是爱", artist: "张杰", src: "/music/张杰 - 这，就是爱.mp3" },
 ]
 
+function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
+  if (text.length <= charCount) {
+    return <span className="truncate">{text}</span>
+  }
+
+  return (
+    <span className="inline-block overflow-hidden">
+      <span
+        className={`inline-block ${isActive ? "animate-marquee" : ""}`}
+        style={{ whiteSpace: "nowrap" }}
+      >
+        {text}
+      </span>
+    </span>
+  )
+}
+
 interface MusicContextValue {
   isPlaying: boolean
   isHovering: boolean
@@ -40,6 +57,7 @@ const MusicContext = createContext<MusicContextValue>({
 })
 
 export function MusicProvider({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTrack, setCurrentTrack] = useState(0)
   const [showList, setShowList] = useState(false)
@@ -47,7 +65,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [duration, setDuration] = useState(0)
   const [dragProgress, setDragProgress] = useState<number | null>(null)
   const [isHovering, setIsHovering] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const keepOpenUntilRef = useRef(0)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -55,16 +72,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const didDragRef = useRef(false)
   const progressBarRectRef = useRef<DOMRect | null>(null)
 
-  useEffect(() => { setMounted(true) }, [])
 
-  const clearLeaveTimer = () => {
+  const clearLeaveTimer = useCallback(() => {
     if (leaveTimerRef.current !== null) {
       clearTimeout(leaveTimerRef.current)
       leaveTimerRef.current = null
     }
-  }
+  }, [])
 
-  const startLeaveTimer = (long = false) => {
+  const startLeaveTimer = useCallback((long = false) => {
     if (long) {
       keepOpenUntilRef.current = Date.now() + 10000
       clearLeaveTimer()
@@ -76,7 +92,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         setIsHovering(false)
       }, 400)
     }
-  }
+  }, [clearLeaveTimer])
 
   const track = musicPlaylist[currentTrack]
 
@@ -87,27 +103,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setIsPlaying(!isPlaying)
   }, [isPlaying])
 
-  const selectTrack = useCallback((index: number, openPanel = true) => {
-    if (!audioRef.current) return
-    audioRef.current.pause()
-    audioRef.current.src = musicPlaylist[index].src
-    audioRef.current.load()
-    setCurrentTrack(index)
-    setShowList(false)
-    setProgress(0)
-    setIsPlaying(true)
-    setDragProgress(null)
-    isDraggingRef.current = false
-    didDragRef.current = false
-    window.removeEventListener("mousemove", handleWindowMouseMove)
-    window.removeEventListener("mouseup", handleWindowMouseUp)
-    setTimeout(() => audioRef.current?.play(), 100)
-    if (openPanel) {
-      startLeaveTimer(true)
-      setIsHovering(true)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   const handleWindowMouseMove = useCallback((e: MouseEvent) => {
     if (!isDraggingRef.current || !progressBarRectRef.current) return
     didDragRef.current = true
@@ -115,7 +110,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setDragProgress(pct * 100)
   }, [])
 
-  const handleWindowMouseUp = useCallback((e: MouseEvent) => {
+  const handleWindowMouseUp = useCallback(function onWindowMouseUp(e: MouseEvent) {
     if (isDraggingRef.current && progressBarRectRef.current && audioRef.current) {
       const pct = Math.max(0, Math.min(1, (e.clientX - progressBarRectRef.current.left) / progressBarRectRef.current.width))
       if (audioRef.current.duration) {
@@ -126,8 +121,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
     isDraggingRef.current = false
     window.removeEventListener("mousemove", handleWindowMouseMove)
-    window.removeEventListener("mouseup", handleWindowMouseUp)
-  }, [handleWindowMouseMove]) // eslint-disable-line react-hooks/exhaustive-deps
+    window.removeEventListener("mouseup", onWindowMouseUp)
+  }, [handleWindowMouseMove])
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
@@ -148,6 +143,31 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     audioRef.current.currentTime = pct * audioRef.current.duration
     setProgress(pct * 100)
     setDragProgress(null)
+  }, [])
+
+  const selectTrack = useCallback((index: number, openPanel = true) => {
+    if (!audioRef.current) return
+    audioRef.current.pause()
+    audioRef.current.src = musicPlaylist[index].src
+    audioRef.current.load()
+    setCurrentTrack(index)
+    setShowList(false)
+    setProgress(0)
+    setIsPlaying(true)
+    setDragProgress(null)
+    isDraggingRef.current = false
+    didDragRef.current = false
+    window.removeEventListener("mousemove", handleWindowMouseMove)
+    window.removeEventListener("mouseup", handleWindowMouseUp)
+    setTimeout(() => audioRef.current?.play(), 100)
+    if (openPanel) {
+      startLeaveTimer(true)
+      setIsHovering(true)
+    }
+  }, [handleWindowMouseMove, handleWindowMouseUp, startLeaveTimer])
+
+  useEffect(() => {
+    setMounted(true)
   }, [])
 
   useEffect(() => {
@@ -172,18 +192,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const formatTime = (seconds: number) => {
     if (!seconds || isNaN(seconds)) return "0:00"
     return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`
-  }
-
-  // Simple marquee text using CSS
-  function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
-    if (text.length <= charCount) return <span className="truncate">{text}</span>
-    return (
-      <span className="inline-block overflow-hidden">
-        <span className={`inline-block ${isActive ? "animate-marquee" : ""}`} style={{ whiteSpace: "nowrap" }}>
-          {text}
-        </span>
-      </span>
-    )
   }
 
   return (
@@ -245,9 +253,11 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                   </div>
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <p className="text-sm font-medium">
-                      <MarqueeText text={track.title} isActive={isPlaying} />
+                      <MarqueeText key={track.title} text={track.title} isActive={isPlaying} charCount={6} />
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <MarqueeText key={track.artist + track.title} text={track.artist} isActive={isPlaying} charCount={6} />
+                    </p>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); togglePlay() }}
@@ -272,7 +282,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                       className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-primary rounded-full shadow-md pointer-events-none"
                       style={{
                         left: `calc(${dragProgress ?? progress}% - 7px)`,
-                        opacity: mounted ? 1 : 0,
+                        opacity: 1,
                         transition: "opacity 0.3s"
                       }}
                     />
