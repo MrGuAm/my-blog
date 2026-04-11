@@ -22,6 +22,10 @@ export async function POST(
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json({ views: data.posts[idx].views || 0 })
+    }
+
     data.posts[idx].views = (data.posts[idx].views || 0) + 1
     fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
 

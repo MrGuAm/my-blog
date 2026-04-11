@@ -44,6 +44,10 @@ export default function PostClient({ post, content, readingTime, headings, relat
   }, [content])
 
   useEffect(() => {
+    if (process.env.NODE_ENV !== "production") {
+      return
+    }
+
     // 异步增加访问量
     fetch(`/api/posts/${post.id}/views`, { method: 'POST' })
       .then(r => r.json())
