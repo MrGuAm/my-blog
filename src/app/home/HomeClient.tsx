@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
 import { useMusic } from "@/context/MusicContext"
+import { useAuthStatus } from "@/hooks/useAuthStatus"
 
 interface HomeClientProps {
   posts: Post[]
@@ -149,10 +150,10 @@ function Character({ type, isHovered }: { type: number; isHovered: boolean }) {
 }
 
 // Post card with character that follows mouse
-function PostCard({ post, characterType, onTagClick }: { post: Post; characterType: number; onTagClick: (tag: string) => void }) {
+function PostCard({ post, characterType, isAuthenticated, onTagClick }: { post: Post; characterType: number; isAuthenticated: boolean; onTagClick: (tag: string) => void }) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const postHref = post.draft && document.cookie.includes('authenticated=') ? `/write/${post.id}` : `/posts/${post.id}`
+  const postHref = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.id}`
   return (
     <div
       className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
@@ -210,10 +211,27 @@ function PostCard({ post, characterType, onTagClick }: { post: Post; characterTy
 
 export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const router = useRouter()
-  const { playlist, isPlaying, isHovering: floatingHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime } = useMusic()
-
-  const [isAuthenticated, setIsAuthenticated] = useState(() => typeof document !== "undefined" && document.cookie.includes("authenticated="))
-  const [localPosts, setLocalPosts] = useState(posts)
+  const {
+    playlist,
+    isPlaying,
+    isHovering: floatingHovering,
+    currentTrack,
+    track,
+    playMode,
+    togglePlay,
+    cyclePlayMode,
+    playPrevious,
+    playNext,
+    selectTrack,
+    progress,
+    duration,
+    dragProgress,
+    handleMouseDown,
+    handleProgressClick,
+    formatTime,
+  } = useMusic()
+  const { isAuthenticated, logout } = useAuthStatus()
+  const [remotePosts, setRemotePosts] = useState<Post[] | null>(null)
   const [showDrafts, setShowDrafts] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -221,9 +239,12 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [showList, setShowList] = useState(false)
   const [isSidebarHovering, setIsSidebarHovering] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const postsPerPage = 6
+
+  const visiblePosts = remotePosts ?? posts
 
   // Scroll listener for back to top
   useEffect(() => {
@@ -241,24 +262,22 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   }, [])
 
   const handleLogout = () => {
-    document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    setIsAuthenticated(false);
+    logout()
     router.push('/home');
   };
 
   useEffect(() => {
-    const auth = typeof document !== "undefined" && document.cookie.includes('authenticated=')
-    if (!auth) {
+    if (!isAuthenticated) {
       return
     }
 
     fetch('/api/posts')
       .then(r => r.json())
-      .then(apiPosts => setLocalPosts(apiPosts))
-      .catch(() => setLocalPosts(posts))
-  }, [posts])
+      .then(apiPosts => setRemotePosts(apiPosts))
+      .catch(() => setRemotePosts(null))
+  }, [isAuthenticated])
 
-  const filteredPosts = localPosts.filter(post =>
+  const filteredPosts = visiblePosts.filter(post =>
     (showDrafts || !post.draft) &&
     (searchQuery === "" ||
     post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -271,6 +290,11 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
     if (!a.pinned && b.pinned) return 1
     return new Date(b.date).getTime() - new Date(a.date).getTime()
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / postsPerPage))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const paginatedPosts = filteredPosts.slice((safeCurrentPage - 1) * postsPerPage, safeCurrentPage * postsPerPage)
+  const playModeLabel = playMode === "loop" ? "列表循环" : playMode === "repeat-one" ? "单曲循环" : "随机播放"
 
   return (
     <div className="min-h-screen bg-background">
@@ -285,18 +309,21 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
             <div className="flex items-center gap-4">
-              <div className="relative">
+            <div className="relative">
                 <input
                   type="text"
                   placeholder="搜索文章或标签..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setCurrentPage(1)
+                  }}
                   className="w-48 px-3 py-1.5 pl-8 text-sm bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-muted-foreground"
                 />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">🔍</span>
                 {(searchQuery || selectedTag) && (
                   <button
-                    onClick={() => { setSearchQuery(""); setSelectedTag(null); }}
+                    onClick={() => { setSearchQuery(""); setSelectedTag(null); setCurrentPage(1) }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs flex items-center gap-1"
                   >
                     ✕
@@ -308,6 +335,9 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   #{selectedTag}
                 </span>
               )}
+              <span className="text-xs text-muted-foreground hidden lg:inline">
+                共 {filteredPosts.length} 篇
+              </span>
               <Link href="/home" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                 Home
               </Link>
@@ -323,7 +353,10 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     写文章
                   </Link>
                   <button
-                    onClick={() => setShowDrafts(!showDrafts)}
+                    onClick={() => {
+                      setShowDrafts(!showDrafts)
+                      setCurrentPage(1)
+                    }}
                     className={`text-sm font-medium transition-colors ${showDrafts ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
                   >
                     {showDrafts ? '隐藏草稿' : '显示草稿'}
@@ -370,19 +403,53 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
         <div className="flex gap-8 pb-20">
           {/* Blog Posts */}
           <main className="flex-1 space-y-6">
-            {filteredPosts.length > 0 ? (
-              filteredPosts.map((post, index) => (
-                <PostCard key={post.id} post={post} characterType={index % 4} onTagClick={setSelectedTag} />
+            {paginatedPosts.length > 0 ? (
+              paginatedPosts.map((post, index) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  characterType={index % 4}
+                  isAuthenticated={isAuthenticated}
+                  onTagClick={(tag) => {
+                    setSelectedTag(tag)
+                    setCurrentPage(1)
+                  }}
+                />
               ))
             ) : (
               <div className="text-center py-16">
                 <p className="text-muted-foreground mb-2">没有找到匹配的文章</p>
                 <button
-                  onClick={() => { setSearchQuery(""); setSelectedTag(null); }}
+                  onClick={() => { setSearchQuery(""); setSelectedTag(null); setCurrentPage(1) }}
                   className="text-sm text-primary hover:underline"
                 >
                   清除筛选
                 </button>
+              </div>
+            )}
+            {filteredPosts.length > postsPerPage && (
+              <div className="flex items-center justify-between rounded-xl border border-border/50 bg-card px-4 py-3">
+                <span className="text-sm text-muted-foreground">
+                  第 {safeCurrentPage} / {totalPages} 页
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={safeCurrentPage === 1}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-border/50 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    上一页
+                  </button>
+                  <button
+                    type="button"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    disabled={safeCurrentPage === totalPages}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-border/50 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    下一页
+                  </button>
+                </div>
               </div>
             )}
           </main>
@@ -455,6 +522,30 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   <div
                     className={`transition-all duration-300 ease-out overflow-visible ${isSidebarHovering || isDragging ? 'mt-3 pt-3 border-t border-border/40 opacity-100 max-h-20' : 'mt-0 pt-0 border-t-0 opacity-0 max-h-0'}`}
                   >
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); playPrevious() }}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        ⏮
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); cyclePlayMode() }}
+                        className="hover:text-foreground transition-colors"
+                        title={playModeLabel}
+                      >
+                        {playMode === "loop" ? "🔁" : playMode === "repeat-one" ? "🔂" : "🔀"} {playModeLabel}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); playNext() }}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        ⏭
+                      </button>
+                    </div>
                     <div
                       className="h-1.5 bg-secondary rounded-full relative cursor-grab active:cursor-grabbing"
                       onMouseDown={(e) => { setIsDragging(true); handleMouseDown(e); }}
@@ -500,7 +591,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     filteredPosts.slice(0, 3).map((post) => (
                         <Link
                           key={post.id}
-                          href={`/posts/${post.id}`}
+                          href={post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.id}`}
                           className="block text-sm hover:text-primary transition-colors group"
                         >
                           <p className="truncate group-hover:text-primary">{post.title}</p>
@@ -543,7 +634,10 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   {allTags.map(tag => (
                     <button
                       key={tag}
-                      onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                      onClick={() => {
+                        setSelectedTag(selectedTag === tag ? null : tag)
+                        setCurrentPage(1)
+                      }}
                       className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
                         selectedTag === tag
                           ? 'bg-primary text-primary-foreground'
@@ -565,7 +659,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onSuccess={() => setIsAuthenticated(true)}
+        onSuccess={() => {}}
       />
 
       {/* Footer */}

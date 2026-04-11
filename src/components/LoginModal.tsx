@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuthStatus } from "@/hooks/useAuthStatus"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -12,19 +13,20 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const { login } = useAuthStatus()
 
   if (!isOpen) return null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password === process.env.NEXT_PUBLIC_PASSWORD) {
-      document.cookie = 'authenticated=true; path=/'
+    try {
+      await login(password)
       setPassword("")
       setError("")
       onSuccess()
       onClose()
-    } else {
-      setError("密码错误")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "密码错误")
     }
   }
 

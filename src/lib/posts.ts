@@ -1,7 +1,4 @@
-import fs from 'fs'
-import path from 'path'
-
-const dataFile = path.join(process.cwd(), 'data/posts/posts.json')
+import { getPostById, listPosts } from '@/lib/server/store'
 
 export interface Post {
   id: string
@@ -16,17 +13,8 @@ export interface Post {
   views?: number
 }
 
-function readPosts(): Post[] {
-  try {
-    const data = fs.readFileSync(dataFile, 'utf-8')
-    return JSON.parse(data).posts
-  } catch {
-    return []
-  }
-}
-
 export function getAllPosts(): Post[] {
-  return readPosts().sort((a, b) => {
+  return listPosts({ includeDrafts: true }).sort((a, b) => {
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
     return new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -34,11 +22,11 @@ export function getAllPosts(): Post[] {
 }
 
 export function getPost(id: string): Post | undefined {
-  return readPosts().find(p => p.id === id)
+  return getPostById(id)
 }
 
 export function getAllTags(): string[] {
-  return Array.from(new Set(readPosts().filter(p => !p.draft).flatMap(p => p.tags))).sort()
+  return Array.from(new Set(listPosts({ includeDrafts: false }).flatMap(p => p.tags))).sort()
 }
 
 export function getPostContent(id: string): string {
@@ -80,15 +68,4 @@ export function getRelatedPosts(post: Post, limit = 3): Post[] {
     return { post: p, score }
   })
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map(s => s.post)
-}
-
-export function incrementViews(id: string): number {
-  const posts = readPosts()
-  const idx = posts.findIndex(p => p.id === id)
-  if (idx >= 0) {
-    posts[idx].views = (posts[idx].views || 0) + 1
-    fs.writeFileSync(dataFile, JSON.stringify({ posts }, null, 2))
-    return posts[idx].views || 0
-  }
-  return 0
 }

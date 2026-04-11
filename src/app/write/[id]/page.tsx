@@ -3,11 +3,37 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
+import { useAuthStatus } from "@/hooks/useAuthStatus"
+
+interface LocalDraft {
+  title: string
+  excerpt: string
+  content: string
+  category: string
+  tags: string
+  pinned: boolean
+  draft: boolean
+  savedAt: string
+}
+
+function readLocalDraft(storageKey: string) {
+  if (typeof window === "undefined") return null
+
+  try {
+    const raw = window.localStorage.getItem(storageKey)
+    return raw ? (JSON.parse(raw) as LocalDraft) : null
+  } catch {
+    return null
+  }
+}
 
 export default function EditPostPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
+  const draftStorageKey = `champion-blog:edit-post:${id}`
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuthStatus()
+  const [localDraft, setLocalDraft] = useState<LocalDraft | null>(() => readLocalDraft(draftStorageKey))
 
   const [title, setTitle] = useState("")
   const [excerpt, setExcerpt] = useState("")
@@ -21,14 +47,20 @@ export default function EditPostPage() {
   const [loading, setLoading] = useState(true)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
+  const [savedAt, setSavedAt] = useState<string | null>(localDraft?.savedAt ?? null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!document.cookie.includes('authenticated=')) {
+    if (!isAuthLoading && !isAuthenticated) {
       router.push('/login')
       return
     }
+
+    if (!isAuthenticated) {
+      return
+    }
+
     fetch(`/api/posts/${id}`)
       .then(r => r.json())
       .then(post => {
@@ -45,7 +77,51 @@ export default function EditPostPage() {
         setMessage("加载失败")
         setLoading(false)
       })
-  }, [id, router])
+  }, [id, isAuthenticated, isAuthLoading, router])
+
+  const clearSavedDraft = useCallback(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.removeItem(draftStorageKey)
+    setLocalDraft(null)
+    setSavedAt(null)
+  }, [draftStorageKey])
+
+  const restoreLocalDraft = useCallback(() => {
+    if (!localDraft) return
+    setTitle(localDraft.title)
+    setExcerpt(localDraft.excerpt)
+    setContent(localDraft.content)
+    setCategory(localDraft.category)
+    setTags(localDraft.tags)
+    setPinned(localDraft.pinned)
+    setDraft(localDraft.draft)
+    setSavedAt(localDraft.savedAt)
+  }, [localDraft])
+
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated || loading) return
+
+    const timeoutId = window.setTimeout(() => {
+      const nextSavedAt = new Date().toISOString()
+      const payload: LocalDraft = {
+        title,
+        excerpt,
+        content,
+        category,
+        tags,
+        pinned,
+        draft,
+        savedAt: nextSavedAt,
+      }
+
+      try {
+        window.localStorage.setItem(draftStorageKey, JSON.stringify(payload))
+        setSavedAt(nextSavedAt)
+      } catch {}
+    }, 600)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [category, content, draft, draftStorageKey, excerpt, isAuthenticated, isAuthLoading, loading, pinned, tags, title])
 
   const insertTextAtCursor = useCallback((text: string) => {
     const textarea = textareaRef.current
@@ -146,6 +222,7 @@ export default function EditPostPage() {
       })
 
       if (res.ok) {
+        clearSavedDraft()
         setMessage(publishDraft ? "草稿已保存！" : "文章已更新！")
         if (!publishDraft) {
           setDraft(false)
@@ -209,6 +286,22 @@ export default function EditPostPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight mb-2">编辑文章</h1>
           <p className="text-muted-foreground">修改你的内容 · 支持上传/粘贴图片</p>
+          {savedAt && (
+            <p className="text-xs text-muted-foreground mt-2">
+              本地草稿最近保存于 {new Date(savedAt).toLocaleString("zh-CN")}
+            </p>
+          )}
+          {localDraft && (
+            <div className="mt-3 flex items-center gap-3 text-sm">
+              <span className="text-muted-foreground">检测到未提交的本地草稿。</span>
+              <button type="button" onClick={restoreLocalDraft} className="text-primary hover:underline">
+                恢复草稿
+              </button>
+              <button type="button" onClick={clearSavedDraft} className="text-muted-foreground hover:text-foreground transition-colors">
+                清除
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -429,6 +522,15 @@ export default function EditPostPage() {
               <span className={message.includes("成功") || message.includes("已更新") ? "text-green-500" : "text-red-500"}>
                 {message}
               </span>
+            )}
+            {savedAt && (
+              <button
+                type="button"
+                onClick={clearSavedDraft}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                清除本地草稿
+              </button>
             )}
           </div>
         </div>

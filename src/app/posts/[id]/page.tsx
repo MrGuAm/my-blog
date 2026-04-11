@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { notFound } from "next/navigation"
-import { cookies } from "next/headers"
 import { getAllPosts, getPost, getPostContent, calculateReadingTime, extractHeadings, getRelatedPosts } from "@/lib/posts"
+import { isAuthenticatedServer } from "@/lib/server/auth"
 import PostClient from "./PostClient"
 
 interface Props {
@@ -59,8 +59,7 @@ export default async function PostPage({ params }: Props) {
 
   // If post is a draft, check auth on server side before rendering
   if (post.draft) {
-    const cookieStore = await cookies()
-    const isAuthenticated = cookieStore.get("authenticated")?.value === "true"
+    const isAuthenticated = await isAuthenticatedServer()
     if (!isAuthenticated) {
       redirect("/login")
     }

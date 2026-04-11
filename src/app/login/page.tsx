@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Sparkles, Moon, Sun } from "lucide-react";
+import { useAuthStatus } from "@/hooks/useAuthStatus";
 
 
 interface PupilProps {
@@ -185,7 +186,6 @@ function LoginPage() {
  const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
  const [isPurplePeeking, setIsPurplePeeking] = useState(false);
  const [isDarkMode, setIsDarkMode] = useState(() => typeof window !== "undefined" && window.matchMedia('(prefers-color-scheme: dark)').matches);
- const [isAuthenticated, setIsAuthenticated] = useState(() => typeof document !== "undefined" && document.cookie.includes('authenticated='));
  const [characterPositions, setCharacterPositions] = useState({
  purple: defaultCharacterPosition,
  black: defaultCharacterPosition,
@@ -193,6 +193,7 @@ function LoginPage() {
  orange: defaultCharacterPosition,
  });
  const lookTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+ const { isAuthenticated, login, logout } = useAuthStatus();
 
  useEffect(() => {
    if (isAuthenticated) {
@@ -201,8 +202,7 @@ function LoginPage() {
  }, [isAuthenticated, router]);
 
  const handleLogout = () => {
-   document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-   setIsAuthenticated(false);
+   logout();
  };
 
  // Detect system color scheme preference
@@ -342,11 +342,11 @@ function LoginPage() {
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
  setIsLoading(true);
- if (password === process.env.NEXT_PUBLIC_PASSWORD) {
- document.cookie = 'authenticated=true; path=/';
+ try {
+ await login(password);
  window.location.href = '/write';
- } else {
- setError('Incorrect password');
+ } catch (err) {
+ setError(err instanceof Error ? err.message : 'Incorrect password');
  setIsLoading(false);
  }
  };

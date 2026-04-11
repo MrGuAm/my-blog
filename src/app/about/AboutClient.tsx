@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import LoginModal from "@/components/LoginModal"
+import { useAuthStatus } from "@/hooks/useAuthStatus"
 
 // Character component with eyes that follow mouse
 function Character({ bgColor, width, height, borderRadius, eyeSize, mouth, mouseX, mouseY }: { bgColor: string; width: number; height: number; borderRadius: string; eyeSize: number; mouth?: boolean; mouseX: number; mouseY: number }) {
@@ -89,28 +90,13 @@ function Character({ bgColor, width, height, borderRadius, eyeSize, mouth, mouse
 }
 
 export default function AboutClient() {
-  const [isDarkMode, setIsDarkMode] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-
-  useEffect(() => {
-    const auth = document.cookie.includes('authenticated=')
-    setIsAuthenticated(auth)
-  }, [])
+  const { isAuthenticated, logout } = useAuthStatus()
 
   const handleLogout = () => {
-    document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    setIsAuthenticated(false);
+    logout()
   };
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    setIsDarkMode(mediaQuery.matches)
-    const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches)
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY })
@@ -221,7 +207,7 @@ export default function AboutClient() {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onSuccess={() => setIsAuthenticated(true)}
+        onSuccess={() => {}}
       />
 
       {/* Footer */}

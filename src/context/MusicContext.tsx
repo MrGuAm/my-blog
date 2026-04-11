@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from "react"
 import type { MusicTrack } from "@/app/api/music/route"
 
+type PlayMode = "loop" | "repeat-one" | "shuffle"
+
 const fallbackPlaylist: MusicTrack[] = [
   { title: "最美的太阳", artist: "张杰", src: "/music/张杰 - 最美的太阳.mp3" },
   { title: "着魔", artist: "张杰", src: "/music/张杰 - 着魔.mp3" },
@@ -33,7 +35,11 @@ interface MusicContextValue {
   isHovering: boolean
   currentTrack: number
   track: MusicTrack
+  playMode: PlayMode
   togglePlay: () => void
+  cyclePlayMode: () => void
+  playPrevious: () => void
+  playNext: () => void
   selectTrack: (index: number, openPanel?: boolean) => void
   progress: number
   duration: number
@@ -49,7 +55,11 @@ const MusicContext = createContext<MusicContextValue>({
   isHovering: false,
   currentTrack: 0,
   track: fallbackPlaylist[0],
+  playMode: "loop",
   togglePlay: () => {},
+  cyclePlayMode: () => {},
+  playPrevious: () => {},
+  playNext: () => {},
   selectTrack: () => {},
   progress: 0,
   duration: 0,
@@ -68,6 +78,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [duration, setDuration] = useState(0)
   const [dragProgress, setDragProgress] = useState<number | null>(null)
   const [isHovering, setIsHovering] = useState(false)
+  const [playMode, setPlayMode] = useState<PlayMode>("loop")
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const keepOpenUntilRef = useRef(0)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -98,6 +109,14 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [clearLeaveTimer])
 
   const track = playlist[currentTrack] ?? fallbackPlaylist[0]
+
+  const cyclePlayMode = useCallback(() => {
+    setPlayMode((current) => {
+      if (current === "loop") return "repeat-one"
+      if (current === "repeat-one") return "shuffle"
+      return "loop"
+    })
+  }, [])
 
   const togglePlay = useCallback(() => {
     if (!audioRef.current || !track) return
@@ -169,6 +188,36 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
   }, [handleWindowMouseMove, handleWindowMouseUp, playlist, startLeaveTimer])
 
+  const playTrackByIndex = useCallback((index: number, openPanel = false) => {
+    selectTrack(index, openPanel)
+  }, [selectTrack])
+
+  const playPrevious = useCallback(() => {
+    if (playlist.length === 0) return
+    const previous = currentTrack === 0 ? playlist.length - 1 : currentTrack - 1
+    playTrackByIndex(previous)
+  }, [currentTrack, playTrackByIndex, playlist.length])
+
+  const playNext = useCallback(() => {
+    if (playlist.length === 0) return
+    if (playMode === "repeat-one") {
+      playTrackByIndex(currentTrack)
+      return
+    }
+
+    if (playMode === "shuffle" && playlist.length > 1) {
+      let next = currentTrack
+      while (next === currentTrack) {
+        next = Math.floor(Math.random() * playlist.length)
+      }
+      playTrackByIndex(next)
+      return
+    }
+
+    const next = (currentTrack + 1) % playlist.length
+    playTrackByIndex(next)
+  }, [currentTrack, playMode, playTrackByIndex, playlist.length])
+
   useEffect(() => {
     fetch('/api/music', { cache: 'no-store' })
       .then(r => r.json())
@@ -196,10 +245,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
   }, [handleWindowMouseMove, handleWindowMouseUp])
 
-  const handleTrackEnd = () => {
-    const next = (currentTrack + 1) % playlist.length
-    selectTrack(next)
-  }
+  const handleTrackEnd = useCallback(() => {
+    playNext()
+  }, [playNext])
+
+  const playModeLabel = playMode === "loop" ? "列表循环" : playMode === "repeat-one" ? "单曲循环" : "随机播放"
+  const playModeIcon = playMode === "loop" ? "🔁" : playMode === "repeat-one" ? "🔂" : "🔀"
 
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current && audioRef.current.duration && !isDraggingRef.current) {
@@ -214,7 +265,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <MusicContext.Provider value={{ playlist, isPlaying, isHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime }}>
+    <MusicContext.Provider value={{ playlist, isPlaying, isHovering, currentTrack, track, playMode, togglePlay, cyclePlayMode, playPrevious, playNext, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime }}>
       <audio
         ref={audioRef}
         src={track?.src}
@@ -288,6 +339,27 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
                 {/* Progress */}
                 <div className="px-3 pb-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pb-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); playPrevious() }}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      ⏮
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); cyclePlayMode() }}
+                      className="hover:text-foreground transition-colors"
+                      title={playModeLabel}
+                    >
+                      {playModeIcon} {playModeLabel}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); playNext() }}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      ⏭
+                    </button>
+                  </div>
                   <div
                     className="h-1.5 bg-secondary rounded-full relative cursor-pointer group"
                     onMouseDown={handleMouseDown}

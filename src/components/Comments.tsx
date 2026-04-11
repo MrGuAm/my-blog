@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Post } from "@/lib/posts"
+import { useAuthStatus } from "@/hooks/useAuthStatus"
 
 function parseMarkdown(text: string): string {
   const escape = (s: string) =>
@@ -41,18 +42,48 @@ interface CommentsProps {
 }
 
 export default function Comments({ post }: CommentsProps) {
+  const { isAuthenticated } = useAuthStatus()
   const [comments, setComments] = useState<Comment[]>([])
   const [author, setAuthor] = useState("")
   const [content, setContent] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
   const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   useEffect(() => {
-    fetch(`/api/comments/${post.id}`)
-      .then(r => r.json())
-      .then(data => setComments(data.comments || []))
-      .catch(() => {})
+    const loadComments = async () => {
+      try {
+        const res = await fetch(`/api/comments/${post.id}`)
+        const data = await res.json()
+        setComments(data.comments || [])
+      } catch {}
+    }
+
+    loadComments()
   }, [post.id])
+
+  const handleDelete = async (commentId: string) => {
+    setDeletingCommentId(commentId)
+    setSubmitMsg(null)
+
+    try {
+      const res = await fetch(`/api/comments/${post.id}?commentId=${encodeURIComponent(commentId)}`, {
+        method: "DELETE",
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setComments((current) => current.filter((comment) => comment.id !== commentId))
+        setSubmitMsg({ type: "success", text: "评论已删除" })
+      } else {
+        setSubmitMsg({ type: "error", text: data.error || "删除失败" })
+      }
+    } catch {
+      setSubmitMsg({ type: "error", text: "网络错误，请重试" })
+    } finally {
+      setDeletingCommentId(null)
+      setTimeout(() => setSubmitMsg(null), 3000)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,6 +131,16 @@ export default function Comments({ post }: CommentsProps) {
                 <span className="font-medium text-sm">{comment.author}</span>
                 <span className="text-xs text-muted-foreground">·</span>
                 <span className="text-xs text-muted-foreground">{comment.date}</span>
+                {isAuthenticated && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(comment.id)}
+                    disabled={deletingCommentId === comment.id}
+                    className="ml-auto text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                  >
+                    {deletingCommentId === comment.id ? "删除中..." : "删除"}
+                  </button>
+                )}
               </div>
               <p className="text-sm text-muted-foreground"><span dangerouslySetInnerHTML={{ __html: parseMarkdown(comment.content) }} /></p>
             </div>

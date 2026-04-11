@@ -3,32 +3,89 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuthStatus } from "@/hooks/useAuthStatus"
+
+interface LocalDraft {
+  title: string
+  excerpt: string
+  content: string
+  category: string
+  tags: string
+  pinned: boolean
+  savedAt: string
+}
+
+const draftStorageKey = "champion-blog:new-post-draft"
+
+function readLocalDraft() {
+  if (typeof window === "undefined") return null
+
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey)
+    return raw ? (JSON.parse(raw) as LocalDraft) : null
+  } catch {
+    return null
+  }
+}
 
 export default function WritePage() {
   const router = useRouter()
-  const [title, setTitle] = useState("")
-  const [excerpt, setExcerpt] = useState("")
-  const [content, setContent] = useState("")
-  const [category, setCategory] = useState("随笔")
-  const [tags, setTags] = useState("")
+  const { isAuthenticated, isLoading: isAuthLoading, logout } = useAuthStatus()
+  const initialDraft = readLocalDraft()
+  const [title, setTitle] = useState(initialDraft?.title ?? "")
+  const [excerpt, setExcerpt] = useState(initialDraft?.excerpt ?? "")
+  const [content, setContent] = useState(initialDraft?.content ?? "")
+  const [category, setCategory] = useState(initialDraft?.category ?? "随笔")
+  const [tags, setTags] = useState(initialDraft?.tags ?? "")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState("")
-  const [pinned, setPinned] = useState(false)
+  const [pinned, setPinned] = useState(initialDraft?.pinned ?? false)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
+  const [savedAt, setSavedAt] = useState<string | null>(initialDraft?.savedAt ?? null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!document.cookie.includes('authenticated=')) {
+    if (!isAuthLoading && !isAuthenticated) {
       router.push('/login')
     }
-  }, [router])
+  }, [isAuthenticated, isAuthLoading, router])
 
   const handleLogout = () => {
-   document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+   logout()
    router.push('/home');
  };
+
+  const clearSavedDraft = useCallback(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.removeItem(draftStorageKey)
+    setSavedAt(null)
+  }, [])
+
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) return
+
+    const timeoutId = window.setTimeout(() => {
+      const nextSavedAt = new Date().toISOString()
+      const payload: LocalDraft = {
+        title,
+        excerpt,
+        content,
+        category,
+        tags,
+        pinned,
+        savedAt: nextSavedAt,
+      }
+
+      try {
+        window.localStorage.setItem(draftStorageKey, JSON.stringify(payload))
+        setSavedAt(nextSavedAt)
+      } catch {}
+    }, 600)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [category, content, excerpt, isAuthenticated, isAuthLoading, pinned, tags, title])
 
   const insertTextAtCursor = useCallback((text: string) => {
     const textarea = textareaRef.current
@@ -131,6 +188,7 @@ export default function WritePage() {
       })
 
       if (res.ok) {
+        clearSavedDraft()
         setMessage("发布成功！")
         setTimeout(() => router.push("/home"), 1000)
       } else {
@@ -175,6 +233,11 @@ export default function WritePage() {
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight mb-2">写文章</h1>
           <p className="text-muted-foreground">记录你的想法 · 支持直接粘贴图片</p>
+          {savedAt && (
+            <p className="text-xs text-muted-foreground mt-2">
+              草稿已自动保存在本地 · 最近一次保存 {new Date(savedAt).toLocaleString("zh-CN")}
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -381,9 +444,10 @@ export default function WritePage() {
                   const res = await fetch("/api/posts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ title, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), draft: true, pinned }),
-                  })
+                  body: JSON.stringify({ title, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), draft: true, pinned }),
+                })
                   if (res.ok) {
+                    clearSavedDraft()
                     setMessage("草稿已保存！")
                     setTimeout(() => router.push("/home"), 1000)
                   } else {
@@ -403,6 +467,15 @@ export default function WritePage() {
               <span className={message.includes("成功") ? "text-green-500" : "text-red-500"}>
                 {message}
               </span>
+            )}
+            {savedAt && (
+              <button
+                type="button"
+                onClick={clearSavedDraft}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                清除本地草稿
+              </button>
             )}
           </div>
         </form>

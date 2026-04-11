@@ -8,6 +8,7 @@ import { Post, TocItem } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
 import Comments from "@/components/Comments"
 import hljs from "highlight.js"
+import { useAuthStatus } from "@/hooks/useAuthStatus"
 
 import "highlight.js/styles/github-dark.css"
 
@@ -21,12 +22,12 @@ interface PostClientProps {
 
 export default function PostClient({ post, content, readingTime, headings, relatedPosts }: PostClientProps) {
   const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(() => typeof document !== "undefined" && document.cookie.includes("authenticated="))
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [views, setViews] = useState(post.views || 0)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const { isHovering } = useMusic()
+  const { isAuthenticated, logout } = useAuthStatus()
 
   // Back to top & code highlight
   useEffect(() => {
@@ -56,8 +57,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
   }, [post.id])
 
   const handleLogout = () => {
-    document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    setIsAuthenticated(false);
+    logout()
     router.push('/home');
   };
 
@@ -244,7 +244,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onSuccess={() => setIsAuthenticated(true)}
+        onSuccess={() => {}}
       />
 
       {/* Footer */}

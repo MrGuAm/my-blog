@@ -1,34 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
 import type { Post } from '@/lib/posts'
-
-const dataFile = path.join(process.cwd(), 'data/posts/posts.json')
-
-interface PostsData {
-  posts: Post[]
-}
-
-function readPosts(): PostsData {
-  const data = fs.readFileSync(dataFile, 'utf-8')
-  return JSON.parse(data) as PostsData
-}
-
-function writePosts(data: PostsData) {
-  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
-}
+import { isAuthenticatedRequest } from '@/lib/server/auth'
+import { createPost, listPosts } from '@/lib/server/store'
 
 export async function GET() {
   try {
-    const data = readPosts()
-    return NextResponse.json(data.posts)
+    return NextResponse.json(listPosts({ includeDrafts: true }))
   } catch {
     return NextResponse.json([])
   }
 }
 
 export async function POST(request: NextRequest) {
-  if (!request.cookies.get('authenticated')) {
+  if (!isAuthenticatedRequest(request)) {
     return NextResponse.json({ error: '请先登录' }, { status: 401 })
   }
 
@@ -40,24 +24,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '标题和内容不能为空' }, { status: 400 })
     }
 
-    const id = title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-') + '-' + Date.now()
-    const date = new Date().toISOString().split('T')[0]
-
-    const newPost: Post = {
-      id,
+    const newPost: Post = createPost({
       title,
-      excerpt: excerpt || content.substring(0, 100) + '...',
-      date,
-      category: category || '未分类',
-      tags: tags || [],
+      excerpt,
       content,
+      category,
+      tags,
+      draft,
       pinned: false,
-      draft: draft === true,
-    }
-
-    const data = readPosts()
-    data.posts.unshift(newPost)
-    writePosts(data)
+    })
 
     return NextResponse.json(newPost, { status: 201 })
   } catch {
