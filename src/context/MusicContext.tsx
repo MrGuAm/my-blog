@@ -1,8 +1,9 @@
 "use client"
 
 import { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from "react"
+import type { MusicTrack } from "@/app/api/music/route"
 
-export const musicPlaylist = [
+const fallbackPlaylist: MusicTrack[] = [
   { title: "最美的太阳", artist: "张杰", src: "/music/张杰 - 最美的太阳.mp3" },
   { title: "着魔", artist: "张杰", src: "/music/张杰 - 着魔.mp3" },
   { title: "这里是神奇的赛尔号", artist: "张杰", src: "/music/张杰 - 这里是神奇的赛尔号（《赛尔号》动画插曲）.mp3" },
@@ -27,10 +28,11 @@ function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive
 }
 
 interface MusicContextValue {
+  playlist: MusicTrack[]
   isPlaying: boolean
   isHovering: boolean
   currentTrack: number
-  track: typeof musicPlaylist[number]
+  track: MusicTrack
   togglePlay: () => void
   selectTrack: (index: number, openPanel?: boolean) => void
   progress: number
@@ -42,10 +44,11 @@ interface MusicContextValue {
 }
 
 const MusicContext = createContext<MusicContextValue>({
+  playlist: fallbackPlaylist,
   isPlaying: false,
   isHovering: false,
   currentTrack: 0,
-  track: musicPlaylist[0],
+  track: fallbackPlaylist[0],
   togglePlay: () => {},
   selectTrack: () => {},
   progress: 0,
@@ -57,6 +60,7 @@ const MusicContext = createContext<MusicContextValue>({
 })
 
 export function MusicProvider({ children }: { children: ReactNode }) {
+  const [playlist, setPlaylist] = useState<MusicTrack[]>(fallbackPlaylist)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTrack, setCurrentTrack] = useState(0)
   const [showList, setShowList] = useState(false)
@@ -93,14 +97,14 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
   }, [clearLeaveTimer])
 
-  const track = musicPlaylist[currentTrack]
+  const track = playlist[currentTrack] ?? fallbackPlaylist[0]
 
   const togglePlay = useCallback(() => {
-    if (!audioRef.current) return
+    if (!audioRef.current || !track) return
     if (isPlaying) audioRef.current.pause()
     else audioRef.current.play()
     setIsPlaying(!isPlaying)
-  }, [isPlaying])
+  }, [isPlaying, track])
 
   const handleWindowMouseMove = useCallback((e: MouseEvent) => {
     if (!isDraggingRef.current || !progressBarRectRef.current) return
@@ -145,9 +149,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const selectTrack = useCallback((index: number, openPanel = true) => {
-    if (!audioRef.current) return
+    if (!audioRef.current || !playlist[index]) return
     audioRef.current.pause()
-    audioRef.current.src = musicPlaylist[index].src
+    audioRef.current.src = playlist[index].src
     audioRef.current.load()
     setCurrentTrack(index)
     setShowList(false)
@@ -163,7 +167,27 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       startLeaveTimer(true)
       setIsHovering(true)
     }
-  }, [handleWindowMouseMove, handleWindowMouseUp, startLeaveTimer])
+  }, [handleWindowMouseMove, handleWindowMouseUp, playlist, startLeaveTimer])
+
+  useEffect(() => {
+    fetch('/api/music', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.tracks) && data.tracks.length > 0) {
+          setPlaylist(data.tracks)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (currentTrack < playlist.length) {
+      return
+    }
+    setCurrentTrack(0)
+    setProgress(0)
+    setDragProgress(null)
+  }, [currentTrack, playlist.length])
 
   useEffect(() => {
     return () => {
@@ -173,7 +197,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [handleWindowMouseMove, handleWindowMouseUp])
 
   const handleTrackEnd = () => {
-    const next = (currentTrack + 1) % musicPlaylist.length
+    const next = (currentTrack + 1) % playlist.length
     selectTrack(next)
   }
 
@@ -190,10 +214,10 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <MusicContext.Provider value={{ isPlaying, isHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime }}>
+    <MusicContext.Provider value={{ playlist, isPlaying, isHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime }}>
       <audio
         ref={audioRef}
-        src={track.src}
+        src={track?.src}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
         onEnded={handleTrackEnd}
@@ -228,7 +252,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                   <button onClick={() => setShowList(false)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
                 </div>
                 <div className="space-y-1">
-                  {musicPlaylist.map((song, i) => (
+                  {playlist.map((song, i) => (
                     <button
                       key={i}
                       onClick={() => { setShowList(false); if (currentTrack !== i) selectTrack(i, false) }}

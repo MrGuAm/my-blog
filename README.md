@@ -8,6 +8,7 @@
 - 文章分类、标签、置顶、草稿、浏览量统计
 - 评论接口与最新评论展示
 - 侧边栏播放器 + 右下角全局播放器
+- 自动扫描 `public/music` 目录生成播放列表
 - 长歌名滚动、暂停时省略号截断、播放列表与进度条拖拽
 - 富文本写作能力，支持格式化、图片 URL、本地图片和粘贴图片
 - HEIC/HEIF 自动转 JPEG
@@ -63,7 +64,7 @@ src/
 │   ├── posts/[id]/    # 文章详情
 │   ├── write/         # 写作与编辑
 │   ├── about/         # 关于页
-│   ├── api/           # 评论、文章、RSS 等接口
+│   ├── api/           # 评论、文章、音乐、RSS 等接口
 │   └── login/         # 登录页
 ├── components/        # 通用 UI 组件
 ├── context/           # 全局播放器状态
@@ -74,8 +75,15 @@ src/
 
 - 文章数据：`data/posts/posts.json`
 - 评论数据：`data/comments.json`
-- 音乐列表：`src/context/MusicContext.tsx` 中的 `musicPlaylist`
 - 音乐文件目录：`public/music/`
+- 音乐列表接口：`src/app/api/music/route.ts`
+
+### 音乐文件规则
+
+- 把歌曲文件放进 `public/music/` 后，刷新页面即可自动出现在播放列表
+- 支持的格式：`.mp3`、`.wav`、`.m4a`、`.aac`、`.flac`、`.ogg`
+- 推荐文件名格式：`歌手 - 歌名.mp3`
+- 如果文件名里没有 `歌手 - 歌名` 结构，页面会用“未知歌手”兜底
 
 ## 部署
 
@@ -90,4 +98,5 @@ npm run build
 - 清理了多余状态、无用参数和部分重复逻辑
 - 补齐了文章接口类型定义，减少 `any`
 - 修正了登录页动画实现与播放器文本展示逻辑
+- 音乐播放器已改为自动扫描本地音乐目录生成歌单
 - 当前 `npm run lint` 与 `npm run build` 均可通过

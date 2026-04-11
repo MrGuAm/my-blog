@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
-import { useMusic, musicPlaylist } from "@/context/MusicContext"
+import { useMusic } from "@/context/MusicContext"
 
 interface HomeClientProps {
   posts: Post[]
@@ -210,7 +210,7 @@ function PostCard({ post, characterType, onTagClick }: { post: Post; characterTy
 
 export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const router = useRouter()
-  const { isPlaying, isHovering: floatingHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime } = useMusic()
+  const { playlist, isPlaying, isHovering: floatingHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime } = useMusic()
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => typeof document !== "undefined" && document.cookie.includes("authenticated="))
   const [localPosts, setLocalPosts] = useState(posts)
@@ -409,7 +409,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     </button>
                   </div>
                   <div className="space-y-1">
-                    {musicPlaylist.map((song, index) => (
+                    {playlist.map((song, index) => (
                       <button
                         key={index}
                         onClick={() => { setShowList(false); if (currentTrack !== index) selectTrack(index, false) }}
