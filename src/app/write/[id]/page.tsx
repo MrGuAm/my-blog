@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { Post } from "@/lib/posts"
 
 export default function EditPostPage() {
   const router = useRouter()
@@ -48,6 +47,22 @@ export default function EditPostPage() {
       })
   }, [id, router])
 
+  const insertTextAtCursor = useCallback((text: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const before = content.substring(0, start)
+    const after = content.substring(end)
+    setContent(before + text + after)
+
+    requestAnimationFrame(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + text.length
+      textarea.focus()
+    })
+  }, [content])
+
   // Handle paste - image as base64
   useEffect(() => {
     const textarea = textareaRef.current
@@ -86,23 +101,7 @@ export default function EditPostPage() {
 
     textarea.addEventListener('paste', handlePaste)
     return () => textarea.removeEventListener('paste', handlePaste)
-  }, [])
-
-  const insertTextAtCursor = (text: string) => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const before = content.substring(0, start)
-    const after = content.substring(end)
-    setContent(before + text + after)
-
-    requestAnimationFrame(() => {
-      textarea.selectionStart = textarea.selectionEnd = start + text.length
-      textarea.focus()
-    })
-  }
+  }, [insertTextAtCursor])
 
   const handleInsertImage = () => {
     if (!imageUrl.trim()) return

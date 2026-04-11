@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import type { Post } from '@/lib/posts'
 
 const dataFile = path.join(process.cwd(), 'data/posts/posts.json')
 
-function readPosts() {
-  const data = fs.readFileSync(dataFile, 'utf-8')
-  return JSON.parse(data)
+interface PostsData {
+  posts: Post[]
 }
 
-function writePosts(data: { posts: any[] }) {
+function readPosts(): PostsData {
+  const data = fs.readFileSync(dataFile, 'utf-8')
+  return JSON.parse(data) as PostsData
+}
+
+function writePosts(data: PostsData) {
   fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
 }
 
@@ -38,7 +43,7 @@ export async function POST(request: NextRequest) {
     const id = title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-') + '-' + Date.now()
     const date = new Date().toISOString().split('T')[0]
 
-    const newPost = {
+    const newPost: Post = {
       id,
       title,
       excerpt: excerpt || content.substring(0, 100) + '...',
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
     writePosts(data)
 
     return NextResponse.json(newPost, { status: 201 })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: '保存失败' }, { status: 500 })
   }
 }

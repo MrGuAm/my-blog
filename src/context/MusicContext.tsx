@@ -10,18 +10,18 @@ export const musicPlaylist = [
 ]
 
 function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
-  if (text.length <= charCount) {
-    return <span className="truncate">{text}</span>
-  }
-
   return (
-    <span className="inline-block overflow-hidden">
-      <span
-        className={`inline-block ${isActive ? "animate-marquee" : ""}`}
-        style={{ whiteSpace: "nowrap" }}
-      >
-        {text}
-      </span>
+    <span className="block max-w-full overflow-hidden leading-tight">
+      {text.length <= charCount || !isActive ? (
+        <span className="block truncate">{text}</span>
+      ) : (
+        <span
+          className="inline-block animate-marquee"
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {text}
+        </span>
+      )}
     </span>
   )
 }
@@ -57,7 +57,6 @@ const MusicContext = createContext<MusicContextValue>({
 })
 
 export function MusicProvider({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTrack, setCurrentTrack] = useState(0)
   const [showList, setShowList] = useState(false)
@@ -167,10 +166,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [handleWindowMouseMove, handleWindowMouseUp, startLeaveTimer])
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
     return () => {
       window.removeEventListener("mousemove", handleWindowMouseMove)
       window.removeEventListener("mouseup", handleWindowMouseUp)
@@ -213,7 +208,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         {/* Small dot — always visible */}
         <div
           className={`w-12 h-12 rounded-full bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] shadow-lg flex items-center justify-center cursor-pointer ${isPlaying ? "animate-spin" : ""}`}
-          style={{ animationDuration: isPlaying ? "3s" : "0s", opacity: mounted && !isHovering ? 1 : 0, transition: "opacity 0.5s" }}
+          style={{ animationDuration: isPlaying ? "3s" : "0s", opacity: !isHovering ? 1 : 0, transition: "opacity 0.5s" }}
         >
           <span className="text-lg">🎵</span>
         </div>

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import type { Post } from '@/lib/posts'
 
 const dataFile = path.join(process.cwd(), 'data/posts/posts.json')
+
+interface PostsData {
+  posts: Post[]
+}
 
 export async function POST(
   request: NextRequest,
@@ -10,8 +15,8 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf-8'))
-    const idx = data.posts.findIndex((p: any) => p.id === id)
+    const data = JSON.parse(fs.readFileSync(dataFile, 'utf-8')) as PostsData
+    const idx = data.posts.findIndex(p => p.id === id)
 
     if (idx === -1) {
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })

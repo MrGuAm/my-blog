@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
@@ -26,7 +26,7 @@ function readComments(): CommentsData {
 }
 
 // GET /api/comments - 获取所有评论（最新汇总）
-export async function GET(request: NextRequest) {
+export async function GET() {
   const data = readComments()
   // 收集所有评论
   const all: Comment[] = []

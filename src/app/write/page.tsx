@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -29,6 +29,23 @@ export default function WritePage() {
    document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
    router.push('/home');
  };
+
+  const insertTextAtCursor = useCallback((text: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const before = content.substring(0, start)
+    const after = content.substring(end)
+    setContent(before + text + after)
+
+    // Move cursor after the inserted text
+    requestAnimationFrame(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + text.length
+      textarea.focus()
+    })
+  }, [content])
 
   // Handle paste - image as base64
   useEffect(() => {
@@ -68,24 +85,7 @@ export default function WritePage() {
 
     textarea.addEventListener('paste', handlePaste)
     return () => textarea.removeEventListener('paste', handlePaste)
-  }, [])
-
-  const insertTextAtCursor = (text: string) => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const before = content.substring(0, start)
-    const after = content.substring(end)
-    setContent(before + text + after)
-
-    // Move cursor after the inserted text
-    requestAnimationFrame(() => {
-      textarea.selectionStart = textarea.selectionEnd = start + text.length
-      textarea.focus()
-    })
-  }
+  }, [insertTextAtCursor])
 
   const handleInsertImage = () => {
     if (!imageUrl.trim()) return

@@ -1,83 +1,93 @@
 # Champion's Blog
 
-一个简约有趣的博客网站，带有可爱的卡通角色和音乐播放器 🎵
+一个基于 Next.js 16 的个人博客项目，包含文章系统、评论、音乐播放器、登录保护和一套带角色动效的界面。
 
-## 功能特点
+## 功能概览
 
-- 🎨 **卡通角色**：登录页和文章卡片都有动态卡通角色
-- 🎵 **音乐播放器**：
-  - 侧边栏播放器 + 右下角悬浮播放器（hover 展开）
-  - 播放列表、进度条拖拽/点击跳转
-  - 歌曲名过长时自动滚动（播放时触发）
-  - 列表选择当前曲目自动关闭
-- 🌙 **主题切换**：支持浅色/深色模式自动切换
-- 📝 **评论系统**：支持 Markdown 渲染
-- ✍️ **富文本编辑器**：支持加粗/斜体/标题/代码/链接/引用/列表
-- 🖼️ **图片上传**：支持本地上传、粘贴、URL，支持 HEIC 转 JPEG
-- 📄 **文章功能**：分类/标签、置顶、草稿文章
-- ⬆️ **返回顶部**：主页和文章详情页均有
-- 📖 **阅读体验**：阅读时间显示、文章目录（TOC）、相关文章推荐
-- 🔍 **SEO**：RSS 订阅（/api/feed）、sitemap.xml、meta tags
-- 📱 **响应式设计**：适配各种屏幕尺寸
+- 博客首页、文章详情、关于页、写作页与编辑页
+- 文章分类、标签、置顶、草稿、浏览量统计
+- 评论接口与最新评论展示
+- 侧边栏播放器 + 右下角全局播放器
+- 长歌名滚动、暂停时省略号截断、播放列表与进度条拖拽
+- 富文本写作能力，支持格式化、图片 URL、本地图片和粘贴图片
+- HEIC/HEIF 自动转 JPEG
+- 阅读时间、目录提取、相关文章推荐
+- RSS、`sitemap.xml` 与基础 SEO 支持
+- 响应式布局与系统深色模式适配
 
-## 开始使用
+## 技术栈
 
-### 安装依赖
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- shadcn/ui
+- highlight.js
+
+## 本地开发
+
+安装依赖：
 
 ```bash
 npm install
 ```
 
-### 启动开发服务器
+启动开发环境：
 
 ```bash
 npm run dev
 ```
 
-### 打开页面
+代码检查：
 
-访问 [http://localhost:3000](http://localhost:3000)
-
-## 项目结构
-
-```
-src/
-├── app/
-│   ├── home/           # 主页（博客文章列表 + 侧边栏播放器）
-│   ├── posts/[id]/    # 文章详情页
-│   ├── write/         # 写文章（富文本编辑器）
-│   ├── about/         # 关于页面
-│   ├── page.tsx       # 登录页
-│   └── layout.tsx     # 全局布局
-├── components/         # UI 组件
-├── context/
-│   └── MusicContext.tsx  # 全局音乐播放器状态
-└── proxy.ts           # 路由保护（验证登录）
+```bash
+npm run lint
 ```
 
-## 技术栈
-
-- **Next.js 16** - React 框架
-- **Tailwind CSS** - 样式设计
-- **TypeScript** - 类型安全
-- **shadcn/ui** - UI 组件库
-
-## 音乐文件
-
-将音乐文件放入 `public/music/` 目录，文件名将自动匹配播放列表。
-
-修改音乐列表：`src/context/MusicContext.tsx` 中的 `musicPlaylist` 数组。
-
-## 部署
-
-推荐部署到 Vercel：
+生产构建：
 
 ```bash
 npm run build
 ```
 
-然后将项目导入 Vercel 即可。
+默认访问地址：
 
----
+[http://localhost:3000](http://localhost:3000)
 
-*Made with ❤️ by Champion*
+## 目录结构
+
+```text
+src/
+├── app/
+│   ├── home/          # 首页与文章列表
+│   ├── posts/[id]/    # 文章详情
+│   ├── write/         # 写作与编辑
+│   ├── about/         # 关于页
+│   ├── api/           # 评论、文章、RSS 等接口
+│   └── login/         # 登录页
+├── components/        # 通用 UI 组件
+├── context/           # 全局播放器状态
+└── lib/               # 文章数据与工具函数
+```
+
+## 数据与资源
+
+- 文章数据：`data/posts/posts.json`
+- 评论数据：`data/comments.json`
+- 音乐列表：`src/context/MusicContext.tsx` 中的 `musicPlaylist`
+- 音乐文件目录：`public/music/`
+
+## 部署
+
+推荐直接部署到 Vercel，确保构建命令为：
+
+```bash
+npm run build
+```
+
+## 最近整理
+
+- 清理了多余状态、无用参数和部分重复逻辑
+- 补齐了文章接口类型定义，减少 `any`
+- 修正了登录页动画实现与播放器文本展示逻辑
+- 当前 `npm run lint` 与 `npm run build` 均可通过

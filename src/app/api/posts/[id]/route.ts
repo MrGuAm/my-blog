@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import type { Post } from '@/lib/posts'
 
 const dataFile = path.join(process.cwd(), 'data/posts/posts.json')
 
-function readPosts() {
-  const data = fs.readFileSync(dataFile, 'utf-8')
-  return JSON.parse(data)
+interface PostsData {
+  posts: Post[]
 }
 
-function writePosts(data: { posts: any[] }) {
+function readPosts(): PostsData {
+  const data = fs.readFileSync(dataFile, 'utf-8')
+  return JSON.parse(data) as PostsData
+}
+
+function writePosts(data: PostsData) {
   fs.writeFileSync(dataFile, JSON.stringify(data, null, 2))
 }
+
+type PostPatch = Partial<Pick<Post, 'pinned' | 'draft' | 'title' | 'excerpt' | 'content' | 'category' | 'tags'>>
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +26,7 @@ export async function GET(
 ) {
   const { id } = await params
   const data = readPosts()
-  const post = data.posts.find((p: any) => p.id === id)
+  const post = data.posts.find(p => p.id === id)
 
   if (!post) {
     return NextResponse.json({ error: '文章不存在' }, { status: 404 })
@@ -27,7 +34,17 @@ export async function GET(
 
   if (!request.cookies.get('authenticated')) {
     // 访客：只返回基本信息，不含 content
-    const { content, ...publicPost } = post
+    const publicPost: Omit<Post, 'content'> = {
+      id: post.id,
+      title: post.title,
+      excerpt: post.excerpt,
+      date: post.date,
+      category: post.category,
+      tags: post.tags,
+      pinned: post.pinned,
+      draft: post.draft,
+      views: post.views,
+    }
     return NextResponse.json(publicPost)
   }
 
@@ -44,11 +61,11 @@ export async function PATCH(
 
   try {
     const { id } = await params
-    const body = await request.json()
+    const body = await request.json() as PostPatch
     const { pinned, draft, title, excerpt, content, category, tags } = body
 
     const data = readPosts()
-    const postIndex = data.posts.findIndex((p: any) => p.id === id)
+    const postIndex = data.posts.findIndex(p => p.id === id)
 
     if (postIndex === -1) {
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })
@@ -80,7 +97,7 @@ export async function DELETE(
   try {
     const { id } = await params
     const data = readPosts()
-    const postIndex = data.posts.findIndex((p: any) => p.id === id)
+    const postIndex = data.posts.findIndex(p => p.id === id)
 
     if (postIndex === -1) {
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })

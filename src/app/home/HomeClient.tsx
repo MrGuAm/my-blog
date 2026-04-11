@@ -22,27 +22,27 @@ interface RecentComment {
 
 // Simple marquee text using CSS
 function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
-  if (text.length <= charCount) {
-    return <span className="truncate">{text}</span>;
-  }
-
   return (
-    <span className="inline-block overflow-hidden">
-      <span
-        className={`inline-block ${isActive ? 'animate-marquee' : ''}`}
-        style={{ whiteSpace: 'nowrap' }}
-      >
-        {text}
-      </span>
+    <span className="block max-w-full overflow-hidden leading-tight">
+      {text.length <= charCount || !isActive ? (
+        <span className="block truncate">{text}</span>
+      ) : (
+        <span
+          className="inline-block animate-marquee"
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {text}
+        </span>
+      )}
     </span>
-  );
+  )
 }
-function CharacterEye({ isHovered, containerRef, eyeColor, pupilColor, size }: { isHovered: boolean; containerRef: React.RefObject<HTMLDivElement | null>; eyeColor: string; pupilColor: string; size: number }) {
+function CharacterEye({ isHovered, containerRef, pupilColor, size }: { isHovered: boolean; containerRef: React.RefObject<HTMLDivElement | null>; pupilColor: string; size: number }) {
   const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
+  const displayedOffset = isHovered ? pupilOffset : { x: 0, y: 0 };
 
   useEffect(() => {
     if (!isHovered || !containerRef.current) {
-      setPupilOffset({ x: 0, y: 0 });
       return;
     }
 
@@ -89,7 +89,7 @@ function CharacterEye({ isHovered, containerRef, eyeColor, pupilColor, size }: {
             backgroundColor: pupilColor,
             left: '50%',
             top: '50%',
-            transform: `translate(calc(-50% + ${pupilOffset.x}px), calc(-50% + ${pupilOffset.y}px))`,
+            transform: `translate(calc(-50% + ${displayedOffset.x}px), calc(-50% + ${displayedOffset.y}px))`,
             transition: 'transform 0.1s ease-out'
           }}
         />
@@ -127,14 +127,12 @@ function Character({ type, isHovered }: { type: number; isHovered: boolean }) {
         <CharacterEye
           isHovered={isHovered}
           containerRef={ref}
-          eyeColor={config.eyeColor}
           pupilColor={config.pupilColor}
           size={config.eyeSize}
         />
         <CharacterEye
           isHovered={isHovered}
           containerRef={ref}
-          eyeColor={config.eyeColor}
           pupilColor={config.pupilColor}
           size={config.eyeSize}
         />
@@ -214,7 +212,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const router = useRouter()
   const { isPlaying, isHovering: floatingHovering, currentTrack, track, togglePlay, selectTrack, progress, duration, dragProgress, handleMouseDown, handleProgressClick, formatTime } = useMusic()
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => typeof document !== "undefined" && document.cookie.includes("authenticated="))
   const [localPosts, setLocalPosts] = useState(posts)
   const [showDrafts, setShowDrafts] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
@@ -234,11 +232,6 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Close sidebar playlist when track changes
-  useEffect(() => {
-    setShowList(false)
-  }, [currentTrack])
-
   // Fetch recent comments
   useEffect(() => {
     fetch('/api/comments')
@@ -254,16 +247,15 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   };
 
   useEffect(() => {
-    const auth = document.cookie.includes('authenticated=')
-    setIsAuthenticated(auth)
-    if (auth) {
-      fetch('/api/posts')
-        .then(r => r.json())
-        .then(apiPosts => setLocalPosts(apiPosts))
-        .catch(() => setLocalPosts(posts))
-    } else {
-      setLocalPosts(posts)
+    const auth = typeof document !== "undefined" && document.cookie.includes('authenticated=')
+    if (!auth) {
+      return
     }
+
+    fetch('/api/posts')
+      .then(r => r.json())
+      .then(apiPosts => setLocalPosts(apiPosts))
+      .catch(() => setLocalPosts(posts))
   }, [posts])
 
   const filteredPosts = localPosts.filter(post =>

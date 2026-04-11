@@ -21,8 +21,7 @@ interface PostClientProps {
 
 export default function PostClient({ post, content, readingTime, headings, relatedPosts }: PostClientProps) {
   const router = useRouter()
-  const [isDarkMode, setIsDarkMode] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => typeof document !== "undefined" && document.cookie.includes("authenticated="))
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [views, setViews] = useState(post.views || 0)
   const [showBackToTop, setShowBackToTop] = useState(false)
@@ -45,8 +44,6 @@ export default function PostClient({ post, content, readingTime, headings, relat
   }, [content])
 
   useEffect(() => {
-    const auth = document.cookie.includes('authenticated=')
-    setIsAuthenticated(auth)
     // 异步增加访问量
     fetch(`/api/posts/${post.id}/views`, { method: 'POST' })
       .then(r => r.json())
@@ -70,15 +67,6 @@ export default function PostClient({ post, content, readingTime, headings, relat
       router.refresh()
     } catch {}
   };
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    setIsDarkMode(mediaQuery.matches)
-    const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches)
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [])
-
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}

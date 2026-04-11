@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Mail, Sparkles, Moon, Sun } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Eye, EyeOff, Sparkles, Moon, Sun } from "lucide-react";
 
 
 interface PupilProps {
@@ -19,6 +16,20 @@ interface PupilProps {
  forceLookY?: number;
 }
 
+interface Offset {
+ x: number;
+ y: number;
+}
+
+interface CharacterPosition {
+ faceX: number;
+ faceY: number;
+ bodySkew: number;
+}
+
+const defaultOffset: Offset = { x: 0, y: 0 };
+const defaultCharacterPosition: CharacterPosition = { faceX: 0, faceY: 0, bodySkew: 0 };
+
 const Pupil = ({ 
  size = 12, 
  maxDistance = 5,
@@ -26,14 +37,25 @@ const Pupil = ({
  forceLookX,
  forceLookY
 }: PupilProps) => {
- const [mouseX, setMouseX] = useState<number>(0);
- const [mouseY, setMouseY] = useState<number>(0);
+ const [trackedOffset, setTrackedOffset] = useState<Offset>(defaultOffset);
  const pupilRef = useRef<HTMLDivElement>(null);
 
  useEffect(() => {
  const handleMouseMove = (e: MouseEvent) => {
- setMouseX(e.clientX);
- setMouseY(e.clientY);
+ const pupil = pupilRef.current?.getBoundingClientRect();
+ if (!pupil) return;
+
+ const pupilCenterX = pupil.left + pupil.width / 2;
+ const pupilCenterY = pupil.top + pupil.height / 2;
+ const deltaX = e.clientX - pupilCenterX;
+ const deltaY = e.clientY - pupilCenterY;
+ const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
+ const angle = Math.atan2(deltaY, deltaX);
+
+ setTrackedOffset({
+ x: Math.cos(angle) * distance,
+ y: Math.sin(angle) * distance,
+ });
  };
 
  window.addEventListener("mousemove", handleMouseMove);
@@ -41,32 +63,12 @@ const Pupil = ({
  return () => {
  window.removeEventListener("mousemove", handleMouseMove);
  };
- }, []);
+ }, [maxDistance]);
 
- const calculatePupilPosition = () => {
- if (!pupilRef.current) return { x: 0, y: 0 };
-
- // If forced look direction is provided, use that instead of mouse tracking
- if (forceLookX !== undefined && forceLookY !== undefined) {
- return { x: forceLookX, y: forceLookY };
- }
-
- const pupil = pupilRef.current.getBoundingClientRect();
- const pupilCenterX = pupil.left + pupil.width / 2;
- const pupilCenterY = pupil.top + pupil.height / 2;
-
- const deltaX = mouseX - pupilCenterX;
- const deltaY = mouseY - pupilCenterY;
- const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
-
- const angle = Math.atan2(deltaY, deltaX);
- const x = Math.cos(angle) * distance;
- const y = Math.sin(angle) * distance;
-
- return { x, y };
- };
-
- const pupilPosition = calculatePupilPosition();
+ const pupilPosition =
+ forceLookX !== undefined && forceLookY !== undefined
+ ? { x: forceLookX, y: forceLookY }
+ : trackedOffset;
 
  return (
  <div
@@ -107,14 +109,25 @@ const EyeBall = ({
  forceLookX,
  forceLookY
 }: EyeBallProps) => {
- const [mouseX, setMouseX] = useState<number>(0);
- const [mouseY, setMouseY] = useState<number>(0);
+ const [trackedOffset, setTrackedOffset] = useState<Offset>(defaultOffset);
  const eyeRef = useRef<HTMLDivElement>(null);
 
  useEffect(() => {
  const handleMouseMove = (e: MouseEvent) => {
- setMouseX(e.clientX);
- setMouseY(e.clientY);
+ const eye = eyeRef.current?.getBoundingClientRect();
+ if (!eye) return;
+
+ const eyeCenterX = eye.left + eye.width / 2;
+ const eyeCenterY = eye.top + eye.height / 2;
+ const deltaX = e.clientX - eyeCenterX;
+ const deltaY = e.clientY - eyeCenterY;
+ const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
+ const angle = Math.atan2(deltaY, deltaX);
+
+ setTrackedOffset({
+ x: Math.cos(angle) * distance,
+ y: Math.sin(angle) * distance,
+ });
  };
 
  window.addEventListener("mousemove", handleMouseMove);
@@ -122,32 +135,12 @@ const EyeBall = ({
  return () => {
  window.removeEventListener("mousemove", handleMouseMove);
  };
- }, []);
+ }, [maxDistance]);
 
- const calculatePupilPosition = () => {
- if (!eyeRef.current) return { x: 0, y: 0 };
-
- // If forced look direction is provided, use that instead of mouse tracking
- if (forceLookX !== undefined && forceLookY !== undefined) {
- return { x: forceLookX, y: forceLookY };
- }
-
- const eye = eyeRef.current.getBoundingClientRect();
- const eyeCenterX = eye.left + eye.width / 2;
- const eyeCenterY = eye.top + eye.height / 2;
-
- const deltaX = mouseX - eyeCenterX;
- const deltaY = mouseY - eyeCenterY;
- const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
-
- const angle = Math.atan2(deltaY, deltaX);
- const x = Math.cos(angle) * distance;
- const y = Math.sin(angle) * distance;
-
- return { x, y };
- };
-
- const pupilPosition = calculatePupilPosition();
+ const pupilPosition =
+ forceLookX !== undefined && forceLookY !== undefined
+ ? { x: forceLookX, y: forceLookY }
+ : trackedOffset;
 
  return (
  <div
@@ -183,27 +176,29 @@ const EyeBall = ({
 function LoginPage() {
  const router = useRouter()
  const [showPassword, setShowPassword] = useState(false);
- const [email, setEmail] = useState("");
  const [password, setPassword] = useState("");
  const [error, setError] = useState("");
  const [isLoading, setIsLoading] = useState(false);
- const [mouseX, setMouseX] = useState<number>(0);
- const [mouseY, setMouseY] = useState<number>(0);
  const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
  const [isBlackBlinking, setIsBlackBlinking] = useState(false);
  const [isTyping, setIsTyping] = useState(false);
  const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
  const [isPurplePeeking, setIsPurplePeeking] = useState(false);
- const [isDarkMode, setIsDarkMode] = useState(false);
- const [isAuthenticated, setIsAuthenticated] = useState(false);
+ const [isDarkMode, setIsDarkMode] = useState(() => typeof window !== "undefined" && window.matchMedia('(prefers-color-scheme: dark)').matches);
+ const [isAuthenticated, setIsAuthenticated] = useState(() => typeof document !== "undefined" && document.cookie.includes('authenticated='));
+ const [characterPositions, setCharacterPositions] = useState({
+ purple: defaultCharacterPosition,
+ black: defaultCharacterPosition,
+ yellow: defaultCharacterPosition,
+ orange: defaultCharacterPosition,
+ });
+ const lookTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
  useEffect(() => {
-   const auth = document.cookie.includes('authenticated=');
-   setIsAuthenticated(auth);
-   if (auth) {
+   if (isAuthenticated) {
      router.push('/write');
    }
- }, [router]);
+ }, [isAuthenticated, router]);
 
  const handleLogout = () => {
    document.cookie = 'authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
@@ -213,7 +208,6 @@ function LoginPage() {
  // Detect system color scheme preference
  useEffect(() => {
  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
- setIsDarkMode(mediaQuery.matches);
 
  const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
  mediaQuery.addEventListener('change', handleChange);
@@ -226,9 +220,33 @@ function LoginPage() {
  const orangeRef = useRef<HTMLDivElement>(null);
 
  useEffect(() => {
+ const calculatePosition = (
+ ref: React.RefObject<HTMLDivElement | null>,
+ clientX: number,
+ clientY: number
+ ): CharacterPosition => {
+ if (!ref.current) return defaultCharacterPosition;
+
+ const rect = ref.current.getBoundingClientRect();
+ const centerX = rect.left + rect.width / 2;
+ const centerY = rect.top + rect.height / 3;
+ const deltaX = clientX - centerX;
+ const deltaY = clientY - centerY;
+
+ return {
+ faceX: Math.max(-15, Math.min(15, deltaX / 20)),
+ faceY: Math.max(-10, Math.min(10, deltaY / 30)),
+ bodySkew: Math.max(-6, Math.min(6, -deltaX / 120)),
+ };
+ };
+
  const handleMouseMove = (e: MouseEvent) => {
- setMouseX(e.clientX);
- setMouseY(e.clientY);
+ setCharacterPositions({
+ purple: calculatePosition(purpleRef, e.clientX, e.clientY),
+ black: calculatePosition(blackRef, e.clientX, e.clientY),
+ yellow: calculatePosition(yellowRef, e.clientX, e.clientY),
+ orange: calculatePosition(orangeRef, e.clientX, e.clientY),
+ });
  };
 
  window.addEventListener("mousemove", handleMouseMove);
@@ -275,71 +293,61 @@ function LoginPage() {
  return () => clearTimeout(timeout);
  }, []);
 
- // Looking at each other animation when typing starts
- useEffect(() => {
- if (isTyping) {
- setIsLookingAtEachOther(true);
- const timer = setTimeout(() => {
- setIsLookingAtEachOther(false);
- }, 800); // Look at each other for 1.5 seconds, then back to tracking mouse
- return () => clearTimeout(timer);
- } else {
- setIsLookingAtEachOther(false);
- }
- }, [isTyping]);
-
  // Purple sneaky peeking animation when typing password and it's visible
  useEffect(() => {
- if (password.length > 0 && showPassword) {
- const schedulePeek = () => {
- const peekInterval = setTimeout(() => {
- setIsPurplePeeking(true);
- setTimeout(() => {
- setIsPurplePeeking(false);
- }, 800); // Peek for 800ms
- }, Math.random() * 3000 + 2000); // Random peek every 2-5 seconds
- return peekInterval;
- };
-
- const firstPeek = schedulePeek();
- return () => clearTimeout(firstPeek);
- } else {
- setIsPurplePeeking(false);
+ if (!(password.length > 0 && showPassword)) {
+ return;
  }
- }, [password, showPassword, isPurplePeeking]);
 
- const calculatePosition = (ref: React.RefObject<HTMLDivElement | null>) => {
- if (!ref.current) return { faceX: 0, faceY: 0, bodyRotation: 0 };
+ let cancelled = false;
+ let peekStartTimeout: ReturnType<typeof setTimeout> | null = null;
+ let peekEndTimeout: ReturnType<typeof setTimeout> | null = null;
 
- const rect = ref.current.getBoundingClientRect();
- const centerX = rect.left + rect.width / 2;
- const centerY = rect.top + rect.height / 3; // Focus on head area
-
- const deltaX = mouseX - centerX;
- const deltaY = mouseY - centerY;
-
- // Face movement (limited range)
- const faceX = Math.max(-15, Math.min(15, deltaX / 20));
- const faceY = Math.max(-10, Math.min(10, deltaY / 30));
-
- // Body lean (skew for lean while keeping bottom straight) - negative to lean towards mouse
- const bodySkew = Math.max(-6, Math.min(6, -deltaX / 120));
-
- return { faceX, faceY, bodySkew };
+ const schedulePeek = () => {
+ peekStartTimeout = setTimeout(() => {
+ if (cancelled) return;
+ setIsPurplePeeking(true);
+ peekEndTimeout = setTimeout(() => {
+ if (cancelled) return;
+ setIsPurplePeeking(false);
+ schedulePeek();
+ }, 800);
+ }, Math.random() * 3000 + 2000);
  };
 
- const purplePos = calculatePosition(purpleRef);
- const blackPos = calculatePosition(blackRef);
- const yellowPos = calculatePosition(yellowRef);
- const orangePos = calculatePosition(orangeRef);
+ schedulePeek();
+
+ return () => {
+ cancelled = true;
+ if (peekStartTimeout) clearTimeout(peekStartTimeout);
+ if (peekEndTimeout) clearTimeout(peekEndTimeout);
+ };
+ }, [password, showPassword]);
+
+ const triggerLookAtEachOther = () => {
+ if (lookTimerRef.current) {
+ clearTimeout(lookTimerRef.current);
+ }
+ setIsLookingAtEachOther(true);
+ lookTimerRef.current = setTimeout(() => {
+ setIsLookingAtEachOther(false);
+ lookTimerRef.current = null;
+ }, 800);
+ };
+
+ const isPurplePeekingActive = password.length > 0 && showPassword && isPurplePeeking;
+
+ const { purple: purplePos, black: blackPos, yellow: yellowPos, orange: orangePos } = characterPositions;
 
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
+ setIsLoading(true);
  if (password === process.env.NEXT_PUBLIC_PASSWORD) {
  document.cookie = 'authenticated=true; path=/';
  window.location.href = '/write';
  } else {
  setError('Incorrect password');
+ setIsLoading(false);
  }
  };
 
@@ -393,8 +401,8 @@ function LoginPage() {
  eyeColor="white" 
  pupilColor="#2D2D2D" 
  isBlinking={isPurpleBlinking}
- forceLookX={(password.length > 0 && showPassword) ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
- forceLookY={(password.length > 0 && showPassword) ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
+ forceLookX={(password.length > 0 && showPassword) ? (isPurplePeekingActive ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
+ forceLookY={(password.length > 0 && showPassword) ? (isPurplePeekingActive ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
  />
  <EyeBall 
  size={18} 
@@ -403,8 +411,8 @@ function LoginPage() {
  eyeColor="white" 
  pupilColor="#2D2D2D" 
  isBlinking={isPurpleBlinking}
- forceLookX={(password.length > 0 && showPassword) ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
- forceLookY={(password.length > 0 && showPassword) ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
+ forceLookX={(password.length > 0 && showPassword) ? (isPurplePeekingActive ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
+ forceLookY={(password.length > 0 && showPassword) ? (isPurplePeekingActive ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
  />
  </div>
  </div>
@@ -599,6 +607,14 @@ function LoginPage() {
  placeholder="••••••••"
  value={password}
  onChange={(e) => setPassword(e.target.value)}
+ onFocus={() => {
+ setIsTyping(true);
+ triggerLookAtEachOther();
+ }}
+ onBlur={() => {
+ setIsTyping(false);
+ setIsLookingAtEachOther(false);
+ }}
  required
  className={`h-12 pr-10 border ${isDarkMode ? 'bg-black border-white/20 text-white placeholder:text-white/40' : 'bg-background border-border/60'} focus:border-primary`}
  />
