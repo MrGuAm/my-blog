@@ -60,7 +60,7 @@ export default function WritePage() {
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      router.push('/login')
+      router.replace('/home?login=1&next=/write')
     }
   }, [isAuthenticated, isAuthLoading, router])
 

@@ -14,6 +14,8 @@ import { useAuthStatus } from "@/hooks/useAuthStatus"
 interface HomeClientProps {
   posts: Post[]
   allTags: string[]
+  loginRequested?: boolean
+  nextPath?: string | null
 }
 
 interface RecentComment {
@@ -230,7 +232,7 @@ function PostCard({
   );
 }
 
-export default function HomeClient({ posts, allTags }: HomeClientProps) {
+export default function HomeClient({ posts, allTags, loginRequested = false, nextPath = null }: HomeClientProps) {
   const router = useRouter()
   const {
     playlist,
@@ -273,6 +275,19 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const postsPerPage = 6
+
+  const getSafeNextPath = (value: string | null) => {
+    if (!value) return null
+    return value.startsWith("/") && !value.startsWith("//") ? value : null
+  }
+
+  const closeLoginModal = () => {
+    setIsLoginModalOpen(false)
+    if (!loginRequested) return
+    router.replace("/home")
+  }
+
+  const loginModalOpen = isLoginModalOpen || (loginRequested && !isAuthenticated)
 
   const visiblePosts = isAuthenticated ? (adminPosts ?? posts) : posts
 
@@ -770,9 +785,18 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
 
       {/* Login Modal */}
       <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        onSuccess={() => {}}
+        isOpen={loginModalOpen}
+        onClose={closeLoginModal}
+        onSuccess={() => {
+          const safeNextPath = getSafeNextPath(nextPath)
+          if (safeNextPath) {
+            router.push(safeNextPath)
+            return
+          }
+          if (loginRequested) {
+            router.replace("/home")
+          }
+        }}
       />
 
       {/* Footer */}

@@ -64,7 +64,7 @@ export default function EditPostPage() {
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      router.push('/login')
+      router.replace(`/home?login=1&next=/write/${id}`)
       return
     }
 

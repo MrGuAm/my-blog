@@ -61,7 +61,7 @@ export default async function PostPage({ params }: Props) {
   if (post.draft) {
     const isAuthenticated = await isAuthenticatedServer()
     if (!isAuthenticated) {
-      redirect("/login")
+      redirect(`/home?login=1&next=/write/${post.id}`)
     }
     // Authenticated user viewing a draft -> go to edit page
     redirect(`/write/${post.id}`)

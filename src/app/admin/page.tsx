@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function AdminPage() {
   const isAuthenticated = await isAuthenticatedServer()
   if (!isAuthenticated) {
-    redirect("/login")
+    redirect("/home?login=1&next=/admin")
   }
 
   const [posts, comments, users] = await Promise.all([

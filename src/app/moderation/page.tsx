@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function ModerationPage() {
   const isAuthenticated = await isAuthenticatedServer()
   if (!isAuthenticated) {
-    redirect("/login")
+    redirect("/home?login=1&next=/moderation")
   }
 
   const [comments, posts] = await Promise.all([
