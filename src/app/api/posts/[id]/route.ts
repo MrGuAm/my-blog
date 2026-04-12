@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const post = getPostById(id)
+  const post = await getPostById(id)
 
   if (!post) {
     return NextResponse.json({ error: '文章不存在' }, { status: 404 })
@@ -50,7 +50,7 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json() as PostPatch
-    const post = updatePost(id, body)
+    const post = await updatePost(id, body)
 
     if (!post) {
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })
@@ -72,7 +72,7 @@ export async function DELETE(
 
   try {
     const { id } = await params
-    if (!deletePost(id)) {
+    if (!(await deletePost(id))) {
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })
     }
 

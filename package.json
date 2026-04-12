@@ -1,5 +1,5 @@
 {
-  "name": "login-page",
+  "name": "my-blog",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
+    "@neondatabase/serverless": "^1.0.2",
     "@vercel/speed-insights": "^2.0.0",
     "better-sqlite3": "^12.8.0",
     "class-variance-authority": "^0.7.1",

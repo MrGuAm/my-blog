@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ postId: string }> }
 ) {
   const { postId } = await params
-  return NextResponse.json({ comments: listCommentsByPost(postId) })
+  return NextResponse.json({ comments: await listCommentsByPost(postId) })
 }
 
 // POST /api/comments/[postId] - 添加评论
@@ -24,7 +24,7 @@ export async function POST(
     return NextResponse.json({ error: '昵称和评论内容不能为空' }, { status: 400 })
   }
 
-  const newComment = createComment({
+  const newComment = await createComment({
     postId,
     author,
     content,
@@ -49,7 +49,7 @@ export async function DELETE(
     return NextResponse.json({ error: '缺少评论 ID' }, { status: 400 })
   }
 
-  if (!deleteComment(postId, commentId)) {
+  if (!(await deleteComment(postId, commentId))) {
     return NextResponse.json({ error: '评论不存在' }, { status: 404 })
   }
 

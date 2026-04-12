@@ -52,6 +52,12 @@ AUTH_PASSWORD=your-password
 AUTH_SECRET=replace-this-with-a-long-random-string
 ```
 
+如果你准备把线上部署接到 Neon，再额外配置：
+
+```bash
+DATABASE_URL=postgresql://...
+```
+
 推荐在项目根目录创建 `.env.local`：
 
 ```bash
@@ -63,6 +69,7 @@ AUTH_SECRET=replace-this-with-a-long-random-string
 
 - 如果没有设置 `AUTH_PASSWORD`，项目会回退读取 `NEXT_PUBLIC_PASSWORD`
 - 如果没有设置 `AUTH_SECRET`，开发环境会使用一个本地默认值
+- 如果没有设置 `DATABASE_URL`，项目会继续使用本地 SQLite 文件
 
 修改环境变量后，重新启动开发服务器即可生效。
 
@@ -100,7 +107,7 @@ src/
 
 ## 数据与资源
 
-- SQLite 数据库：`data/blog.db`
+- 本地 SQLite 数据库：`data/blog.db`
 - 初始文章数据：`data/posts/posts.json`
 - 初始评论数据：`data/comments.json`
 - 音乐文件目录：`public/music/`
@@ -110,6 +117,7 @@ src/
 
 - 项目会优先使用 `data/blog.db` 保存文章、评论和浏览量
 - 首次启动且数据库为空时，会自动从 `data/posts/posts.json` 与 `data/comments.json` 导入初始数据
+- 如果设置了 `DATABASE_URL`，项目会改为使用外部 Postgres，并优先把初始数据导入远程数据库
 - 开发环境下不会自动增加浏览量，避免本地调试把数据写脏
 - 只有生产环境访问文章详情页时才会累加浏览量
 - 数据库文件已加入 `.gitignore`，不会默认提交到仓库
@@ -134,6 +142,23 @@ src/
 ```bash
 npm run build
 ```
+
+### Vercel 说明
+
+- 本地开发默认使用 SQLite，线上推荐使用 Neon
+- Vercel 的函数运行环境不适合把业务数据持久写入项目目录，所以不要在线上继续依赖 `data/blog.db`
+- 当前代码已经支持自动切换：
+  - 没有 `DATABASE_URL`：使用本地 SQLite
+  - 有 `DATABASE_URL`：使用远程 Postgres（推荐 Neon）
+- 在 Vercel 中至少配置这三个环境变量：
+  - `AUTH_PASSWORD`
+  - `AUTH_SECRET`
+  - `DATABASE_URL`
+- 推荐接法：
+  1. 在 Vercel 项目的 Marketplace 安装 Neon
+  2. 创建数据库后，把 Neon 提供的连接串写入 `DATABASE_URL`
+  3. 重新部署项目
+  4. 首次访问时项目会自动建表，并从本地 JSON 导入初始文章和评论
 
 ## 最近整理
 

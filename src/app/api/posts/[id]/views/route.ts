@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const post = getPostById(id)
+    const post = await getPostById(id)
 
     if (!post) {
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })
@@ -17,7 +17,7 @@ export async function POST(
       return NextResponse.json({ views: post.views || 0 })
     }
 
-    return NextResponse.json({ views: incrementPostViews(id) })
+    return NextResponse.json({ views: await incrementPostViews(id) })
   } catch {
     return NextResponse.json({ error: '更新失败' }, { status: 500 })
   }

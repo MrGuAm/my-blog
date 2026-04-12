@@ -13,24 +13,26 @@ export interface Post {
   views?: number
 }
 
-export function getAllPosts(): Post[] {
-  return listPosts({ includeDrafts: true }).sort((a, b) => {
+export async function getAllPosts(): Promise<Post[]> {
+  const posts: Post[] = await listPosts({ includeDrafts: true })
+  return posts.sort((a: Post, b: Post) => {
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
     return new Date(b.date).getTime() - new Date(a.date).getTime()
   })
 }
 
-export function getPost(id: string): Post | undefined {
+export async function getPost(id: string): Promise<Post | undefined> {
   return getPostById(id)
 }
 
-export function getAllTags(): string[] {
-  return Array.from(new Set(listPosts({ includeDrafts: false }).flatMap(p => p.tags))).sort()
+export async function getAllTags(): Promise<string[]> {
+  const posts: Post[] = await listPosts({ includeDrafts: false })
+  return Array.from(new Set(posts.flatMap((post) => post.tags))).sort()
 }
 
-export function getPostContent(id: string): string {
-  const post = getPost(id)
+export async function getPostContent(id: string): Promise<string> {
+  const post = await getPost(id)
   return post?.content || ''
 }
 
@@ -59,8 +61,8 @@ export function extractHeadings(content: string): TocItem[] {
   return headings
 }
 
-export function getRelatedPosts(post: Post, limit = 3): Post[] {
-  const allPosts = getAllPosts().filter(p => p.id !== post.id && !p.draft)
+export async function getRelatedPosts(post: Post, limit = 3): Promise<Post[]> {
+  const allPosts = (await getAllPosts()).filter((item) => item.id !== post.id && !item.draft)
   const scored = allPosts.map(p => {
     let score = 0
     if (p.category === post.category) score += 3

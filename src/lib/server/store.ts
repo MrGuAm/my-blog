@@ -1,3 +1,4 @@
+import { neon } from '@neondatabase/serverless'
 import Database from 'better-sqlite3'
 import fs from 'fs'
 import path from 'path'
@@ -19,8 +20,8 @@ interface PostRow {
   category: string
   tags_json: string
   content: string
-  pinned: number
-  draft: number
+  pinned: number | boolean
+  draft: number | boolean
   views: number
 }
 
@@ -32,9 +33,16 @@ const dataDir = path.join(process.cwd(), 'data')
 const dbPath = path.join(dataDir, 'blog.db')
 const postsJsonPath = path.join(dataDir, 'posts/posts.json')
 const commentsJsonPath = path.join(dataDir, 'comments.json')
+const databaseUrl = process.env.DATABASE_URL
 
 declare global {
   var __championBlogDb: Database.Database | undefined
+  var __championBlogSql: ReturnType<typeof neon> | undefined
+  var __championBlogStoreReady: Promise<void> | undefined
+}
+
+function isRemoteDatabaseEnabled() {
+  return Boolean(databaseUrl)
 }
 
 function ensureDataDir() {
@@ -62,6 +70,15 @@ function rowToPost(row: PostRow): Post {
     draft: Boolean(row.draft),
     views: row.views || 0,
   }
+}
+
+function normalizeExcerpt(content: string, excerpt?: string) {
+  if (excerpt?.trim()) return excerpt.trim()
+  return `${content.substring(0, 100)}...`
+}
+
+function normalizeTags(tags?: string[]) {
+  return (tags || []).map((tag) => tag.trim()).filter(Boolean)
 }
 
 function getDb() {
@@ -143,8 +160,7 @@ function getDb() {
         }
       })
 
-      const flatComments = Object.values(commentsData.comments).flat()
-      insertMany(flatComments)
+      insertMany(Object.values(commentsData.comments).flat())
     }
 
     global.__championBlogDb = db
@@ -153,19 +169,104 @@ function getDb() {
   return global.__championBlogDb
 }
 
-function normalizeExcerpt(content: string, excerpt?: string) {
-  if (excerpt?.trim()) return excerpt.trim()
-  return `${content.substring(0, 100)}...`
+function getSql() {
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not configured')
+  }
+
+  if (!global.__championBlogSql) {
+    global.__championBlogSql = neon(databaseUrl)
+  }
+
+  return global.__championBlogSql
 }
 
-function normalizeTags(tags?: string[]) {
-  return (tags || []).map(tag => tag.trim()).filter(Boolean)
+async function seedRemoteDatabase() {
+  const sql = getSql()
+  const postsData = readJsonFile<{ posts: Post[] }>(postsJsonPath, { posts: [] })
+  const commentsData = readJsonFile<CommentFileData>(commentsJsonPath, { comments: {} })
+
+  for (const post of postsData.posts) {
+    await sql`
+      INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, pinned, draft, views)
+      VALUES (${post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.content}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0})
+      ON CONFLICT (id) DO NOTHING
+    `
+  }
+
+  for (const comment of Object.values(commentsData.comments).flat()) {
+    await sql`
+      INSERT INTO comments (id, post_id, author, content, date)
+      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date})
+      ON CONFLICT (id) DO NOTHING
+    `
+  }
 }
 
-export function listPosts(options?: { includeDrafts?: boolean }) {
-  const db = getDb()
+async function ensureRemoteSchema() {
+  const sql = getSql()
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS posts (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      excerpt TEXT NOT NULL,
+      date TEXT NOT NULL,
+      category TEXT NOT NULL,
+      tags_json TEXT NOT NULL DEFAULT '[]',
+      content TEXT NOT NULL,
+      pinned INTEGER NOT NULL DEFAULT 0,
+      draft INTEGER NOT NULL DEFAULT 0,
+      views INTEGER NOT NULL DEFAULT 0
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS comments (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL,
+      author TEXT NOT NULL,
+      content TEXT NOT NULL,
+      date TEXT NOT NULL
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)`
+
+  const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
+  const postCount = Number(postCountRows[0]?.count || 0)
+  if (postCount === 0) {
+    await seedRemoteDatabase()
+  }
+}
+
+async function ensureStoreReady() {
+  if (!isRemoteDatabaseEnabled()) {
+    getDb()
+    return
+  }
+
+  if (!global.__championBlogStoreReady) {
+    global.__championBlogStoreReady = ensureRemoteSchema()
+  }
+
+  await global.__championBlogStoreReady
+}
+
+export async function listPosts(options?: { includeDrafts?: boolean }) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = ((options?.includeDrafts ?? true)
+      ? await sql`SELECT id, title, excerpt, date, category, tags_json, content, pinned, draft, views FROM posts ORDER BY pinned DESC, date DESC`
+      : await sql`SELECT id, title, excerpt, date, category, tags_json, content, pinned, draft, views FROM posts WHERE draft = 0 ORDER BY pinned DESC, date DESC`) as PostRow[]
+
+    return rows.map((row) => rowToPost(row as unknown as PostRow))
+  }
+
   const includeDrafts = options?.includeDrafts ?? true
-  const rows = db.prepare(`
+  const rows = getDb().prepare(`
     SELECT * FROM posts
     ${includeDrafts ? '' : 'WHERE draft = 0'}
     ORDER BY pinned DESC, date DESC
@@ -174,13 +275,25 @@ export function listPosts(options?: { includeDrafts?: boolean }) {
   return rows.map(rowToPost)
 }
 
-export function getPostById(id: string) {
-  const db = getDb()
-  const row = db.prepare('SELECT * FROM posts WHERE id = ?').get(id) as PostRow | undefined
+export async function getPostById(id: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, title, excerpt, date, category, tags_json, content, pinned, draft, views
+      FROM posts
+      WHERE id = ${id}
+      LIMIT 1
+    `) as PostRow[]
+    return rows[0] ? rowToPost(rows[0] as unknown as PostRow) : undefined
+  }
+
+  const row = getDb().prepare('SELECT * FROM posts WHERE id = ?').get(id) as PostRow | undefined
   return row ? rowToPost(row) : undefined
 }
 
-export function createPost(input: {
+export async function createPost(input: {
   title: string
   excerpt?: string
   content: string
@@ -189,14 +302,13 @@ export function createPost(input: {
   draft?: boolean
   pinned?: boolean
 }) {
-  const db = getDb()
-  const id = `${input.title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-')}-${Date.now()}`
-  const date = new Date().toISOString().split('T')[0]
+  await ensureStoreReady()
+
   const post: Post = {
-    id,
+    id: `${input.title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-')}-${Date.now()}`,
     title: input.title,
     excerpt: normalizeExcerpt(input.content, input.excerpt),
-    date,
+    date: new Date().toISOString().split('T')[0],
     category: input.category?.trim() || '未分类',
     tags: normalizeTags(input.tags),
     content: input.content,
@@ -205,7 +317,16 @@ export function createPost(input: {
     views: 0,
   }
 
-  db.prepare(`
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    await sql`
+      INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, pinned, draft, views)
+      VALUES (${post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags)}, ${post.content}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0})
+    `
+    return post
+  }
+
+  getDb().prepare(`
     INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, pinned, draft, views)
     VALUES (@id, @title, @excerpt, @date, @category, @tags_json, @content, @pinned, @draft, @views)
   `).run({
@@ -218,8 +339,11 @@ export function createPost(input: {
   return post
 }
 
-export function updatePost(id: string, patch: Partial<Pick<Post, 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'pinned' | 'draft'>>) {
-  const existing = getPostById(id)
+export async function updatePost(
+  id: string,
+  patch: Partial<Pick<Post, 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'pinned' | 'draft'>>
+) {
+  const existing = await getPostById(id)
   if (!existing) return undefined
 
   const next: Post = {
@@ -228,6 +352,22 @@ export function updatePost(id: string, patch: Partial<Pick<Post, 'title' | 'exce
     excerpt: normalizeExcerpt(patch.content ?? existing.content, patch.excerpt ?? existing.excerpt),
     category: patch.category?.trim() || existing.category,
     tags: patch.tags ? normalizeTags(patch.tags) : existing.tags,
+  }
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    await sql`
+      UPDATE posts
+      SET title = ${next.title},
+          excerpt = ${next.excerpt},
+          category = ${next.category},
+          tags_json = ${JSON.stringify(next.tags)},
+          content = ${next.content},
+          pinned = ${next.pinned ? 1 : 0},
+          draft = ${next.draft ? 1 : 0}
+      WHERE id = ${id}
+    `
+    return next
   }
 
   getDb().prepare(`
@@ -254,11 +394,18 @@ export function updatePost(id: string, patch: Partial<Pick<Post, 'title' | 'exce
   return next
 }
 
-export function deletePost(id: string) {
-  const db = getDb()
-  const post = getPostById(id)
+export async function deletePost(id: string) {
+  const post = await getPostById(id)
   if (!post) return false
 
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    await sql`DELETE FROM comments WHERE post_id = ${id}`
+    await sql`DELETE FROM posts WHERE id = ${id}`
+    return true
+  }
+
+  const db = getDb()
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM comments WHERE post_id = ?').run(id)
     db.prepare('DELETE FROM posts WHERE id = ?').run(id)
@@ -268,17 +415,48 @@ export function deletePost(id: string) {
   return true
 }
 
-export function incrementPostViews(id: string) {
-  const db = getDb()
-  const existing = getPostById(id)
+export async function incrementPostViews(id: string) {
+  const existing = await getPostById(id)
   if (!existing) return undefined
 
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      UPDATE posts
+      SET views = views + 1
+      WHERE id = ${id}
+      RETURNING views
+    `) as Array<{ views: number }>
+    return Number(rows[0]?.views || 0)
+  }
+
+  const db = getDb()
   db.prepare('UPDATE posts SET views = views + 1 WHERE id = ?').run(id)
-  const updated = getPostById(id)
+  const updated = db.prepare('SELECT views FROM posts WHERE id = ?').get(id) as { views: number } | undefined
   return updated?.views || 0
 }
 
-export function listCommentsByPost(postId: string) {
+export async function listCommentsByPost(postId: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, post_id, author, content, date
+      FROM comments
+      WHERE post_id = ${postId}
+      ORDER BY date DESC, id DESC
+    `) as Array<{ id: string; post_id: string; author: string; content: string; date: string }>
+
+    return rows.map((row) => ({
+      id: String(row.id),
+      postId: String(row.post_id),
+      author: String(row.author),
+      content: String(row.content),
+      date: String(row.date),
+    }))
+  }
+
   const rows = getDb().prepare(`
     SELECT id, post_id, author, content, date
     FROM comments
@@ -286,7 +464,7 @@ export function listCommentsByPost(postId: string) {
     ORDER BY date DESC, id DESC
   `).all(postId) as Array<{ id: string; post_id: string; author: string; content: string; date: string }>
 
-  return rows.map(row => ({
+  return rows.map((row) => ({
     id: row.id,
     postId: row.post_id,
     author: row.author,
@@ -295,7 +473,27 @@ export function listCommentsByPost(postId: string) {
   }))
 }
 
-export function listRecentComments(limit = 10) {
+export async function listRecentComments(limit = 10) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, post_id, author, content, date
+      FROM comments
+      ORDER BY date DESC, id DESC
+      LIMIT ${limit}
+    `) as Array<{ id: string; post_id: string; author: string; content: string; date: string }>
+
+    return rows.map((row) => ({
+      id: String(row.id),
+      postId: String(row.post_id),
+      author: String(row.author),
+      content: String(row.content),
+      date: String(row.date),
+    }))
+  }
+
   const rows = getDb().prepare(`
     SELECT id, post_id, author, content, date
     FROM comments
@@ -303,7 +501,7 @@ export function listRecentComments(limit = 10) {
     LIMIT ?
   `).all(limit) as Array<{ id: string; post_id: string; author: string; content: string; date: string }>
 
-  return rows.map(row => ({
+  return rows.map((row) => ({
     id: row.id,
     postId: row.post_id,
     author: row.author,
@@ -312,8 +510,9 @@ export function listRecentComments(limit = 10) {
   }))
 }
 
-export function createComment(input: { postId: string; author: string; content: string }) {
-  const db = getDb()
+export async function createComment(input: { postId: string; author: string; content: string }) {
+  await ensureStoreReady()
+
   const comment: CommentRecord = {
     id: Date.now().toString(),
     postId: input.postId,
@@ -322,7 +521,16 @@ export function createComment(input: { postId: string; author: string; content: 
     date: new Date().toISOString().split('T')[0],
   }
 
-  db.prepare(`
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    await sql`
+      INSERT INTO comments (id, post_id, author, content, date)
+      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date})
+    `
+    return comment
+  }
+
+  getDb().prepare(`
     INSERT INTO comments (id, post_id, author, content, date)
     VALUES (@id, @post_id, @author, @content, @date)
   `).run({
@@ -336,7 +544,19 @@ export function createComment(input: { postId: string; author: string; content: 
   return comment
 }
 
-export function deleteComment(postId: string, commentId: string) {
+export async function deleteComment(postId: string, commentId: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      DELETE FROM comments
+      WHERE id = ${commentId} AND post_id = ${postId}
+      RETURNING id
+    `) as Array<{ id: string }>
+    return rows.length > 0
+  }
+
   const result = getDb().prepare('DELETE FROM comments WHERE id = ? AND post_id = ?').run(commentId, postId)
   return result.changes > 0
 }

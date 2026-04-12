@@ -1,7 +1,7 @@
 import { getAllPosts } from "@/lib/posts"
 
 export async function GET() {
-  const posts = getAllPosts().filter(p => !p.draft)
+  const posts = (await getAllPosts()).filter((post) => !post.draft)
 
   const items = posts.map(post => `
     <item>

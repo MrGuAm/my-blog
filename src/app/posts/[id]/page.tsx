@@ -11,7 +11,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  const post = getPost(id)
+  const post = await getPost(id)
   
   if (!post) {
     return {
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const dynamic = 'force-dynamic'
 
 export async function generateStaticParams() {
-  const posts = getAllPosts()
+  const posts = await getAllPosts()
   return posts.map((post) => ({
     id: post.id,
   }))
@@ -51,7 +51,7 @@ export async function generateStaticParams() {
 export default async function PostPage({ params }: Props) {
   const { id } = await params
   const decodedId = decodeURIComponent(id)
-  const post = getPost(decodedId)
+  const post = await getPost(decodedId)
 
   if (!post) {
     notFound()
@@ -77,7 +77,7 @@ export default async function PostPage({ params }: Props) {
 
   const readingTime = calculateReadingTime(content)
   const headings = extractHeadings(contentWithIds)
-  const relatedPosts = getRelatedPosts(post)
+  const relatedPosts = await getRelatedPosts(post)
 
   return <PostClient post={post} content={contentWithIds} readingTime={readingTime} headings={headings} relatedPosts={relatedPosts} />
 }

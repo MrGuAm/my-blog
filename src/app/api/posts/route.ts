@@ -5,9 +5,9 @@ import { createPost, listPosts } from '@/lib/server/store'
 
 export async function GET() {
   try {
-    return NextResponse.json(listPosts({ includeDrafts: true }))
+    return NextResponse.json(await listPosts({ includeDrafts: true }))
   } catch {
-    return NextResponse.json([])
+    return NextResponse.json({ error: '数据存储暂不可用' }, { status: 500 })
   }
 }
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '标题和内容不能为空' }, { status: 400 })
     }
 
-    const newPost: Post = createPost({
+    const newPost: Post = await createPost({
       title,
       excerpt,
       content,

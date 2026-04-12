@@ -11,8 +11,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function HomePage() {
-  const posts = getAllPosts()
-  const allTags = getAllTags()
+export default async function HomePage() {
+  const [posts, allTags] = await Promise.all([getAllPosts(), getAllTags()])
   return <HomeClient posts={posts} allTags={allTags} />
 }
