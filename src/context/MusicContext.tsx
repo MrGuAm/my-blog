@@ -32,35 +32,29 @@ function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive
 }
 
 function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: number; text: string }>; activeIndex: number }) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const activeLineRef = useRef<HTMLParagraphElement | null>(null)
-
-  useEffect(() => {
-    const container = containerRef.current
-    const activeLine = activeLineRef.current
-    if (!container || !activeLine) return
-
-    const nextTop = activeLine.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2
-    container.scrollTo({ top: Math.max(0, nextTop), behavior: "smooth" })
-  }, [activeIndex])
-
   if (lyrics.length === 0) {
     return <p className="text-xs text-muted-foreground leading-5">当前歌曲没有可滚动的时间轴歌词。</p>
   }
 
+  const safeIndex = activeIndex >= 0 ? activeIndex : 0
+  const start = Math.max(0, safeIndex - 2)
+  const end = Math.min(lyrics.length, safeIndex + 3)
+  const visibleLyrics = lyrics.slice(start, end)
+
   return (
-    <div ref={containerRef} className="max-h-24 overflow-y-auto px-1 py-8 text-center">
-      {lyrics.map((line, index) => (
+    <div className="flex min-h-32 flex-col justify-center px-1 py-3 text-center">
+      {visibleLyrics.map((line, index) => {
+        const actualIndex = start + index
+        return (
         <p
-          key={`${line.time}-${index}`}
-          ref={index === activeIndex ? activeLineRef : null}
+          key={`${line.time}-${actualIndex}`}
           className={`py-1 text-xs leading-5 transition-all duration-300 ${
-            index === activeIndex ? "text-primary font-semibold scale-[1.05] opacity-100" : index < activeIndex ? "text-foreground/70 opacity-55" : "text-muted-foreground opacity-55"
+            actualIndex === activeIndex ? "text-primary font-semibold scale-[1.08] opacity-100" : actualIndex < activeIndex ? "text-foreground/70 opacity-45" : "text-muted-foreground opacity-55"
           }`}
         >
           {line.text}
         </p>
-      ))}
+      )})}
     </div>
   )
 }
