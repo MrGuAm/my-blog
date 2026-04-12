@@ -58,8 +58,13 @@ function SyncedLyrics({ lyrics, activeIndex }: { lyrics: Array<{ time: number; t
         <p
           key={`${line.time}-${actualIndex}`}
           className={`py-1 text-xs leading-5 transition-all duration-300 ${
-            actualIndex === activeIndex ? "text-primary font-semibold scale-[1.08] opacity-100" : actualIndex < activeIndex ? "text-foreground/70 opacity-45" : "text-muted-foreground opacity-55"
+            actualIndex === activeIndex
+              ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
+              : actualIndex < activeIndex
+                ? "text-foreground/65 scale-100 opacity-35"
+                : "text-muted-foreground scale-100 opacity-50"
           }`}
+          style={{ transformOrigin: "center center" }}
         >
           {line.text}
         </p>

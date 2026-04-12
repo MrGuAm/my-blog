@@ -5,7 +5,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { MusicTrack } from "@/app/api/music/route"
 
 type PlayMode = "loop" | "repeat-one" | "shuffle"
-const lyricHighlightDelay = 0.18
 
 const favoriteStorageKey = "champion-blog:favorite-tracks"
 const recentStorageKey = "champion-blog:recent-tracks"
@@ -49,8 +48,13 @@ function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: numb
         <p
           key={`${line.time}-${actualIndex}`}
           className={`py-1 text-xs leading-5 transition-all duration-300 ${
-            actualIndex === activeIndex ? "text-primary font-semibold scale-[1.08] opacity-100" : actualIndex < activeIndex ? "text-foreground/70 opacity-45" : "text-muted-foreground opacity-55"
+            actualIndex === activeIndex
+              ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
+              : actualIndex < activeIndex
+                ? "text-foreground/65 scale-100 opacity-35"
+                : "text-muted-foreground scale-100 opacity-50"
           }`}
+          style={{ transformOrigin: "center center" }}
         >
           {line.text}
         </p>
@@ -183,9 +187,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const parsedLyrics = useMemo(() => parseTimedLyrics(track?.lyrics), [track?.lyrics])
   const activeLyricIndex = useMemo(() => {
     if (!parsedLyrics.length) return -1
-    const effectiveTime = Math.max(0, currentTime - lyricHighlightDelay)
     for (let index = parsedLyrics.length - 1; index >= 0; index -= 1) {
-      if (effectiveTime >= parsedLyrics[index].time) {
+      if (currentTime >= parsedLyrics[index].time) {
         return index
       }
     }
