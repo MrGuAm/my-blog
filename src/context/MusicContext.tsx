@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { MusicTrack } from "@/app/api/music/route"
 
 type PlayMode = "loop" | "repeat-one" | "shuffle"
+const lyricHighlightDelay = 0.18
 
 const favoriteStorageKey = "champion-blog:favorite-tracks"
 const recentStorageKey = "champion-blog:recent-tracks"
@@ -48,13 +49,13 @@ function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: numb
   }
 
   return (
-    <div ref={containerRef} className="max-h-24 overflow-y-auto space-y-1 pr-1">
+    <div ref={containerRef} className="max-h-24 overflow-y-auto px-1 py-8 text-center">
       {lyrics.map((line, index) => (
         <p
           key={`${line.time}-${index}`}
           ref={index === activeIndex ? activeLineRef : null}
-          className={`text-xs leading-5 transition-all ${
-            index === activeIndex ? "text-primary font-medium scale-[1.01]" : index < activeIndex ? "text-foreground/80" : "text-muted-foreground"
+          className={`py-1 text-xs leading-5 transition-all duration-300 ${
+            index === activeIndex ? "text-primary font-semibold scale-[1.05] opacity-100" : index < activeIndex ? "text-foreground/70 opacity-55" : "text-muted-foreground opacity-55"
           }`}
         >
           {line.text}
@@ -188,12 +189,13 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const parsedLyrics = useMemo(() => parseTimedLyrics(track?.lyrics), [track?.lyrics])
   const activeLyricIndex = useMemo(() => {
     if (!parsedLyrics.length) return -1
+    const effectiveTime = Math.max(0, currentTime - lyricHighlightDelay)
     for (let index = parsedLyrics.length - 1; index >= 0; index -= 1) {
-      if (currentTime >= parsedLyrics[index].time) {
+      if (effectiveTime >= parsedLyrics[index].time) {
         return index
       }
     }
-    return 0
+    return -1
   }, [currentTime, parsedLyrics])
   const favoriteTracks = useMemo(() => playlist.filter((item) => favoriteSrcs.includes(item.src)), [favoriteSrcs, playlist])
   const recentTracks = useMemo(() => recentSrcs.map((src) => playlist.find((item) => item.src === src)).filter(Boolean) as MusicTrack[], [playlist, recentSrcs])

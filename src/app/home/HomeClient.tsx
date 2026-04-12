@@ -58,13 +58,13 @@ function SyncedLyrics({ lyrics, activeIndex }: { lyrics: Array<{ time: number; t
   }
 
   return (
-    <div ref={containerRef} className="max-h-32 overflow-y-auto space-y-1 pr-1">
+    <div ref={containerRef} className="max-h-32 overflow-y-auto px-1 py-10 text-center">
       {lyrics.map((line, index) => (
         <p
           key={`${line.time}-${index}`}
           ref={index === activeIndex ? activeLineRef : null}
-          className={`text-xs leading-5 transition-all ${
-            index === activeIndex ? "text-primary font-medium scale-[1.01]" : index < activeIndex ? "text-foreground/80" : "text-muted-foreground"
+          className={`py-1 text-xs leading-5 transition-all duration-300 ${
+            index === activeIndex ? "text-primary font-semibold scale-[1.05] opacity-100" : index < activeIndex ? "text-foreground/70 opacity-55" : "text-muted-foreground opacity-55"
           }`}
         >
           {line.text}
