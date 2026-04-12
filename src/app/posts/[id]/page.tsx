@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { notFound } from "next/navigation"
-import { getAllPosts, getPost, getPostContent, calculateReadingTime, extractHeadings, getRelatedPosts } from "@/lib/posts"
+import { getAdjacentPosts, getAllPosts, getPost, getPostContent, calculateReadingTime, extractHeadings, getRelatedPosts } from "@/lib/posts"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import PostClient from "./PostClient"
 
@@ -77,7 +77,20 @@ export default async function PostPage({ params }: Props) {
 
   const readingTime = calculateReadingTime(content)
   const headings = extractHeadings(contentWithIds)
-  const relatedPosts = await getRelatedPosts(post)
+  const [relatedPosts, adjacentPosts] = await Promise.all([
+    getRelatedPosts(post),
+    getAdjacentPosts(post),
+  ])
 
-  return <PostClient post={post} content={contentWithIds} readingTime={readingTime} headings={headings} relatedPosts={relatedPosts} />
+  return (
+    <PostClient
+      post={post}
+      content={contentWithIds}
+      readingTime={readingTime}
+      headings={headings}
+      relatedPosts={relatedPosts}
+      previousPost={adjacentPosts.previousPost}
+      nextPost={adjacentPosts.nextPost}
+    />
+  )
 }

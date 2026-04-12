@@ -18,15 +18,19 @@ export interface Post {
   updatedAt?: string
 }
 
-export async function getAllPosts(options?: { includeDrafts?: boolean; cached?: boolean }): Promise<Post[]> {
-  const shouldUseCache = options?.cached ?? false
-  const includeDrafts = options?.includeDrafts ?? true
-  const posts: Post[] = shouldUseCache && !includeDrafts ? await getCachedPublicPosts() : await listPosts({ includeDrafts })
-  return posts.sort((a: Post, b: Post) => {
+function sortPosts(posts: Post[]) {
+  return [...posts].sort((a: Post, b: Post) => {
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
     return new Date(b.date).getTime() - new Date(a.date).getTime()
   })
+}
+
+export async function getAllPosts(options?: { includeDrafts?: boolean; cached?: boolean }): Promise<Post[]> {
+  const shouldUseCache = options?.cached ?? false
+  const includeDrafts = options?.includeDrafts ?? true
+  const posts: Post[] = shouldUseCache && !includeDrafts ? await getCachedPublicPosts() : await listPosts({ includeDrafts })
+  return sortPosts(posts)
 }
 
 export async function getPost(id: string): Promise<Post | undefined> {
@@ -79,4 +83,25 @@ export async function getRelatedPosts(post: Post, limit = 3): Promise<Post[]> {
     return { post: p, score }
   })
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map(s => s.post)
+}
+
+export async function getAdjacentPosts(post: Post) {
+  const posts = (await getAllPosts({ includeDrafts: false, cached: true })).filter((item) => !item.draft)
+  const currentIndex = posts.findIndex((item) => item.id === post.id)
+  if (currentIndex < 0) {
+    return { previousPost: undefined, nextPost: undefined }
+  }
+
+  return {
+    previousPost: posts[currentIndex - 1],
+    nextPost: posts[currentIndex + 1],
+  }
+}
+
+export async function getPostsByTag(tag: string) {
+  const normalizedTag = tag.trim()
+  if (!normalizedTag) return []
+
+  const posts = await getAllPosts({ includeDrafts: false, cached: true })
+  return sortPosts(posts.filter((post) => post.tags.includes(normalizedTag)))
 }

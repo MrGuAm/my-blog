@@ -19,21 +19,40 @@ interface PostClientProps {
   readingTime: number
   headings: TocItem[]
   relatedPosts: Post[]
+  previousPost?: Post
+  nextPost?: Post
 }
 
-export default function PostClient({ post, content, readingTime, headings, relatedPosts }: PostClientProps) {
+export default function PostClient({ post, content, readingTime, headings, relatedPosts, previousPost, nextPost }: PostClientProps) {
   const router = useRouter()
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [views, setViews] = useState(post.views || 0)
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const [readingProgress, setReadingProgress] = useState(0)
+  const articleRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const { isHovering, playTrackBySrc, track } = useMusic()
   const { isAuthenticated, logout } = useAuthStatus()
 
   // Back to top & code highlight
   useEffect(() => {
-    const handleScroll = () => setShowBackToTop(window.scrollY > 400)
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400)
+
+      const article = articleRef.current
+      if (!article) return
+
+      const rect = article.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const startOffset = 120
+      const visibleProgressStart = Math.max(0, startOffset - rect.top)
+      const trackableHeight = Math.max(1, article.offsetHeight - viewportHeight + 220)
+      const nextProgress = Math.max(0, Math.min(100, (visibleProgressStart / trackableHeight) * 100))
+      setReadingProgress(nextProgress)
+    }
+
     window.addEventListener("scroll", handleScroll, { passive: true })
+    handleScroll()
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
@@ -144,6 +163,9 @@ export default function PostClient({ post, content, readingTime, headings, relat
             </div>
           </div>
         </div>
+        <div className="h-0.5 bg-secondary/70">
+          <div className="h-full bg-primary transition-[width] duration-150" style={{ width: `${readingProgress}%` }} />
+        </div>
       </nav>
 
       <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
@@ -156,7 +178,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             {/* Article */}
-            <article className="bg-card rounded-xl border border-border/60 p-5 sm:p-8">
+            <article ref={articleRef} className="bg-card rounded-xl border border-border/60 p-5 sm:p-8">
               <header className="mb-8">
                 {post.coverImage && (
                   <div className="mb-6 overflow-hidden rounded-2xl border border-border/50">
@@ -174,12 +196,13 @@ export default function PostClient({ post, content, readingTime, headings, relat
                   <span className="text-sm text-muted-foreground">{views} 次阅读</span>
                   <div className="flex gap-1.5 ml-auto">
                     {post.tags.map(tag => (
-                      <span
+                      <Link
                         key={tag}
-                        className="text-xs px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground"
+                        href={`/tags/${encodeURIComponent(tag)}`}
+                        className="text-xs px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                       >
                         #{tag}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -212,6 +235,34 @@ export default function PostClient({ post, content, readingTime, headings, relat
               <div className="w-2 h-2 rounded-full bg-[#2D2D2D]" />
             </div>
 
+            {(previousPost || nextPost) && (
+              <section className="mt-8 grid gap-4 md:grid-cols-2">
+                {previousPost ? (
+                  <Link
+                    href={`/posts/${previousPost.slug || previousPost.id}`}
+                    className="rounded-2xl border border-border/50 bg-card p-5 transition-all hover:border-primary/50 hover:bg-accent/20"
+                  >
+                    <p className="text-xs text-muted-foreground">上一篇</p>
+                    <h3 className="mt-2 text-base font-semibold">{previousPost.title}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{previousPost.excerpt}</p>
+                  </Link>
+                ) : (
+                  <div className="hidden md:block" />
+                )}
+
+                {nextPost ? (
+                  <Link
+                    href={`/posts/${nextPost.slug || nextPost.id}`}
+                    className="rounded-2xl border border-border/50 bg-card p-5 text-left transition-all hover:border-primary/50 hover:bg-accent/20"
+                  >
+                    <p className="text-xs text-muted-foreground">下一篇</p>
+                    <h3 className="mt-2 text-base font-semibold">{nextPost.title}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{nextPost.excerpt}</p>
+                  </Link>
+                ) : null}
+              </section>
+            )}
+
             {/* Comments */}
             <div className="mt-8">
               <Comments post={post} />
@@ -222,6 +273,29 @@ export default function PostClient({ post, content, readingTime, headings, relat
           {(headings.length > 0 || relatedPosts.length > 0) && (
             <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-72">
               <div className="space-y-6">
+                <div className="rounded-xl border border-border/60 bg-card p-4">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">文章信息</h3>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>发布时间：{post.date}</p>
+                    <p>阅读时长：{readingTime} 分钟</p>
+                    <p>浏览次数：{views}</p>
+                    <p>分类：{post.category}</p>
+                  </div>
+                  {post.tags.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {post.tags.map((tag) => (
+                        <Link
+                          key={tag}
+                          href={`/tags/${encodeURIComponent(tag)}`}
+                          className="rounded-full bg-secondary/70 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                        >
+                          #{tag}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {headings.length > 0 && (
                   <div className="rounded-xl border border-border/60 bg-card p-4">
                     <h3 className="mb-3 text-sm font-semibold text-foreground">目录</h3>
