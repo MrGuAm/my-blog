@@ -46,29 +46,32 @@ function SyncedLyrics({ lyrics, activeIndex }: { lyrics: Array<{ time: number; t
   }
 
   const safeIndex = activeIndex >= 0 ? activeIndex : 0
-  const start = Math.max(0, safeIndex - 2)
-  const end = Math.min(lyrics.length, safeIndex + 3)
-  const visibleLyrics = lyrics.slice(start, end)
+  const lineHeight = 28
+  const viewportHeight = lineHeight * 5
+  const paddingOffset = lineHeight * 2
 
   return (
-    <div className="flex min-h-36 flex-col justify-center px-1 py-3 text-center">
-      {visibleLyrics.map((line, index) => {
-        const actualIndex = start + index
-        return (
+    <div className="overflow-hidden px-1 text-center" style={{ height: viewportHeight }}>
+      <div
+        className="transition-transform duration-500 ease-out will-change-transform"
+        style={{ transform: `translateY(${paddingOffset - safeIndex * lineHeight}px)` }}
+      >
+      {lyrics.map((line, index) => (
         <p
-          key={`${line.time}-${actualIndex}`}
+          key={`${line.time}-${index}`}
+          style={{ height: lineHeight, lineHeight: `${lineHeight}px`, transformOrigin: "center center" }}
           className={`py-1 text-xs leading-5 transition-all duration-300 ${
-            actualIndex === activeIndex
+            index === activeIndex
               ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
-              : actualIndex < activeIndex
+              : index < activeIndex
                 ? "text-foreground/65 scale-100 opacity-35"
                 : "text-muted-foreground scale-100 opacity-50"
           }`}
-          style={{ transformOrigin: "center center" }}
         >
           {line.text}
         </p>
-      )})}
+      ))}
+      </div>
     </div>
   )
 }
@@ -517,10 +520,19 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   </div>
                   <div className="space-y-1">
                     {playlist.map((song, index) => (
-                      <button
+                      <div
                         key={song.src}
                         onClick={() => { setShowList(false); if (currentTrack !== index) selectTrack(index, false) }}
-                        className={`w-full text-left p-2 rounded-lg transition-colors ${
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            setShowList(false)
+                            if (currentTrack !== index) selectTrack(index, false)
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className={`w-full cursor-pointer text-left p-2 rounded-lg transition-colors ${
                           currentTrack === index
                             ? 'bg-primary/10 text-primary'
                             : 'hover:bg-accent/50'
@@ -542,7 +554,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                             {isFavorite(song.src) ? "❤️" : "🤍"}
                           </button>
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>

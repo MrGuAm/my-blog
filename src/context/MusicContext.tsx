@@ -36,29 +36,32 @@ function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: numb
   }
 
   const safeIndex = activeIndex >= 0 ? activeIndex : 0
-  const start = Math.max(0, safeIndex - 2)
-  const end = Math.min(lyrics.length, safeIndex + 3)
-  const visibleLyrics = lyrics.slice(start, end)
+  const lineHeight = 28
+  const viewportHeight = lineHeight * 5
+  const paddingOffset = lineHeight * 2
 
   return (
-    <div className="flex min-h-32 flex-col justify-center px-1 py-3 text-center">
-      {visibleLyrics.map((line, index) => {
-        const actualIndex = start + index
-        return (
+    <div className="overflow-hidden px-1 text-center" style={{ height: viewportHeight }}>
+      <div
+        className="transition-transform duration-500 ease-out will-change-transform"
+        style={{ transform: `translateY(${paddingOffset - safeIndex * lineHeight}px)` }}
+      >
+      {lyrics.map((line, index) => (
         <p
-          key={`${line.time}-${actualIndex}`}
+          key={`${line.time}-${index}`}
           className={`py-1 text-xs leading-5 transition-all duration-300 ${
-            actualIndex === activeIndex
+            index === activeIndex
               ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
-              : actualIndex < activeIndex
+              : index < activeIndex
                 ? "text-foreground/65 scale-100 opacity-35"
                 : "text-muted-foreground scale-100 opacity-50"
           }`}
-          style={{ transformOrigin: "center center" }}
+          style={{ height: lineHeight, lineHeight: `${lineHeight}px`, transformOrigin: "center center" }}
         >
           {line.text}
         </p>
-      )})}
+      ))}
+      </div>
     </div>
   )
 }
@@ -455,13 +458,22 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                 </div>
                 <div className="max-h-72 space-y-1 overflow-y-auto">
                   {playlist.map((song, index) => (
-                    <button
+                    <div
                       key={song.src}
                       onClick={() => {
                         setShowList(false)
                         selectTrack(index, false)
                       }}
-                      className={`w-full text-left rounded-xl p-2 transition-colors ${currentTrack === index ? "bg-primary/10 text-primary" : "hover:bg-accent/50"}`}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          setShowList(false)
+                          selectTrack(index, false)
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className={`w-full cursor-pointer text-left rounded-xl p-2 transition-colors ${currentTrack === index ? "bg-primary/10 text-primary" : "hover:bg-accent/50"}`}
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-secondary/40 flex items-center justify-center">
@@ -483,7 +495,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                           {isFavorite(song.src) ? "❤️" : "🤍"}
                         </button>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
