@@ -3,7 +3,7 @@ import type { Post } from '@/lib/posts'
 import { isAuthenticatedRequest } from '@/lib/server/auth'
 import { deletePost, getPostById, updatePost } from '@/lib/server/store'
 
-type PostPatch = Partial<Pick<Post, 'pinned' | 'draft' | 'title' | 'excerpt' | 'content' | 'category' | 'tags'>>
+type PostPatch = Partial<Pick<Post, 'pinned' | 'draft' | 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'coverImage' | 'bgmSrc'>>
 
 export async function GET(
   request: NextRequest,
@@ -29,6 +29,8 @@ export async function GET(
       date: post.date,
       category: post.category,
       tags: post.tags,
+      coverImage: post.coverImage,
+      bgmSrc: post.bgmSrc,
       pinned: post.pinned,
       draft: post.draft,
       views: post.views,

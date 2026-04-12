@@ -1,9 +1,11 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
+import type { MusicTrack } from "@/app/api/music/route"
 
 interface LocalDraft {
   title: string
@@ -11,6 +13,8 @@ interface LocalDraft {
   content: string
   category: string
   tags: string
+  coverImage: string
+  bgmSrc: string
   pinned: boolean
   savedAt: string
 }
@@ -37,12 +41,16 @@ export default function WritePage() {
   const [content, setContent] = useState(initialDraft?.content ?? "")
   const [category, setCategory] = useState(initialDraft?.category ?? "随笔")
   const [tags, setTags] = useState(initialDraft?.tags ?? "")
+  const [coverImage, setCoverImage] = useState(initialDraft?.coverImage ?? "")
+  const [bgmSrc, setBgmSrc] = useState(initialDraft?.bgmSrc ?? "")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState("")
   const [pinned, setPinned] = useState(initialDraft?.pinned ?? false)
+  const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit")
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
   const [savedAt, setSavedAt] = useState<string | null>(initialDraft?.savedAt ?? null)
+  const [availableTracks, setAvailableTracks] = useState<MusicTrack[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -74,6 +82,8 @@ export default function WritePage() {
         content,
         category,
         tags,
+        coverImage,
+        bgmSrc,
         pinned,
         savedAt: nextSavedAt,
       }
@@ -85,7 +95,14 @@ export default function WritePage() {
     }, 600)
 
     return () => window.clearTimeout(timeoutId)
-  }, [category, content, excerpt, isAuthenticated, isAuthLoading, pinned, tags, title])
+  }, [bgmSrc, category, content, coverImage, excerpt, isAuthenticated, isAuthLoading, pinned, tags, title])
+
+  useEffect(() => {
+    fetch("/api/music", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => setAvailableTracks(Array.isArray(data.tracks) ? data.tracks : []))
+      .catch(() => setAvailableTracks([]))
+  }, [])
 
   const insertTextAtCursor = useCallback((text: string) => {
     const textarea = textareaRef.current
@@ -183,6 +200,8 @@ export default function WritePage() {
           content,
           category,
           tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+          coverImage,
+          bgmSrc,
           pinned,
         }),
       })
@@ -292,9 +311,55 @@ export default function WritePage() {
             </div>
           </div>
 
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium mb-2">封面图（可选）</label>
+              <input
+                type="url"
+                value={coverImage}
+                onChange={(e) => setCoverImage(e.target.value)}
+                placeholder="https://example.com/cover.jpg"
+                className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">文章 BGM（可选）</label>
+              <select
+                value={bgmSrc}
+                onChange={(e) => setBgmSrc(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              >
+                <option value="">不绑定</option>
+                {availableTracks.map((song) => (
+                  <option key={song.src} value={song.src}>
+                    {song.artist} - {song.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* Content Toolbar */}
           <div>
-            <label className="block text-sm font-medium mb-2">内容</label>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label className="block text-sm font-medium">内容</label>
+              <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("edit")}
+                  className={`rounded-full px-3 py-1 transition-colors ${previewMode === "edit" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  编辑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("preview")}
+                  className={`rounded-full px-3 py-1 transition-colors ${previewMode === "preview" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  预览
+                </button>
+              </div>
+            </div>
             <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
               {/* Toolbar */}
               <div className="flex items-center gap-1 px-3 py-2 border-b border-border/40 bg-secondary/20 flex-wrap">
@@ -330,14 +395,34 @@ export default function WritePage() {
               </div>
 
               {/* Textarea */}
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder={"写下你的内容...\n\n💡 提示：\n- 选中文字后点击工具栏按钮可快速格式化\n- 直接 Ctrl/Cmd+V 粘贴图片\n- 点击 🖼️ 图片 按钮输入图片链接"}
-                rows={15}
-                className="w-full px-4 py-3 bg-transparent focus:outline-none transition-all resize-none text-sm leading-relaxed"
-              />
+              {previewMode === "edit" ? (
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder={"写下你的内容...\n\n💡 提示：\n- 选中文字后点击工具栏按钮可快速格式化\n- 直接 Ctrl/Cmd+V 粘贴图片\n- 点击 🖼️ 图片 按钮输入图片链接"}
+                  rows={15}
+                  className="w-full px-4 py-3 bg-transparent focus:outline-none transition-all resize-none text-sm leading-relaxed"
+                />
+              ) : (
+                <div className="min-h-[24rem] space-y-5 px-4 py-4">
+                  {coverImage && (
+                    <div className="overflow-hidden rounded-xl border border-border/40">
+                      <img src={coverImage} alt={title || "文章封面"} className="h-56 w-full object-cover" />
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-2xl font-black">{title || "未命名文章"}</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">{excerpt || "这里会显示文章摘要。"}</p>
+                    {bgmSrc && (
+                      <p className="mt-3 inline-flex rounded-full bg-[#FF9B6B]/15 px-3 py-1 text-xs text-[#FF9B6B]">
+                        这篇文章已绑定 BGM
+                      </p>
+                    )}
+                  </div>
+                  <div className="prose prose-lg max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: content || "<p>预览内容会显示在这里。</p>" }} />
+                </div>
+              )}
             </div>
           </div>
 
@@ -444,7 +529,7 @@ export default function WritePage() {
                   const res = await fetch("/api/posts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ title, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), draft: true, pinned }),
+                  body: JSON.stringify({ title, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), coverImage, bgmSrc, draft: true, pinned }),
                 })
                   if (res.ok) {
                     clearSavedDraft()

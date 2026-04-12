@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { Post } from "@/lib/posts"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
+import { useUserSession } from "@/hooks/useUserSession"
+import CommentAuthModal from "@/components/CommentAuthModal"
 
 function parseMarkdown(text: string): string {
   const escape = (s: string) =>
@@ -35,6 +37,7 @@ interface Comment {
   author: string
   content: string
   date: string
+  userId?: string | null
 }
 
 interface CommentsProps {
@@ -43,12 +46,15 @@ interface CommentsProps {
 
 export default function Comments({ post }: CommentsProps) {
   const { isAuthenticated } = useAuthStatus()
+  const userSession = useUserSession()
   const [comments, setComments] = useState<Comment[]>([])
   const [author, setAuthor] = useState("")
   const [content, setContent] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
   const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const activeAuthor = userSession.isAuthenticated ? userSession.displayName ?? "" : author
 
   useEffect(() => {
     const loadComments = async () => {
@@ -87,7 +93,8 @@ export default function Comments({ post }: CommentsProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!author.trim() || !content.trim()) return
+    const nextAuthor = activeAuthor
+    if (!nextAuthor.trim() || !content.trim()) return
 
     setIsSubmitting(true)
     setSubmitMsg(null)
@@ -96,13 +103,15 @@ export default function Comments({ post }: CommentsProps) {
       const res = await fetch(`/api/comments/${post.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ author, content }),
+        body: JSON.stringify({ author: nextAuthor, content }),
       })
       const data = await res.json()
 
       if (res.ok) {
-        setComments([data.comment, ...comments])
-        setAuthor("")
+        setComments((current) => [data.comment, ...current])
+        if (!userSession.isAuthenticated) {
+          setAuthor("")
+        }
         setContent("")
         setSubmitMsg({ type: "success", text: "评论发布成功！" })
       } else {
@@ -131,7 +140,7 @@ export default function Comments({ post }: CommentsProps) {
                 <span className="font-medium text-sm">{comment.author}</span>
                 <span className="text-xs text-muted-foreground">·</span>
                 <span className="text-xs text-muted-foreground">{comment.date}</span>
-                {isAuthenticated && (
+                {(isAuthenticated || (userSession.isAuthenticated && comment.userId === userSession.userId)) && (
                   <button
                     type="button"
                     onClick={() => handleDelete(comment.id)}
@@ -154,17 +163,51 @@ export default function Comments({ post }: CommentsProps) {
 
       {/* Comment Form */}
       <form onSubmit={handleSubmit} className="p-4 bg-card rounded-xl border border-border/40">
-        <div className="mb-3">
-          <label className="block text-sm font-medium mb-1">昵称</label>
-          <input
-            type="text"
-            value={author}
-            onChange={e => setAuthor(e.target.value)}
-            placeholder="写下你的昵称..."
-            maxLength={20}
-            className="w-full px-3 py-2 bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-          />
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-secondary/20 px-3 py-2">
+          {userSession.isAuthenticated ? (
+            <div className="min-w-0">
+              <p className="text-sm font-medium">已登录为 {userSession.displayName}</p>
+              <p className="text-xs text-muted-foreground">@{userSession.username}</p>
+            </div>
+          ) : (
+            <div className="min-w-0">
+              <p className="text-sm font-medium">游客评论</p>
+              <p className="text-xs text-muted-foreground">登录后评论会自动带上昵称，也能管理自己的评论</p>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            {userSession.isAuthenticated ? (
+              <button
+                type="button"
+                onClick={() => userSession.logout()}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                退出评论账号
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                className="text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                登录 / 注册
+              </button>
+            )}
+          </div>
         </div>
+        {!userSession.isAuthenticated && (
+          <div className="mb-3">
+            <label className="block text-sm font-medium mb-1">昵称</label>
+            <input
+              type="text"
+              value={author}
+              onChange={e => setAuthor(e.target.value)}
+              placeholder="写下你的昵称..."
+              maxLength={20}
+              className="w-full px-3 py-2 bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+            />
+          </div>
+        )}
         <div className="mb-3">
           <label className="block text-sm font-medium mb-1">评论</label>
           <textarea
@@ -179,7 +222,7 @@ export default function Comments({ post }: CommentsProps) {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={isSubmitting || !author.trim() || !content.trim()}
+            disabled={isSubmitting || !activeAuthor.trim() || !content.trim()}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "发布中..." : "发布评论"}
@@ -191,6 +234,7 @@ export default function Comments({ post }: CommentsProps) {
           )}
         </div>
       </form>
+      <CommentAuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   )
 }

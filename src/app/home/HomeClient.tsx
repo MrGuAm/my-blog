@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
@@ -36,6 +37,34 @@ function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive
         </span>
       )}
     </span>
+  )
+}
+
+function SyncedLyrics({ lyrics, activeIndex }: { lyrics: Array<{ time: number; text: string }>; activeIndex: number }) {
+  const activeLineRef = useRef<HTMLParagraphElement | null>(null)
+
+  useEffect(() => {
+    activeLineRef.current?.scrollIntoView({ block: "center", behavior: "smooth" })
+  }, [activeIndex])
+
+  if (lyrics.length === 0) {
+    return <p className="text-xs text-muted-foreground leading-5">当前歌曲没有可滚动的时间轴歌词。</p>
+  }
+
+  return (
+    <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
+      {lyrics.map((line, index) => (
+        <p
+          key={`${line.time}-${index}`}
+          ref={index === activeIndex ? activeLineRef : null}
+          className={`text-xs leading-5 transition-all ${
+            index === activeIndex ? "text-primary font-medium scale-[1.01]" : index < activeIndex ? "text-foreground/80" : "text-muted-foreground"
+          }`}
+        >
+          {line.text}
+        </p>
+      ))}
+    </div>
   )
 }
 function CharacterEye({ isHovered, containerRef, pupilColor, size }: { isHovered: boolean; containerRef: React.RefObject<HTMLDivElement | null>; pupilColor: string; size: number }) {
@@ -160,6 +189,11 @@ function PostCard({ post, characterType, isAuthenticated, onTagClick }: { post: 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {post.coverImage && (
+        <div className="mb-4 overflow-hidden rounded-xl border border-border/40">
+          <img src={post.coverImage} alt={post.title} className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
           {post.category}
@@ -174,6 +208,11 @@ function PostCard({ post, characterType, isAuthenticated, onTagClick }: { post: 
           {post.draft && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">
               草稿
+            </span>
+          )}
+          {post.bgmSrc && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-[#FF9B6B]/15 text-[#FF9B6B] font-medium">
+              绑定 BGM
             </span>
           )}
         </div>
@@ -223,6 +262,14 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
     playPrevious,
     playNext,
     selectTrack,
+    playTrackBySrc,
+    currentLyrics,
+    parsedLyrics,
+    activeLyricIndex,
+    recentTracks,
+    favoriteTracks,
+    toggleFavorite,
+    isFavorite,
     progress,
     duration,
     dragProgress,
@@ -231,7 +278,6 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
     formatTime,
   } = useMusic()
   const { isAuthenticated, logout } = useAuthStatus()
-  const [remotePosts, setRemotePosts] = useState<Post[] | null>(null)
   const [showDrafts, setShowDrafts] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -244,7 +290,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const postsPerPage = 6
 
-  const visiblePosts = remotePosts ?? posts
+  const visiblePosts = posts
 
   // Scroll listener for back to top
   useEffect(() => {
@@ -265,17 +311,6 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
     logout()
     router.push('/home');
   };
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return
-    }
-
-    fetch('/api/posts')
-      .then(r => r.json())
-      .then(apiPosts => setRemotePosts(apiPosts))
-      .catch(() => setRemotePosts(null))
-  }, [isAuthenticated])
 
   const filteredPosts = visiblePosts.filter(post =>
     (showDrafts || !post.draft) &&
@@ -478,7 +513,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   <div className="space-y-1">
                     {playlist.map((song, index) => (
                       <button
-                        key={index}
+                        key={song.src}
                         onClick={() => { setShowList(false); if (currentTrack !== index) selectTrack(index, false) }}
                         className={`w-full text-left p-2 rounded-lg transition-colors ${
                           currentTrack === index
@@ -486,8 +521,22 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                             : 'hover:bg-accent/50'
                         }`}
                       >
-                        <p className="text-sm font-medium truncate">{song.title}</p>
-                        <p className="text-xs text-muted-foreground">{song.artist}</p>
+                        <div className="flex items-center gap-2">
+                          <div className="w-9 h-9 rounded-lg overflow-hidden bg-secondary/40 flex items-center justify-center">
+                            {song.coverUrl ? <img src={song.coverUrl} alt={song.title} className="w-full h-full object-cover" /> : <span>🎵</span>}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{song.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(song.src) }}
+                            className="text-sm"
+                          >
+                            {isFavorite(song.src) ? "❤️" : "🤍"}
+                          </button>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -499,8 +548,8 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   onClick={() => { if (!isDragging) setShowList(true) }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] flex items-center justify-center flex-shrink-0 ${isPlaying ? 'animate-pulse' : ''}`}>
-                      <span className="text-lg">🎵</span>
+                    <div className={`w-10 h-10 rounded-lg overflow-hidden bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B] flex items-center justify-center flex-shrink-0 ${isPlaying ? 'animate-pulse' : ''}`}>
+                      {track.coverUrl ? <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover" /> : <span className="text-lg">🎵</span>}
                     </div>
                     <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-sm font-medium">
@@ -510,6 +559,12 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                         <MarqueeText key={track.artist + track.title} text={track.artist} isActive={isPlaying} charCount={6} />
                       </p>
                     </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(track.src) }}
+                      className="text-sm flex-shrink-0"
+                    >
+                      {isFavorite(track.src) ? "❤️" : "🤍"}
+                    </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); togglePlay() }}
                       className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0"
@@ -581,6 +636,43 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                 </div>
               )}
             </div>
+
+            {(currentLyrics.length > 0 || favoriteTracks.length > 0 || recentTracks.length > 0) && (
+              <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
+                <div className="px-3 py-3 space-y-3">
+                  {currentLyrics.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2">当前歌词</h3>
+                      <SyncedLyrics lyrics={parsedLyrics} activeIndex={activeLyricIndex} />
+                    </div>
+                  )}
+                  {favoriteTracks.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2">收藏歌曲</h3>
+                      <div className="space-y-2">
+                        {favoriteTracks.slice(0, 3).map((song) => (
+                          <button key={song.src} onClick={() => playTrackBySrc(song.src, false)} className="block text-left text-xs hover:text-primary transition-colors">
+                            {song.title}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {recentTracks.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2">最近播放</h3>
+                      <div className="space-y-2">
+                        {recentTracks.slice(0, 3).map((song) => (
+                          <button key={song.src} onClick={() => playTrackBySrc(song.src, false)} className="block text-left text-xs hover:text-primary transition-colors">
+                            {song.title}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Latest Posts */}
             <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">

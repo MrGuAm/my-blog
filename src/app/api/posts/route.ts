@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { title, excerpt, content, category, tags, draft } = body
+    const { title, excerpt, content, category, tags, draft, pinned, coverImage, bgmSrc } = body
 
     if (!title || !content) {
       return NextResponse.json({ error: '标题和内容不能为空' }, { status: 400 })
@@ -30,8 +30,10 @@ export async function POST(request: NextRequest) {
       content,
       category,
       tags,
+      coverImage,
+      bgmSrc,
       draft,
-      pinned: false,
+      pinned,
     })
 
     return NextResponse.json(newPost, { status: 201 })

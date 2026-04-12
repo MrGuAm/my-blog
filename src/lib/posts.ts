@@ -8,6 +8,8 @@ export interface Post {
   category: string
   tags: string[]
   content: string
+  coverImage?: string
+  bgmSrc?: string
   pinned?: boolean
   draft?: boolean
   views?: number

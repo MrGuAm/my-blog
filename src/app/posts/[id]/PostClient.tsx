@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link"
 import { useMusic } from "@/context/MusicContext"
@@ -26,7 +27,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
   const [views, setViews] = useState(post.views || 0)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
-  const { isHovering } = useMusic()
+  const { isHovering, playTrackBySrc, track } = useMusic()
   const { isAuthenticated, logout } = useAuthStatus()
 
   // Back to top & code highlight
@@ -142,6 +143,11 @@ export default function PostClient({ post, content, readingTime, headings, relat
             {/* Article */}
             <article className="bg-card rounded-xl border border-border/60 p-8">
               <header className="mb-8">
+                {post.coverImage && (
+                  <div className="mb-6 overflow-hidden rounded-2xl border border-border/50">
+                    <img src={post.coverImage} alt={post.title} className="h-72 w-full object-cover" />
+                  </div>
+                )}
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
                   <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
                     {post.category}
@@ -163,6 +169,18 @@ export default function PostClient({ post, content, readingTime, headings, relat
                   </div>
                 </div>
                 <h1 className="text-3xl font-black tracking-tight">{post.title}</h1>
+                {post.bgmSrc && (
+                  <div className="mt-4 flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => playTrackBySrc(post.bgmSrc)}
+                      className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      {track.src === post.bgmSrc ? "播放本文 BGM 中" : "播放本文 BGM"}
+                    </button>
+                    <span className="text-sm text-muted-foreground">这篇文章绑定了一首专属背景音乐</span>
+                  </div>
+                )}
               </header>
 
               {/* Table of Contents */}

@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { getAllPosts, getAllTags } from "@/lib/posts"
 import HomeClient from "./HomeClient"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "首页",
   description: "Champion's Blog - 记录生活，分享想法",

@@ -10,6 +10,7 @@ export interface CommentRecord {
   author: string
   content: string
   date: string
+  userId?: string | null
 }
 
 interface PostRow {
@@ -20,9 +21,28 @@ interface PostRow {
   category: string
   tags_json: string
   content: string
+  cover_image?: string | null
+  bgm_src?: string | null
   pinned: number | boolean
   draft: number | boolean
   views: number
+}
+
+interface UserRow {
+  id: string
+  username: string
+  display_name: string
+  password_hash: string
+  created_at: string
+}
+
+interface CommentRow {
+  id: string
+  post_id: string
+  author: string
+  content: string
+  date: string
+  user_id?: string | null
 }
 
 interface CommentFileData {
@@ -66,9 +86,22 @@ function rowToPost(row: PostRow): Post {
     category: row.category,
     tags: JSON.parse(row.tags_json || '[]') as string[],
     content: row.content,
+    coverImage: row.cover_image || '',
+    bgmSrc: row.bgm_src || '',
     pinned: Boolean(row.pinned),
     draft: Boolean(row.draft),
     views: row.views || 0,
+  }
+}
+
+function rowToComment(row: CommentRow): CommentRecord {
+  return {
+    id: row.id,
+    postId: row.post_id,
+    author: row.author,
+    content: row.content,
+    date: row.date,
+    userId: row.user_id || null,
   }
 }
 
@@ -79,6 +112,13 @@ function normalizeExcerpt(content: string, excerpt?: string) {
 
 function normalizeTags(tags?: string[]) {
   return (tags || []).map((tag) => tag.trim()).filter(Boolean)
+}
+
+function ensureSqliteColumn(db: Database.Database, tableName: string, columnName: string, definition: string) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>
+  if (!columns.some((column) => column.name === columnName)) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`)
+  }
 }
 
 function getDb() {
@@ -96,6 +136,8 @@ function getDb() {
         category TEXT NOT NULL,
         tags_json TEXT NOT NULL DEFAULT '[]',
         content TEXT NOT NULL,
+        cover_image TEXT NOT NULL DEFAULT '',
+        bgm_src TEXT NOT NULL DEFAULT '',
         pinned INTEGER NOT NULL DEFAULT 0,
         draft INTEGER NOT NULL DEFAULT 0,
         views INTEGER NOT NULL DEFAULT 0
@@ -106,18 +148,31 @@ function getDb() {
         post_id TEXT NOT NULL,
         author TEXT NOT NULL,
         content TEXT NOT NULL,
-        date TEXT NOT NULL
+        date TEXT NOT NULL,
+        user_id TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        display_name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL
       );
 
       CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
     `)
 
+    ensureSqliteColumn(db, 'posts', 'cover_image', "TEXT NOT NULL DEFAULT ''")
+    ensureSqliteColumn(db, 'posts', 'bgm_src', "TEXT NOT NULL DEFAULT ''")
+    ensureSqliteColumn(db, 'comments', 'user_id', 'TEXT')
+
     const postCount = db.prepare('SELECT COUNT(*) as count FROM posts').get() as { count: number }
     if (postCount.count === 0) {
       const postsData = readJsonFile<{ posts: Post[] }>(postsJsonPath, { posts: [] })
       const insertPost = db.prepare(`
-        INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, pinned, draft, views)
-        VALUES (@id, @title, @excerpt, @date, @category, @tags_json, @content, @pinned, @draft, @views)
+        INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views)
+        VALUES (@id, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @draft, @views)
       `)
 
       const insertMany = db.transaction((posts: Post[]) => {
@@ -130,6 +185,8 @@ function getDb() {
             category: post.category,
             tags_json: JSON.stringify(post.tags || []),
             content: post.content,
+            cover_image: post.coverImage || '',
+            bgm_src: post.bgmSrc || '',
             pinned: post.pinned ? 1 : 0,
             draft: post.draft ? 1 : 0,
             views: post.views || 0,
@@ -144,8 +201,8 @@ function getDb() {
     if (commentCount.count === 0) {
       const commentsData = readJsonFile<CommentFileData>(commentsJsonPath, { comments: {} })
       const insertComment = db.prepare(`
-        INSERT INTO comments (id, post_id, author, content, date)
-        VALUES (@id, @post_id, @author, @content, @date)
+        INSERT INTO comments (id, post_id, author, content, date, user_id)
+        VALUES (@id, @post_id, @author, @content, @date, @user_id)
       `)
 
       const insertMany = db.transaction((records: CommentRecord[]) => {
@@ -156,6 +213,7 @@ function getDb() {
             author: comment.author,
             content: comment.content,
             date: comment.date,
+            user_id: comment.userId || null,
           })
         }
       })
@@ -188,16 +246,16 @@ async function seedRemoteDatabase() {
 
   for (const post of postsData.posts) {
     await sql`
-      INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, pinned, draft, views)
-      VALUES (${post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.content}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0})
+      INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views)
+      VALUES (${post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0})
       ON CONFLICT (id) DO NOTHING
     `
   }
 
   for (const comment of Object.values(commentsData.comments).flat()) {
     await sql`
-      INSERT INTO comments (id, post_id, author, content, date)
-      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date})
+      INSERT INTO comments (id, post_id, author, content, date, user_id)
+      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date}, ${comment.userId || null})
       ON CONFLICT (id) DO NOTHING
     `
   }
@@ -215,6 +273,8 @@ async function ensureRemoteSchema() {
       category TEXT NOT NULL,
       tags_json TEXT NOT NULL DEFAULT '[]',
       content TEXT NOT NULL,
+      cover_image TEXT NOT NULL DEFAULT '',
+      bgm_src TEXT NOT NULL DEFAULT '',
       pinned INTEGER NOT NULL DEFAULT 0,
       draft INTEGER NOT NULL DEFAULT 0,
       views INTEGER NOT NULL DEFAULT 0
@@ -227,15 +287,28 @@ async function ensureRemoteSchema() {
       post_id TEXT NOT NULL,
       author TEXT NOT NULL,
       content TEXT NOT NULL,
-      date TEXT NOT NULL
+      date TEXT NOT NULL,
+      user_id TEXT
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL
     )
   `
 
   await sql`CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)`
+  await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS cover_image TEXT NOT NULL DEFAULT ''`
+  await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS bgm_src TEXT NOT NULL DEFAULT ''`
+  await sql`ALTER TABLE comments ADD COLUMN IF NOT EXISTS user_id TEXT`
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
-  const postCount = Number(postCountRows[0]?.count || 0)
-  if (postCount === 0) {
+  if (Number(postCountRows[0]?.count || 0) === 0) {
     await seedRemoteDatabase()
   }
 }
@@ -259,15 +332,16 @@ export async function listPosts(options?: { includeDrafts?: boolean }) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = ((options?.includeDrafts ?? true)
-      ? await sql`SELECT id, title, excerpt, date, category, tags_json, content, pinned, draft, views FROM posts ORDER BY pinned DESC, date DESC`
-      : await sql`SELECT id, title, excerpt, date, category, tags_json, content, pinned, draft, views FROM posts WHERE draft = 0 ORDER BY pinned DESC, date DESC`) as PostRow[]
+      ? await sql`SELECT id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views FROM posts ORDER BY pinned DESC, date DESC`
+      : await sql`SELECT id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views FROM posts WHERE draft = 0 ORDER BY pinned DESC, date DESC`) as PostRow[]
 
-    return rows.map((row) => rowToPost(row as unknown as PostRow))
+    return rows.map(rowToPost)
   }
 
   const includeDrafts = options?.includeDrafts ?? true
   const rows = getDb().prepare(`
-    SELECT * FROM posts
+    SELECT id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views
+    FROM posts
     ${includeDrafts ? '' : 'WHERE draft = 0'}
     ORDER BY pinned DESC, date DESC
   `).all() as PostRow[]
@@ -281,15 +355,20 @@ export async function getPostById(id: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, title, excerpt, date, category, tags_json, content, pinned, draft, views
+      SELECT id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views
       FROM posts
       WHERE id = ${id}
       LIMIT 1
     `) as PostRow[]
-    return rows[0] ? rowToPost(rows[0] as unknown as PostRow) : undefined
+    return rows[0] ? rowToPost(rows[0]) : undefined
   }
 
-  const row = getDb().prepare('SELECT * FROM posts WHERE id = ?').get(id) as PostRow | undefined
+  const row = getDb().prepare(`
+    SELECT id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views
+    FROM posts
+    WHERE id = ?
+    LIMIT 1
+  `).get(id) as PostRow | undefined
   return row ? rowToPost(row) : undefined
 }
 
@@ -299,6 +378,8 @@ export async function createPost(input: {
   content: string
   category?: string
   tags?: string[]
+  coverImage?: string
+  bgmSrc?: string
   draft?: boolean
   pinned?: boolean
 }) {
@@ -312,6 +393,8 @@ export async function createPost(input: {
     category: input.category?.trim() || '未分类',
     tags: normalizeTags(input.tags),
     content: input.content,
+    coverImage: input.coverImage?.trim() || '',
+    bgmSrc: input.bgmSrc?.trim() || '',
     pinned: Boolean(input.pinned),
     draft: Boolean(input.draft),
     views: 0,
@@ -320,18 +403,20 @@ export async function createPost(input: {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     await sql`
-      INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, pinned, draft, views)
-      VALUES (${post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags)}, ${post.content}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0})
+      INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views)
+      VALUES (${post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags)}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0})
     `
     return post
   }
 
   getDb().prepare(`
-    INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, pinned, draft, views)
-    VALUES (@id, @title, @excerpt, @date, @category, @tags_json, @content, @pinned, @draft, @views)
+    INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views)
+    VALUES (@id, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @draft, @views)
   `).run({
     ...post,
     tags_json: JSON.stringify(post.tags),
+    cover_image: post.coverImage || '',
+    bgm_src: post.bgmSrc || '',
     pinned: post.pinned ? 1 : 0,
     draft: post.draft ? 1 : 0,
   })
@@ -341,7 +426,7 @@ export async function createPost(input: {
 
 export async function updatePost(
   id: string,
-  patch: Partial<Pick<Post, 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'pinned' | 'draft'>>
+  patch: Partial<Pick<Post, 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'coverImage' | 'bgmSrc' | 'pinned' | 'draft'>>
 ) {
   const existing = await getPostById(id)
   if (!existing) return undefined
@@ -352,6 +437,8 @@ export async function updatePost(
     excerpt: normalizeExcerpt(patch.content ?? existing.content, patch.excerpt ?? existing.excerpt),
     category: patch.category?.trim() || existing.category,
     tags: patch.tags ? normalizeTags(patch.tags) : existing.tags,
+    coverImage: typeof patch.coverImage === 'string' ? patch.coverImage.trim() : existing.coverImage || '',
+    bgmSrc: typeof patch.bgmSrc === 'string' ? patch.bgmSrc.trim() : existing.bgmSrc || '',
   }
 
   if (isRemoteDatabaseEnabled()) {
@@ -363,6 +450,8 @@ export async function updatePost(
           category = ${next.category},
           tags_json = ${JSON.stringify(next.tags)},
           content = ${next.content},
+          cover_image = ${next.coverImage || ''},
+          bgm_src = ${next.bgmSrc || ''},
           pinned = ${next.pinned ? 1 : 0},
           draft = ${next.draft ? 1 : 0}
       WHERE id = ${id}
@@ -377,6 +466,8 @@ export async function updatePost(
         category = @category,
         tags_json = @tags_json,
         content = @content,
+        cover_image = @cover_image,
+        bgm_src = @bgm_src,
         pinned = @pinned,
         draft = @draft
     WHERE id = @id
@@ -387,6 +478,8 @@ export async function updatePost(
     category: next.category,
     tags_json: JSON.stringify(next.tags),
     content: next.content,
+    cover_image: next.coverImage || '',
+    bgm_src: next.bgmSrc || '',
     pinned: next.pinned ? 1 : 0,
     draft: next.draft ? 1 : 0,
   })
@@ -442,35 +535,22 @@ export async function listCommentsByPost(postId: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, post_id, author, content, date
+      SELECT id, post_id, author, content, date, user_id
       FROM comments
       WHERE post_id = ${postId}
       ORDER BY date DESC, id DESC
-    `) as Array<{ id: string; post_id: string; author: string; content: string; date: string }>
-
-    return rows.map((row) => ({
-      id: String(row.id),
-      postId: String(row.post_id),
-      author: String(row.author),
-      content: String(row.content),
-      date: String(row.date),
-    }))
+    `) as CommentRow[]
+    return rows.map(rowToComment)
   }
 
   const rows = getDb().prepare(`
-    SELECT id, post_id, author, content, date
+    SELECT id, post_id, author, content, date, user_id
     FROM comments
     WHERE post_id = ?
     ORDER BY date DESC, id DESC
-  `).all(postId) as Array<{ id: string; post_id: string; author: string; content: string; date: string }>
+  `).all(postId) as CommentRow[]
 
-  return rows.map((row) => ({
-    id: row.id,
-    postId: row.post_id,
-    author: row.author,
-    content: row.content,
-    date: row.date,
-  }))
+  return rows.map(rowToComment)
 }
 
 export async function listRecentComments(limit = 10) {
@@ -479,38 +559,25 @@ export async function listRecentComments(limit = 10) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, post_id, author, content, date
+      SELECT id, post_id, author, content, date, user_id
       FROM comments
       ORDER BY date DESC, id DESC
       LIMIT ${limit}
-    `) as Array<{ id: string; post_id: string; author: string; content: string; date: string }>
-
-    return rows.map((row) => ({
-      id: String(row.id),
-      postId: String(row.post_id),
-      author: String(row.author),
-      content: String(row.content),
-      date: String(row.date),
-    }))
+    `) as CommentRow[]
+    return rows.map(rowToComment)
   }
 
   const rows = getDb().prepare(`
-    SELECT id, post_id, author, content, date
+    SELECT id, post_id, author, content, date, user_id
     FROM comments
     ORDER BY date DESC, id DESC
     LIMIT ?
-  `).all(limit) as Array<{ id: string; post_id: string; author: string; content: string; date: string }>
+  `).all(limit) as CommentRow[]
 
-  return rows.map((row) => ({
-    id: row.id,
-    postId: row.post_id,
-    author: row.author,
-    content: row.content,
-    date: row.date,
-  }))
+  return rows.map(rowToComment)
 }
 
-export async function createComment(input: { postId: string; author: string; content: string }) {
+export async function createComment(input: { postId: string; author: string; content: string; userId?: string | null }) {
   await ensureStoreReady()
 
   const comment: CommentRecord = {
@@ -519,29 +586,55 @@ export async function createComment(input: { postId: string; author: string; con
     author: input.author.trim(),
     content: input.content.trim(),
     date: new Date().toISOString().split('T')[0],
+    userId: input.userId || null,
   }
 
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     await sql`
-      INSERT INTO comments (id, post_id, author, content, date)
-      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date})
+      INSERT INTO comments (id, post_id, author, content, date, user_id)
+      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date}, ${comment.userId || null})
     `
     return comment
   }
 
   getDb().prepare(`
-    INSERT INTO comments (id, post_id, author, content, date)
-    VALUES (@id, @post_id, @author, @content, @date)
+    INSERT INTO comments (id, post_id, author, content, date, user_id)
+    VALUES (@id, @post_id, @author, @content, @date, @user_id)
   `).run({
     id: comment.id,
     post_id: comment.postId,
     author: comment.author,
     content: comment.content,
     date: comment.date,
+    user_id: comment.userId || null,
   })
 
   return comment
+}
+
+export async function getCommentById(postId: string, commentId: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, post_id, author, content, date, user_id
+      FROM comments
+      WHERE id = ${commentId} AND post_id = ${postId}
+      LIMIT 1
+    `) as CommentRow[]
+    return rows[0] ? rowToComment(rows[0]) : undefined
+  }
+
+  const row = getDb().prepare(`
+    SELECT id, post_id, author, content, date, user_id
+    FROM comments
+    WHERE id = ? AND post_id = ?
+    LIMIT 1
+  `).get(commentId, postId) as CommentRow | undefined
+
+  return row ? rowToComment(row) : undefined
 }
 
 export async function deleteComment(postId: string, commentId: string) {
@@ -559,4 +652,54 @@ export async function deleteComment(postId: string, commentId: string) {
 
   const result = getDb().prepare('DELETE FROM comments WHERE id = ? AND post_id = ?').run(commentId, postId)
   return result.changes > 0
+}
+
+export async function getUserByUsername(username: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, username, display_name, password_hash, created_at
+      FROM users
+      WHERE username = ${username}
+      LIMIT 1
+    `) as UserRow[]
+    return rows[0]
+  }
+
+  return getDb().prepare(`
+    SELECT id, username, display_name, password_hash, created_at
+    FROM users
+    WHERE username = ?
+    LIMIT 1
+  `).get(username) as UserRow | undefined
+}
+
+export async function createUser(input: { id: string; username: string; displayName: string; passwordHash: string }) {
+  await ensureStoreReady()
+
+  const createdAt = new Date().toISOString()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    await sql`
+      INSERT INTO users (id, username, display_name, password_hash, created_at)
+      VALUES (${input.id}, ${input.username}, ${input.displayName}, ${input.passwordHash}, ${createdAt})
+    `
+    return { ...input, createdAt }
+  }
+
+  getDb().prepare(`
+    INSERT INTO users (id, username, display_name, password_hash, created_at)
+    VALUES (@id, @username, @display_name, @password_hash, @created_at)
+  `).run({
+    id: input.id,
+    username: input.username,
+    display_name: input.displayName,
+    password_hash: input.passwordHash,
+    created_at: createdAt,
+  })
+
+  return { ...input, createdAt }
 }
