@@ -442,6 +442,9 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
               <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 About
               </Link>
+              <Link href="/music" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Music
+              </Link>
               {isAuthenticated ? (
                 <>
                   <Link
@@ -449,6 +452,12 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                   >
                     写文章
+                  </Link>
+                  <Link
+                    href="/moderation"
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    审核评论
                   </Link>
                   <button
                     onClick={() => {

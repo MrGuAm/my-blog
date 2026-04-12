@@ -853,6 +853,35 @@ export async function listRecentComments(limit = 10, options?: { includePending?
   return rows.map(rowToComment)
 }
 
+export async function listComments(options?: {
+  statuses?: CommentStatus[]
+  limit?: number
+}) {
+  await ensureStoreReady()
+  const statuses = options?.statuses?.length ? options.statuses : ['approved', 'pending', 'rejected']
+  const limit = options?.limit ?? 100
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
+      FROM comments
+      ORDER BY date DESC, id DESC
+      LIMIT ${limit}
+    `) as CommentRow[]
+    return rows.map(rowToComment).filter((comment) => statuses.includes(comment.status || 'approved'))
+  }
+
+  const rows = getDb().prepare(`
+    SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
+    FROM comments
+    ORDER BY date DESC, id DESC
+    LIMIT ?
+  `).all(limit) as CommentRow[]
+
+  return rows.map(rowToComment).filter((comment) => statuses.includes(comment.status || 'approved'))
+}
+
 export async function createComment(input: { postId: string; author: string; content: string; userId?: string | null; status?: CommentStatus; moderationNote?: string | null }) {
   await ensureStoreReady()
 

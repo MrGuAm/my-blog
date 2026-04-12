@@ -91,6 +91,9 @@ export default function PostClient({ post, content, readingTime, headings, relat
               <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 About
               </Link>
+              <Link href="/music" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Music
+              </Link>
               {isAuthenticated ? (
                 <>
                   <Link
@@ -111,6 +114,12 @@ export default function PostClient({ post, content, readingTime, headings, relat
                   >
                     {post.pinned ? '取消置顶' : '置顶'}
                   </button>
+                  <Link
+                    href="/moderation"
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    审核评论
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
