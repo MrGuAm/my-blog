@@ -2,13 +2,17 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { usePathname } from "next/navigation"
 import type { MusicTrack } from "@/app/api/music/route"
+import MarqueeText from "@/components/music/MarqueeText"
+import SyncedLyricsPanel from "@/components/music/SyncedLyricsPanel"
 import { useUserSession } from "@/hooks/useUserSession"
 
 type PlayMode = "loop" | "repeat-one" | "shuffle"
 
 const favoriteStorageKey = "champion-blog:favorite-tracks"
 const recentStorageKey = "champion-blog:recent-tracks"
+const resumeStorageKey = "champion-blog:last-track"
 
 const fallbackPlaylist: MusicTrack[] = [
   { title: "最美的太阳", artist: "张杰", src: "/music/张杰 - 最美的太阳.mp3" },
@@ -16,81 +20,6 @@ const fallbackPlaylist: MusicTrack[] = [
   { title: "这里是神奇的赛尔号", artist: "张杰", src: "/music/张杰 - 这里是神奇的赛尔号（《赛尔号》动画插曲）.mp3" },
   { title: "这，就是爱", artist: "张杰", src: "/music/张杰 - 这，就是爱.mp3" },
 ]
-
-function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
-  return (
-    <span className="block max-w-full overflow-hidden leading-tight">
-      {text.length <= charCount || !isActive ? (
-        <span className="block truncate">{text}</span>
-      ) : (
-        <span className="inline-block animate-marquee" style={{ whiteSpace: "nowrap" }}>
-          {text}
-        </span>
-      )}
-    </span>
-  )
-}
-
-function SyncedLyricsPanel({
-  lyrics,
-  activeIndex,
-  onSeek,
-}: {
-  lyrics: Array<{ time: number; text: string }>
-  activeIndex: number
-  onSeek: (time: number) => void
-}) {
-  const viewportRef = useRef<HTMLDivElement | null>(null)
-  const innerRef = useRef<HTMLDivElement | null>(null)
-  const activeLineRef = useRef<HTMLParagraphElement | null>(null)
-
-  useEffect(() => {
-    const viewport = viewportRef.current
-    const activeLine = activeLineRef.current
-    const inner = innerRef.current
-    if (!inner) return
-
-    if (!viewport || !activeLine || activeIndex < 0) {
-      inner.style.transform = "translateY(0px)"
-      return
-    }
-
-    const nextOffset = viewport.clientHeight / 2 - (activeLine.offsetTop + activeLine.offsetHeight / 2)
-    inner.style.transform = `translateY(${nextOffset}px)`
-  }, [activeIndex, lyrics])
-
-  if (lyrics.length === 0) {
-    return <p className="text-xs text-muted-foreground leading-5">当前歌曲没有可滚动的时间轴歌词。</p>
-  }
-
-  return (
-    <div ref={viewportRef} className="overflow-hidden px-1 text-center" style={{ height: 160 }}>
-      <div
-        ref={innerRef}
-        className="transition-transform duration-500 ease-out will-change-transform"
-        style={{ transform: "translateY(0px)" }}
-      >
-      {lyrics.map((line, index) => (
-        <p
-          key={`${line.time}-${index}`}
-          ref={index === activeIndex ? activeLineRef : null}
-          onClick={() => onSeek(line.time)}
-          className={`px-3 py-2 text-xs leading-5 transition-all duration-300 ${
-            index === activeIndex
-              ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
-              : index < activeIndex
-                ? "text-foreground/65 scale-100 opacity-35"
-                : "text-muted-foreground scale-100 opacity-50"
-          } cursor-pointer`}
-          style={{ transformOrigin: "center center" }}
-        >
-          {line.text}
-        </p>
-      ))}
-      </div>
-    </div>
-  )
-}
 
 function readStoredList(key: string) {
   if (typeof window === "undefined") return []
@@ -105,6 +34,36 @@ function readStoredList(key: string) {
 function writeStoredList(key: string, value: string[]) {
   if (typeof window === "undefined") return
   window.localStorage.setItem(key, JSON.stringify(value))
+}
+
+interface ResumeSnapshot {
+  src: string | null
+  time: number
+  updatedAt: number
+}
+
+function readStoredResume() {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(resumeStorageKey)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw) as Partial<ResumeSnapshot>
+    if (typeof parsed.src !== "string" || !parsed.src) return null
+
+    return {
+      src: parsed.src,
+      time: typeof parsed.time === "number" ? Math.max(0, parsed.time) : 0,
+      updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : 0,
+    } satisfies ResumeSnapshot
+  } catch {
+    return null
+  }
+}
+
+function writeStoredResume(value: ResumeSnapshot) {
+  if (typeof window === "undefined") return
+  window.localStorage.setItem(resumeStorageKey, JSON.stringify(value))
 }
 
 function parseTimedLyrics(rawLyrics?: string) {
@@ -148,7 +107,7 @@ interface MusicContextValue {
   togglePlay: () => void
   cyclePlayMode: () => void
   playPrevious: () => void
-  playNext: () => void
+  playNext: (openPanel?: boolean) => void
   selectTrack: (index: number, openPanel?: boolean) => void
   playTrackBySrc: (src?: string | null, openPanel?: boolean) => void
   toggleFavorite: (src: string) => void
@@ -193,6 +152,7 @@ const MusicContext = createContext<MusicContextValue>({
 })
 
 export function MusicProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
   const userSession = useUserSession()
   const [playlist, setPlaylist] = useState<MusicTrack[]>(fallbackPlaylist)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -206,14 +166,28 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [playMode, setPlayMode] = useState<PlayMode>("loop")
   const [favoriteSrcs, setFavoriteSrcs] = useState<string[]>(() => readStoredList(favoriteStorageKey))
   const [recentSrcs, setRecentSrcs] = useState<string[]>(() => readStoredList(recentStorageKey))
+  const [resumeSnapshot, setResumeSnapshot] = useState<ResumeSnapshot | null>(() => readStoredResume())
   const leaveTimerRef = useRef<number | null>(null)
   const keepOpenUntilRef = useRef(0)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const currentTimeRef = useRef(0)
   const isDraggingRef = useRef(false)
   const didDragRef = useRef(false)
   const progressBarRectRef = useRef<DOMRect | null>(null)
+  const lastLocalResumeSecondRef = useRef(-1)
+  const lastRemoteResumeSecondRef = useRef(-1)
 
-  const activeTrackIndex = currentTrack < playlist.length ? currentTrack : 0
+  const resumeTrackIndex = useMemo(() => {
+    const candidate = resumeSnapshot || readStoredResume()
+    if (!candidate?.src || !playlist.length) return -1
+    return playlist.findIndex((item) => item.src === candidate.src)
+  }, [playlist, resumeSnapshot])
+
+  const activeTrackIndex = currentTrack < playlist.length
+    ? currentTrack
+    : resumeTrackIndex >= 0
+      ? resumeTrackIndex
+      : 0
   const track = playlist[activeTrackIndex] ?? fallbackPlaylist[0]
   const currentLyrics = useMemo(() => (track?.lyrics || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean), [track?.lyrics])
   const parsedLyrics = useMemo(() => parseTimedLyrics(track?.lyrics), [track?.lyrics])
@@ -228,18 +202,39 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [currentTime, parsedLyrics])
   const favoriteTracks = useMemo(() => playlist.filter((item) => favoriteSrcs.includes(item.src)), [favoriteSrcs, playlist])
   const recentTracks = useMemo(() => recentSrcs.map((src) => playlist.find((item) => item.src === src)).filter(Boolean) as MusicTrack[], [playlist, recentSrcs])
+  const shouldAutoOpenFloatingPlayer = pathname !== "/music"
 
-  const persistLibrary = useCallback((nextFavoriteSrcs: string[], nextRecentSrcs: string[]) => {
+  const persistLibrary = useCallback((payload: {
+    favoriteSrcs?: string[]
+    recentSrcs?: string[]
+    lastTrackSrc?: string | null
+    lastTrackTime?: number
+  }) => {
     if (!userSession.isAuthenticated) return
     fetch("/api/user/music", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        favoriteSrcs: nextFavoriteSrcs,
-        recentSrcs: nextRecentSrcs,
-      }),
+      body: JSON.stringify(payload),
     }).catch(() => {})
   }, [userSession.isAuthenticated])
+
+  const persistResumeSnapshot = useCallback((src: string, time: number, remote = false) => {
+    const snapshot = {
+      src,
+      time: Number.isFinite(time) ? Math.max(0, time) : 0,
+      updatedAt: Date.now(),
+    } satisfies ResumeSnapshot
+
+    writeStoredResume(snapshot)
+    setResumeSnapshot(snapshot)
+
+    if (remote) {
+      persistLibrary({
+        lastTrackSrc: snapshot.src,
+        lastTrackTime: snapshot.time,
+      })
+    }
+  }, [persistLibrary])
 
   const clearLeaveTimer = useCallback(() => {
     if (leaveTimerRef.current !== null) {
@@ -269,25 +264,25 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setFavoriteSrcs((current) => {
       const next = current.includes(src) ? current.filter((item) => item !== src) : [src, ...current]
       writeStoredList(favoriteStorageKey, next)
-      persistLibrary(next, recentSrcs)
+      persistLibrary({ favoriteSrcs: next })
       return next
     })
-  }, [persistLibrary, recentSrcs])
+  }, [persistLibrary])
 
   const rememberTrack = useCallback((src: string) => {
     setRecentSrcs((current) => {
       const next = [src, ...current.filter((item) => item !== src)].slice(0, 8)
       writeStoredList(recentStorageKey, next)
-      persistLibrary(favoriteSrcs, next)
+      persistLibrary({ recentSrcs: next })
       return next
     })
-  }, [favoriteSrcs, persistLibrary])
+  }, [persistLibrary])
 
   const cyclePlayMode = useCallback(() => {
     setPlayMode((current) => (current === "loop" ? "repeat-one" : current === "repeat-one" ? "shuffle" : "loop"))
   }, [])
 
-  const selectTrack = useCallback((index: number, openPanel = true) => {
+  const selectTrack = useCallback((index: number, openPanel?: boolean) => {
     const nextTrack = playlist[index]
     if (!audioRef.current || !nextTrack) return
 
@@ -301,18 +296,25 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setDragProgress(null)
     isDraggingRef.current = false
     didDragRef.current = false
+    lastLocalResumeSecondRef.current = -1
+    lastRemoteResumeSecondRef.current = -1
     rememberTrack(nextTrack.src)
+    persistResumeSnapshot(nextTrack.src, 0, userSession.isAuthenticated)
     window.setTimeout(() => {
       audioRef.current?.play().catch(() => {})
     }, 80)
 
-    if (openPanel) {
+    if ((openPanel ?? shouldAutoOpenFloatingPlayer)) {
       setIsHovering(true)
       startLeaveTimer(true)
+    } else {
+      clearLeaveTimer()
+      keepOpenUntilRef.current = 0
+      setIsHovering(false)
     }
-  }, [playlist, rememberTrack, startLeaveTimer])
+  }, [clearLeaveTimer, persistResumeSnapshot, playlist, rememberTrack, shouldAutoOpenFloatingPlayer, startLeaveTimer, userSession.isAuthenticated])
 
-  const playTrackBySrc = useCallback((src?: string | null, openPanel = true) => {
+  const playTrackBySrc = useCallback((src?: string | null, openPanel?: boolean) => {
     if (!src) return
     const index = playlist.findIndex((item) => item.src === src)
     if (index >= 0) {
@@ -326,7 +328,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     selectTrack(previousIndex)
   }, [activeTrackIndex, playlist.length, selectTrack])
 
-  const playNext = useCallback((openPanel = true) => {
+  const playNext = useCallback((openPanel?: boolean) => {
     if (!playlist.length) return
     if (playMode === "repeat-one") {
       selectTrack(activeTrackIndex, openPanel)
@@ -429,16 +431,60 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           setRecentSrcs(data.recentSrcs)
           writeStoredList(recentStorageKey, data.recentSrcs)
         }
+
+        const localResume = readStoredResume()
+        const remoteResume = typeof data.lastTrackSrc === "string" && data.lastTrackSrc
+          ? {
+              src: data.lastTrackSrc,
+              time: typeof data.lastTrackTime === "number" ? Math.max(0, data.lastTrackTime) : 0,
+              updatedAt: typeof data.updatedAt === "string" ? Date.parse(data.updatedAt) || 0 : 0,
+            }
+          : null
+
+        const nextResume = [localResume, remoteResume]
+          .filter(Boolean)
+          .sort((a, b) => (b?.updatedAt || 0) - (a?.updatedAt || 0))[0] || null
+
+        if (nextResume) {
+          setResumeSnapshot(nextResume)
+          writeStoredResume(nextResume)
+        }
       })
       .catch(() => {})
   }, [userSession.isAuthenticated, userSession.isLoading])
+
+  const persistTrackResume = useCallback((currentSrc: string | null | undefined, remote = false) => {
+    const currentAudioTime = audioRef.current?.currentTime ?? currentTimeRef.current
+    if (!currentSrc) return
+    persistResumeSnapshot(currentSrc, currentAudioTime, remote)
+  }, [persistResumeSnapshot])
 
   useEffect(() => {
     return () => {
       window.removeEventListener("mousemove", handleWindowMouseMove)
       window.removeEventListener("mouseup", handleWindowMouseUp)
+      persistTrackResume(track?.src, userSession.isAuthenticated)
     }
-  }, [handleWindowMouseMove, handleWindowMouseUp])
+  }, [handleWindowMouseMove, handleWindowMouseUp, persistTrackResume, track?.src, userSession.isAuthenticated])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        persistTrackResume(track?.src, userSession.isAuthenticated)
+      }
+    }
+
+    const handleBeforeUnload = () => {
+      persistTrackResume(track?.src, false)
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("beforeunload", handleBeforeUnload)
+    }
+  }, [persistTrackResume, track?.src, userSession.isAuthenticated])
 
   const playModeLabel = playMode === "loop" ? "列表循环" : playMode === "repeat-one" ? "单曲循环" : "随机播放"
   const playModeIcon = playMode === "loop" ? "🔁" : playMode === "repeat-one" ? "🔂" : "🔀"
@@ -479,16 +525,53 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         ref={audioRef}
         src={track?.src}
         onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
+        onPause={() => {
+          setIsPlaying(false)
+          persistTrackResume(track?.src, userSession.isAuthenticated)
+        }}
         onTimeUpdate={() => {
           if (!audioRef.current || isDraggingRef.current) return
-          setCurrentTime(audioRef.current.currentTime || 0)
-          setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100 || 0)
+          const nextTime = audioRef.current.currentTime || 0
+          currentTimeRef.current = nextTime
+          setCurrentTime(nextTime)
+          setProgress((nextTime / audioRef.current.duration) * 100 || 0)
           setDuration(audioRef.current.duration || 0)
+
+          const currentSecond = Math.floor(nextTime)
+          if (track?.src && currentSecond >= 0 && currentSecond !== lastLocalResumeSecondRef.current && currentSecond % 5 === 0) {
+            lastLocalResumeSecondRef.current = currentSecond
+            persistResumeSnapshot(track.src, nextTime, false)
+          }
+
+          if (
+            userSession.isAuthenticated &&
+            track?.src &&
+            currentSecond >= 15 &&
+            currentSecond !== lastRemoteResumeSecondRef.current &&
+            currentSecond % 15 === 0
+          ) {
+            lastRemoteResumeSecondRef.current = currentSecond
+            persistResumeSnapshot(track.src, nextTime, true)
+          }
         }}
         onLoadedMetadata={() => {
-          setDuration(audioRef.current?.duration || 0)
-          setCurrentTime(audioRef.current?.currentTime || 0)
+          const audio = audioRef.current
+          if (!audio) return
+
+          const pendingResume = currentTrack < playlist.length ? null : resumeSnapshot
+          if (pendingResume?.src === track?.src) {
+            const nextTime = Math.max(0, Math.min(pendingResume.time, audio.duration || pendingResume.time))
+            audio.currentTime = nextTime
+            currentTimeRef.current = nextTime
+            setCurrentTime(nextTime)
+            setProgress((nextTime / audio.duration) * 100 || 0)
+          } else {
+            currentTimeRef.current = audio.currentTime || 0
+            setCurrentTime(audio.currentTime || 0)
+            setProgress((audio.currentTime / audio.duration) * 100 || 0)
+          }
+
+          setDuration(audio.duration || 0)
         }}
         onEnded={() => playNext(false)}
       />
@@ -654,7 +737,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                 {currentLyrics.length > 0 && (
                   <div className="rounded-xl bg-secondary/20 p-3">
                     <p className="text-xs font-medium mb-2">歌词</p>
-                    <SyncedLyricsPanel lyrics={parsedLyrics} activeIndex={activeLyricIndex} onSeek={seekToTime} />
+                    <SyncedLyricsPanel lyrics={parsedLyrics} activeIndex={activeLyricIndex} onSeek={seekToTime} height={160} />
                   </div>
                 )}
               </div>

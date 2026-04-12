@@ -85,6 +85,8 @@ interface UserMusicRow {
   user_id: string
   favorite_srcs_json: string
   recent_srcs_json: string
+  last_track_src?: string | null
+  last_track_time?: number | null
   updated_at: string
 }
 
@@ -92,6 +94,8 @@ export interface UserMusicLibrary {
   userId: string
   favoriteSrcs: string[]
   recentSrcs: string[]
+  lastTrackSrc?: string | null
+  lastTrackTime?: number | null
   updatedAt: string
 }
 
@@ -203,6 +207,8 @@ function rowToUserMusic(row: UserMusicRow): UserMusicLibrary {
     userId: row.user_id,
     favoriteSrcs: JSON.parse(row.favorite_srcs_json || '[]') as string[],
     recentSrcs: JSON.parse(row.recent_srcs_json || '[]') as string[],
+    lastTrackSrc: row.last_track_src || null,
+    lastTrackTime: typeof row.last_track_time === 'number' ? row.last_track_time : 0,
     updatedAt: row.updated_at,
   }
 }
@@ -385,6 +391,11 @@ function getDb() {
           updated_at TEXT NOT NULL
         );
       `)
+    })
+
+    runSqliteMigration(db, '005-user-music-resume', () => {
+      ensureSqliteColumn(db, 'user_music_library', 'last_track_src', 'TEXT')
+      ensureSqliteColumn(db, 'user_music_library', 'last_track_time', 'REAL NOT NULL DEFAULT 0')
     })
 
     const postCount = db.prepare('SELECT COUNT(*) as count FROM posts').get() as { count: number }
@@ -577,6 +588,11 @@ async function ensureRemoteSchema() {
         updated_at TEXT NOT NULL
       )
     `
+  })
+
+  await runRemoteMigration('005-user-music-resume', async () => {
+    await sql`ALTER TABLE user_music_library ADD COLUMN IF NOT EXISTS last_track_src TEXT`
+    await sql`ALTER TABLE user_music_library ADD COLUMN IF NOT EXISTS last_track_time REAL NOT NULL DEFAULT 0`
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
@@ -1237,7 +1253,7 @@ export async function getUserMusicLibrary(userId: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT user_id, favorite_srcs_json, recent_srcs_json, updated_at
+      SELECT user_id, favorite_srcs_json, recent_srcs_json, last_track_src, last_track_time, updated_at
       FROM user_music_library
       WHERE user_id = ${userId}
       LIMIT 1
@@ -1246,7 +1262,7 @@ export async function getUserMusicLibrary(userId: string) {
   }
 
   const row = getDb().prepare(`
-    SELECT user_id, favorite_srcs_json, recent_srcs_json, updated_at
+    SELECT user_id, favorite_srcs_json, recent_srcs_json, last_track_src, last_track_time, updated_at
     FROM user_music_library
     WHERE user_id = ?
     LIMIT 1
@@ -1255,46 +1271,67 @@ export async function getUserMusicLibrary(userId: string) {
   return row ? rowToUserMusic(row) : undefined
 }
 
-export async function upsertUserMusicLibrary(input: { userId: string; favoriteSrcs: string[]; recentSrcs: string[] }) {
+export async function upsertUserMusicLibrary(input: {
+  userId: string
+  favoriteSrcs?: string[]
+  recentSrcs?: string[]
+  lastTrackSrc?: string | null
+  lastTrackTime?: number | null
+}) {
   await ensureStoreReady()
   const updatedAt = new Date().toISOString()
+  const existing = await getUserMusicLibrary(input.userId)
+  const favoriteSrcs = input.favoriteSrcs ?? existing?.favoriteSrcs ?? []
+  const recentSrcs = input.recentSrcs ?? existing?.recentSrcs ?? []
+  const lastTrackSrc = input.lastTrackSrc !== undefined ? input.lastTrackSrc : existing?.lastTrackSrc ?? null
+  const lastTrackTime = input.lastTrackTime !== undefined ? Math.max(0, Number(input.lastTrackTime) || 0) : existing?.lastTrackTime ?? 0
 
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     await sql`
-      INSERT INTO user_music_library (user_id, favorite_srcs_json, recent_srcs_json, updated_at)
-      VALUES (${input.userId}, ${JSON.stringify(input.favoriteSrcs)}, ${JSON.stringify(input.recentSrcs)}, ${updatedAt})
+      INSERT INTO user_music_library (user_id, favorite_srcs_json, recent_srcs_json, last_track_src, last_track_time, updated_at)
+      VALUES (${input.userId}, ${JSON.stringify(favoriteSrcs)}, ${JSON.stringify(recentSrcs)}, ${lastTrackSrc}, ${lastTrackTime}, ${updatedAt})
       ON CONFLICT (user_id) DO UPDATE SET
-        favorite_srcs_json = ${JSON.stringify(input.favoriteSrcs)},
-        recent_srcs_json = ${JSON.stringify(input.recentSrcs)},
+        favorite_srcs_json = ${JSON.stringify(favoriteSrcs)},
+        recent_srcs_json = ${JSON.stringify(recentSrcs)},
+        last_track_src = ${lastTrackSrc},
+        last_track_time = ${lastTrackTime},
         updated_at = ${updatedAt}
     `
     return {
       userId: input.userId,
-      favoriteSrcs: input.favoriteSrcs,
-      recentSrcs: input.recentSrcs,
+      favoriteSrcs,
+      recentSrcs,
+      lastTrackSrc,
+      lastTrackTime,
       updatedAt,
     } satisfies UserMusicLibrary
   }
 
   getDb().prepare(`
-    INSERT INTO user_music_library (user_id, favorite_srcs_json, recent_srcs_json, updated_at)
-    VALUES (@user_id, @favorite_srcs_json, @recent_srcs_json, @updated_at)
+    INSERT INTO user_music_library (user_id, favorite_srcs_json, recent_srcs_json, last_track_src, last_track_time, updated_at)
+    VALUES (@user_id, @favorite_srcs_json, @recent_srcs_json, @last_track_src, @last_track_time, @updated_at)
     ON CONFLICT(user_id) DO UPDATE SET
       favorite_srcs_json = excluded.favorite_srcs_json,
       recent_srcs_json = excluded.recent_srcs_json,
+      last_track_src = excluded.last_track_src,
+      last_track_time = excluded.last_track_time,
       updated_at = excluded.updated_at
   `).run({
     user_id: input.userId,
-    favorite_srcs_json: JSON.stringify(input.favoriteSrcs),
-    recent_srcs_json: JSON.stringify(input.recentSrcs),
+    favorite_srcs_json: JSON.stringify(favoriteSrcs),
+    recent_srcs_json: JSON.stringify(recentSrcs),
+    last_track_src: lastTrackSrc,
+    last_track_time: lastTrackTime,
     updated_at: updatedAt,
   })
 
   return {
     userId: input.userId,
-    favoriteSrcs: input.favoriteSrcs,
-    recentSrcs: input.recentSrcs,
+    favoriteSrcs,
+    recentSrcs,
+    lastTrackSrc,
+    lastTrackTime,
     updatedAt,
   } satisfies UserMusicLibrary
 }

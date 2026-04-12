@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link"
+import SyncedLyricsPanel from "@/components/music/SyncedLyricsPanel"
 import { useMusic } from "@/context/MusicContext"
 
 export default function MusicPageClient() {
@@ -18,6 +19,7 @@ export default function MusicPageClient() {
     togglePlay,
     playPrevious,
     playNext,
+    playTrackBySrc,
     selectTrack,
     toggleFavorite,
     isFavorite,
@@ -79,26 +81,14 @@ export default function MusicPageClient() {
 
           <div className="rounded-3xl border border-border/50 bg-card p-6">
             <h2 className="mb-4 text-lg font-bold">同步歌词</h2>
-            {parsedLyrics.length > 0 ? (
-              <div className="max-h-[22rem] space-y-2 overflow-y-auto pr-2 text-center">
-                {parsedLyrics.map((line, index) => (
-                  <button
-                    key={`${line.time}-${index}`}
-                    type="button"
-                    onClick={() => seekToTime(line.time)}
-                    className={`block w-full rounded-2xl px-3 py-2 text-center text-sm transition-all ${
-                      index === activeLyricIndex
-                        ? "scale-[1.03] bg-primary/10 font-bold text-primary"
-                        : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
-                    }`}
-                  >
-                    {line.text}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">当前歌曲没有可点击的时间轴歌词。</p>
-            )}
+            <SyncedLyricsPanel
+              lyrics={parsedLyrics}
+              activeIndex={activeLyricIndex}
+              onSeek={seekToTime}
+              height={352}
+              variant="page"
+              emptyText="当前歌曲没有可点击的时间轴歌词。"
+            />
           </div>
         </section>
 
@@ -114,7 +104,7 @@ export default function MusicPageClient() {
                   <button
                     key={song.src}
                     type="button"
-                    onClick={() => selectTrack(playlist.findIndex((item) => item.src === song.src))}
+                    onClick={() => playTrackBySrc(song.src, false)}
                     className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left hover:bg-accent/30"
                   >
                     <div className="h-10 w-10 overflow-hidden rounded-xl bg-secondary/40">
@@ -139,7 +129,7 @@ export default function MusicPageClient() {
                   <button
                     key={song.src}
                     type="button"
-                    onClick={() => selectTrack(playlist.findIndex((item) => item.src === song.src))}
+                    onClick={() => playTrackBySrc(song.src, false)}
                     className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left hover:bg-accent/30"
                   >
                     <div className="h-10 w-10 overflow-hidden rounded-xl bg-secondary/40">
@@ -164,11 +154,11 @@ export default function MusicPageClient() {
               {playlist.map((song, index) => (
                 <div
                   key={song.src}
-                  onClick={() => selectTrack(index)}
+                  onClick={() => selectTrack(index, false)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault()
-                      selectTrack(index)
+                      selectTrack(index, false)
                     }
                   }}
                   role="button"

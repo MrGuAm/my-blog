@@ -85,12 +85,12 @@ export function parseUserSessionToken(token?: string | null) {
 
 export function buildUserSessionCookie(token: string) {
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
-  return `${USER_SESSION_COOKIE_NAME}=${token}; Path=/; SameSite=Lax; Max-Age=${USER_SESSION_MAX_AGE}${secure}`
+  return `${USER_SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Priority=High; Max-Age=${USER_SESSION_MAX_AGE}${secure}`
 }
 
 export function buildExpiredUserSessionCookie() {
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
-  return `${USER_SESSION_COOKIE_NAME}=; Path=/; SameSite=Lax; Max-Age=0${secure}`
+  return `${USER_SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Priority=High; Max-Age=0${secure}`
 }
 
 export function getCommentUserFromRequest(request: NextRequest) {

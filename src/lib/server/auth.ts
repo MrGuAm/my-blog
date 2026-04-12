@@ -6,7 +6,7 @@ export const SESSION_COOKIE_NAME = 'session'
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7
 
 function getAuthSecret() {
-  return process.env.AUTH_SECRET || process.env.AUTH_PASSWORD || process.env.NEXT_PUBLIC_PASSWORD || 'champion-blog-dev-secret'
+  return process.env.AUTH_SECRET || process.env.AUTH_PASSWORD || 'champion-blog-dev-secret'
 }
 
 export function getAuthPassword() {
@@ -55,12 +55,12 @@ export function isValidSessionToken(token?: string | null) {
 
 export function buildSessionCookie(token: string) {
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
-  return `${SESSION_COOKIE_NAME}=${token}; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE}${secure}`
+  return `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Priority=High; Max-Age=${SESSION_MAX_AGE}${secure}`
 }
 
 export function buildExpiredSessionCookie() {
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
-  return `${SESSION_COOKIE_NAME}=; Path=/; SameSite=Lax; Max-Age=0${secure}`
+  return `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Priority=High; Max-Age=0${secure}`
 }
 
 export function isAuthenticatedRequest(request: NextRequest) {

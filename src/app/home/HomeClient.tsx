@@ -6,6 +6,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
+import MarqueeText from "@/components/music/MarqueeText"
+import SyncedLyricsPanel from "@/components/music/SyncedLyricsPanel"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 
@@ -22,76 +24,6 @@ interface RecentComment {
   date: string
 }
 
-// Simple marquee text using CSS
-function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive: boolean; charCount?: number }) {
-  return (
-    <span className="block max-w-full overflow-hidden leading-tight">
-      {text.length <= charCount || !isActive ? (
-        <span className="block truncate">{text}</span>
-      ) : (
-        <span
-          className="inline-block animate-marquee"
-          style={{ whiteSpace: "nowrap" }}
-        >
-          {text}
-        </span>
-      )}
-    </span>
-  )
-}
-
-function SyncedLyrics({ lyrics, activeIndex, onSeek }: { lyrics: Array<{ time: number; text: string }>; activeIndex: number; onSeek: (time: number) => void }) {
-  const viewportRef = useRef<HTMLDivElement | null>(null)
-  const innerRef = useRef<HTMLDivElement | null>(null)
-  const activeLineRef = useRef<HTMLParagraphElement | null>(null)
-
-  useEffect(() => {
-    const viewport = viewportRef.current
-    const activeLine = activeLineRef.current
-    const inner = innerRef.current
-    if (!inner) return
-
-    if (!viewport || !activeLine || activeIndex < 0) {
-      inner.style.transform = "translateY(0px)"
-      return
-    }
-
-    const nextOffset = viewport.clientHeight / 2 - (activeLine.offsetTop + activeLine.offsetHeight / 2)
-    inner.style.transform = `translateY(${nextOffset}px)`
-  }, [activeIndex, lyrics])
-
-  if (lyrics.length === 0) {
-    return <p className="text-xs text-muted-foreground leading-5">当前歌曲没有可滚动的时间轴歌词。</p>
-  }
-
-  return (
-    <div ref={viewportRef} className="overflow-hidden px-1 text-center" style={{ height: 176 }}>
-      <div
-        ref={innerRef}
-        className="transition-transform duration-500 ease-out will-change-transform"
-        style={{ transform: "translateY(0px)" }}
-      >
-      {lyrics.map((line, index) => (
-        <p
-          key={`${line.time}-${index}`}
-          ref={index === activeIndex ? activeLineRef : null}
-          style={{ transformOrigin: "center center" }}
-          onClick={() => onSeek(line.time)}
-          className={`px-3 py-2 text-xs leading-5 transition-all duration-300 ${
-            index === activeIndex
-              ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
-              : index < activeIndex
-                ? "text-foreground/65 scale-100 opacity-35"
-                : "text-muted-foreground scale-100 opacity-50"
-          } cursor-pointer`}
-        >
-          {line.text}
-        </p>
-      ))}
-      </div>
-    </div>
-  )
-}
 function CharacterEye({ isHovered, containerRef, pupilColor, size }: { isHovered: boolean; containerRef: React.RefObject<HTMLDivElement | null>; pupilColor: string; size: number }) {
   const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
   const displayedOffset = isHovered ? pupilOffset : { x: 0, y: 0 };
@@ -570,8 +502,8 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
           </main>
 
           {/* Sidebar */}
-          <aside className="w-full flex-shrink-0 lg:w-56">
-            <div className="sticky top-24 space-y-4">
+          <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-56 lg:self-start">
+            <div className="space-y-4 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
               {/* Player */}
               <div
                 className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden"
@@ -732,7 +664,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   {currentLyrics.length > 0 && (
                     <div>
                       <h3 className="text-sm font-semibold mb-2">当前歌词</h3>
-                      <SyncedLyrics lyrics={parsedLyrics} activeIndex={activeLyricIndex} onSeek={seekToTime} />
+                      <SyncedLyricsPanel lyrics={parsedLyrics} activeIndex={activeLyricIndex} onSeek={seekToTime} height={176} />
                     </div>
                   )}
                   {favoriteTracks.length > 0 && (
