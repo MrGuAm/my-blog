@@ -198,27 +198,9 @@ export default function PostClient({ post, content, readingTime, headings, relat
                 )}
               </header>
 
-              {/* Table of Contents */}
-              {headings.length > 0 && (
-                <div className="mb-8 p-4 bg-secondary/30 rounded-xl border border-border/40">
-                  <h3 className="text-sm font-semibold mb-3 text-foreground">目录</h3>
-                  <nav className="space-y-1">
-                    {headings.map(h => (
-                      <a
-                        key={h.id}
-                        href={`#${h.id}`}
-                        className={`block text-sm text-muted-foreground hover:text-primary transition-colors ${h.level === 3 ? 'pl-4' : ''}`}
-                      >
-                        {h.text}
-                      </a>
-                    ))}
-                  </nav>
-                </div>
-              )}
-
               <div
                 ref={contentRef}
-                className="prose prose-lg max-w-none text-muted-foreground"
+                className="post-content prose prose-lg max-w-none text-muted-foreground"
                 dangerouslySetInnerHTML={{ __html: content }}
               />
             </article>
@@ -236,26 +218,51 @@ export default function PostClient({ post, content, readingTime, headings, relat
             </div>
           </div>
 
-          {/* Related Posts Sidebar */}
-          {relatedPosts.length > 0 && (
+          {/* Sidebar */}
+          {(headings.length > 0 || relatedPosts.length > 0) && (
             <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-72">
-              <h3 className="text-sm font-semibold mb-4 text-muted-foreground">相关文章</h3>
-              <div className="space-y-3">
-                {relatedPosts.map(rp => (
-                  <Link
-                    key={rp.id}
-                    href={`/posts/${rp.slug || rp.id}`}
-                    className="block p-3 rounded-xl border border-border/60 bg-card hover:border-primary/50 hover:bg-accent/30 transition-all"
-                  >
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium mb-2 inline-block">
-                      {rp.category}
-                    </span>
-                    <h4 className="font-semibold text-sm hover:text-primary transition-colors line-clamp-2">
-                      {rp.title}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">{rp.date}</p>
-                  </Link>
-                ))}
+              <div className="space-y-6">
+                {headings.length > 0 && (
+                  <div className="rounded-xl border border-border/60 bg-card p-4">
+                    <h3 className="mb-3 text-sm font-semibold text-foreground">目录</h3>
+                    <nav className="space-y-1.5">
+                      {headings.map((heading) => (
+                        <a
+                          key={heading.id}
+                          href={`#${heading.id}`}
+                          className={`block text-sm text-muted-foreground transition-colors hover:text-primary ${
+                            heading.level === 3 ? "pl-4" : ""
+                          }`}
+                        >
+                          {heading.text}
+                        </a>
+                      ))}
+                    </nav>
+                  </div>
+                )}
+
+                {relatedPosts.length > 0 && (
+                  <div>
+                    <h3 className="mb-4 text-sm font-semibold text-muted-foreground">相关文章</h3>
+                    <div className="space-y-3">
+                      {relatedPosts.map(rp => (
+                        <Link
+                          key={rp.id}
+                          href={`/posts/${rp.slug || rp.id}`}
+                          className="block rounded-xl border border-border/60 bg-card p-3 transition-all hover:border-primary/50 hover:bg-accent/30"
+                        >
+                          <span className="mb-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            {rp.category}
+                          </span>
+                          <h4 className="line-clamp-2 text-sm font-semibold transition-colors hover:text-primary">
+                            {rp.title}
+                          </h4>
+                          <p className="mt-1 text-xs text-muted-foreground">{rp.date}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </aside>
           )}
