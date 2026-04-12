@@ -420,14 +420,14 @@ async function ensureRemoteSchema() {
     )
   `
 
-  await sql`CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)`
-  await sql`CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug)`
-  await sql`CREATE INDEX IF NOT EXISTS idx_post_versions_post_id ON post_versions(post_id)`
   await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT ''`
   await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS cover_image TEXT NOT NULL DEFAULT ''`
   await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS bgm_src TEXT NOT NULL DEFAULT ''`
   await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT ''`
   await sql`ALTER TABLE comments ADD COLUMN IF NOT EXISTS user_id TEXT`
+  await sql`CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_versions_post_id ON post_versions(post_id)`
   await sql`
     UPDATE posts
     SET slug = CASE
