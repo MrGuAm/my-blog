@@ -22,13 +22,21 @@ export default function ModerationClient({ comments: initialComments }: { commen
   const { logout } = useAuthStatus()
   const [comments, setComments] = useState(initialComments)
   const [filter, setFilter] = useState<"pending" | "rejected" | "all">("pending")
+  const [keyword, setKeyword] = useState("")
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [message, setMessage] = useState("")
 
   const filteredComments = useMemo(() => {
-    if (filter === "all") return comments
-    return comments.filter((comment) => comment.status === filter)
-  }, [comments, filter])
+    const statusMatched = filter === "all" ? comments : comments.filter((comment) => comment.status === filter)
+    const normalizedKeyword = keyword.trim().toLowerCase()
+    if (!normalizedKeyword) return statusMatched
+    return statusMatched.filter((comment) =>
+      comment.author.toLowerCase().includes(normalizedKeyword) ||
+      comment.content.toLowerCase().includes(normalizedKeyword) ||
+      comment.postTitle.toLowerCase().includes(normalizedKeyword)
+    )
+  }, [comments, filter, keyword])
 
   async function handleModeration(comment: ModerationComment, status: "approved" | "rejected") {
     setProcessingId(comment.id)
@@ -48,6 +56,7 @@ export default function ModerationClient({ comments: initialComments }: { commen
       setComments((current) =>
         current.map((item) => (item.id === comment.id ? { ...item, ...data.comment } : item))
       )
+      setSelectedIds((current) => current.filter((item) => item !== comment.id))
       setMessage(status === "approved" ? "评论已通过" : "评论已拒绝")
       router.refresh()
     } catch {
@@ -55,6 +64,17 @@ export default function ModerationClient({ comments: initialComments }: { commen
     } finally {
       setProcessingId(null)
     }
+  }
+
+  async function handleBatch(status: "approved" | "rejected") {
+    if (selectedIds.length === 0) return
+    setMessage("")
+    for (const commentId of selectedIds) {
+      const comment = comments.find((item) => item.id === commentId)
+      if (!comment) continue
+      await handleModeration(comment, status)
+    }
+    setSelectedIds([])
   }
 
   return (
@@ -87,23 +107,50 @@ export default function ModerationClient({ comments: initialComments }: { commen
             <h1 className="text-3xl font-black tracking-tight">待审核评论</h1>
             <p className="mt-2 text-muted-foreground">游客评论会先进入这里，确认后再公开显示。</p>
           </div>
-          <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
-            {[
-              ["pending", "待审核"],
-              ["rejected", "已拒绝"],
-              ["all", "全部"],
-            ].map(([value, label]) => (
+          <div className="flex flex-col gap-3 md:items-end">
+            <input
+              type="text"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="搜索评论、作者或文章"
+              className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm md:w-64"
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
+                {[
+                  ["pending", "待审核"],
+                  ["rejected", "已拒绝"],
+                  ["all", "全部"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFilter(value as "pending" | "rejected" | "all")}
+                    className={`rounded-full px-3 py-1 transition-colors ${
+                      filter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <button
-                key={value}
                 type="button"
-                onClick={() => setFilter(value as "pending" | "rejected" | "all")}
-                className={`rounded-full px-3 py-1 transition-colors ${
-                  filter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                }`}
+                onClick={() => handleBatch("approved")}
+                disabled={selectedIds.length === 0}
+                className="rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
               >
-                {label}
+                批量通过
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => handleBatch("rejected")}
+                disabled={selectedIds.length === 0}
+                className="rounded-xl border border-red-500/40 px-3 py-2 text-sm text-red-500 disabled:opacity-50"
+              >
+                批量拒绝
+              </button>
+            </div>
           </div>
         </div>
 
@@ -114,6 +161,16 @@ export default function ModerationClient({ comments: initialComments }: { commen
             filteredComments.map((comment) => (
               <div key={comment.id} className="rounded-2xl border border-border/50 bg-card p-5">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(comment.id)}
+                    onChange={(event) => {
+                      setSelectedIds((current) =>
+                        event.target.checked ? [...current, comment.id] : current.filter((item) => item !== comment.id)
+                      )
+                    }}
+                    className="mr-1"
+                  />
                   <span className="text-sm font-semibold">{comment.author}</span>
                   <span className="text-xs text-muted-foreground">·</span>
                   <span className="text-xs text-muted-foreground">{comment.date}</span>

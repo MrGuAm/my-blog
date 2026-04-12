@@ -3,6 +3,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import type { MusicTrack } from "@/app/api/music/route"
+import { useUserSession } from "@/hooks/useUserSession"
 
 type PlayMode = "loop" | "repeat-one" | "shuffle"
 
@@ -192,6 +193,7 @@ const MusicContext = createContext<MusicContextValue>({
 })
 
 export function MusicProvider({ children }: { children: ReactNode }) {
+  const userSession = useUserSession()
   const [playlist, setPlaylist] = useState<MusicTrack[]>(fallbackPlaylist)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTrack, setCurrentTrack] = useState(0)
@@ -227,6 +229,18 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const favoriteTracks = useMemo(() => playlist.filter((item) => favoriteSrcs.includes(item.src)), [favoriteSrcs, playlist])
   const recentTracks = useMemo(() => recentSrcs.map((src) => playlist.find((item) => item.src === src)).filter(Boolean) as MusicTrack[], [playlist, recentSrcs])
 
+  const persistLibrary = useCallback((nextFavoriteSrcs: string[], nextRecentSrcs: string[]) => {
+    if (!userSession.isAuthenticated) return
+    fetch("/api/user/music", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        favoriteSrcs: nextFavoriteSrcs,
+        recentSrcs: nextRecentSrcs,
+      }),
+    }).catch(() => {})
+  }, [userSession.isAuthenticated])
+
   const clearLeaveTimer = useCallback(() => {
     if (leaveTimerRef.current !== null) {
       clearTimeout(leaveTimerRef.current)
@@ -255,17 +269,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setFavoriteSrcs((current) => {
       const next = current.includes(src) ? current.filter((item) => item !== src) : [src, ...current]
       writeStoredList(favoriteStorageKey, next)
+      persistLibrary(next, recentSrcs)
       return next
     })
-  }, [])
+  }, [persistLibrary, recentSrcs])
 
   const rememberTrack = useCallback((src: string) => {
     setRecentSrcs((current) => {
       const next = [src, ...current.filter((item) => item !== src)].slice(0, 8)
       writeStoredList(recentStorageKey, next)
+      persistLibrary(favoriteSrcs, next)
       return next
     })
-  }, [])
+  }, [favoriteSrcs, persistLibrary])
 
   const cyclePlayMode = useCallback(() => {
     setPlayMode((current) => (current === "loop" ? "repeat-one" : current === "repeat-one" ? "shuffle" : "loop"))
@@ -398,6 +414,24 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (userSession.isLoading || !userSession.isAuthenticated) return
+
+    fetch("/api/user/music", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (Array.isArray(data.favoriteSrcs)) {
+          setFavoriteSrcs(data.favoriteSrcs)
+          writeStoredList(favoriteStorageKey, data.favoriteSrcs)
+        }
+        if (Array.isArray(data.recentSrcs)) {
+          setRecentSrcs(data.recentSrcs)
+          writeStoredList(recentStorageKey, data.recentSrcs)
+        }
+      })
+      .catch(() => {})
+  }, [userSession.isAuthenticated, userSession.isLoading])
 
   useEffect(() => {
     return () => {

@@ -81,6 +81,20 @@ export interface UserRecord {
   createdAt: string
 }
 
+interface UserMusicRow {
+  user_id: string
+  favorite_srcs_json: string
+  recent_srcs_json: string
+  updated_at: string
+}
+
+export interface UserMusicLibrary {
+  userId: string
+  favoriteSrcs: string[]
+  recentSrcs: string[]
+  updatedAt: string
+}
+
 interface CommentRow {
   id: string
   post_id: string
@@ -181,6 +195,15 @@ function rowToUser(row: UserRow): UserRecord {
     username: row.username,
     displayName: row.display_name,
     createdAt: row.created_at,
+  }
+}
+
+function rowToUserMusic(row: UserMusicRow): UserMusicLibrary {
+  return {
+    userId: row.user_id,
+    favoriteSrcs: JSON.parse(row.favorite_srcs_json || '[]') as string[],
+    recentSrcs: JSON.parse(row.recent_srcs_json || '[]') as string[],
+    updatedAt: row.updated_at,
   }
 }
 
@@ -351,6 +374,17 @@ function getDb() {
           ELSE status
         END
       `).run()
+    })
+
+    runSqliteMigration(db, '004-user-music-library', () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS user_music_library (
+          user_id TEXT PRIMARY KEY,
+          favorite_srcs_json TEXT NOT NULL DEFAULT '[]',
+          recent_srcs_json TEXT NOT NULL DEFAULT '[]',
+          updated_at TEXT NOT NULL
+        );
+      `)
     })
 
     const postCount = db.prepare('SELECT COUNT(*) as count FROM posts').get() as { count: number }
@@ -532,6 +566,17 @@ async function ensureRemoteSchema() {
     await sql`CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_comments_status ON comments(status)`
     await sql`UPDATE comments SET status = 'approved' WHERE status IS NULL OR status = ''`
+  })
+
+  await runRemoteMigration('004-user-music-library', async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_music_library (
+        user_id TEXT PRIMARY KEY,
+        favorite_srcs_json TEXT NOT NULL DEFAULT '[]',
+        recent_srcs_json TEXT NOT NULL DEFAULT '[]',
+        updated_at TEXT NOT NULL
+      )
+    `
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
@@ -1184,4 +1229,72 @@ export async function listUsers(limit = 50) {
   `).all(limit) as UserRow[]
 
   return rows.map(rowToUser)
+}
+
+export async function getUserMusicLibrary(userId: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT user_id, favorite_srcs_json, recent_srcs_json, updated_at
+      FROM user_music_library
+      WHERE user_id = ${userId}
+      LIMIT 1
+    `) as UserMusicRow[]
+    return rows[0] ? rowToUserMusic(rows[0]) : undefined
+  }
+
+  const row = getDb().prepare(`
+    SELECT user_id, favorite_srcs_json, recent_srcs_json, updated_at
+    FROM user_music_library
+    WHERE user_id = ?
+    LIMIT 1
+  `).get(userId) as UserMusicRow | undefined
+
+  return row ? rowToUserMusic(row) : undefined
+}
+
+export async function upsertUserMusicLibrary(input: { userId: string; favoriteSrcs: string[]; recentSrcs: string[] }) {
+  await ensureStoreReady()
+  const updatedAt = new Date().toISOString()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    await sql`
+      INSERT INTO user_music_library (user_id, favorite_srcs_json, recent_srcs_json, updated_at)
+      VALUES (${input.userId}, ${JSON.stringify(input.favoriteSrcs)}, ${JSON.stringify(input.recentSrcs)}, ${updatedAt})
+      ON CONFLICT (user_id) DO UPDATE SET
+        favorite_srcs_json = ${JSON.stringify(input.favoriteSrcs)},
+        recent_srcs_json = ${JSON.stringify(input.recentSrcs)},
+        updated_at = ${updatedAt}
+    `
+    return {
+      userId: input.userId,
+      favoriteSrcs: input.favoriteSrcs,
+      recentSrcs: input.recentSrcs,
+      updatedAt,
+    } satisfies UserMusicLibrary
+  }
+
+  getDb().prepare(`
+    INSERT INTO user_music_library (user_id, favorite_srcs_json, recent_srcs_json, updated_at)
+    VALUES (@user_id, @favorite_srcs_json, @recent_srcs_json, @updated_at)
+    ON CONFLICT(user_id) DO UPDATE SET
+      favorite_srcs_json = excluded.favorite_srcs_json,
+      recent_srcs_json = excluded.recent_srcs_json,
+      updated_at = excluded.updated_at
+  `).run({
+    user_id: input.userId,
+    favorite_srcs_json: JSON.stringify(input.favoriteSrcs),
+    recent_srcs_json: JSON.stringify(input.recentSrcs),
+    updated_at: updatedAt,
+  })
+
+  return {
+    userId: input.userId,
+    favoriteSrcs: input.favoriteSrcs,
+    recentSrcs: input.recentSrcs,
+    updatedAt,
+  } satisfies UserMusicLibrary
 }
