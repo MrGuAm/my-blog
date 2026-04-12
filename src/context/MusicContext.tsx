@@ -31,10 +31,16 @@ function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive
 }
 
 function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: number; text: string }>; activeIndex: number }) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const activeLineRef = useRef<HTMLParagraphElement | null>(null)
 
   useEffect(() => {
-    activeLineRef.current?.scrollIntoView({ block: "center", behavior: "smooth" })
+    const container = containerRef.current
+    const activeLine = activeLineRef.current
+    if (!container || !activeLine) return
+
+    const nextTop = activeLine.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2
+    container.scrollTo({ top: Math.max(0, nextTop), behavior: "smooth" })
   }, [activeIndex])
 
   if (lyrics.length === 0) {
@@ -42,7 +48,7 @@ function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: numb
   }
 
   return (
-    <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+    <div ref={containerRef} className="max-h-24 overflow-y-auto space-y-1 pr-1">
       {lyrics.map((line, index) => (
         <p
           key={`${line.time}-${index}`}
