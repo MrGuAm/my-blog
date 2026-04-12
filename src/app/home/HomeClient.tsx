@@ -306,6 +306,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [recentComments, setRecentComments] = useState<RecentComment[]>([])
+  const [adminPosts, setAdminPosts] = useState<Post[] | null>(null)
   const [showList, setShowList] = useState(false)
   const [isSidebarHovering, setIsSidebarHovering] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -314,7 +315,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const postsPerPage = 6
 
-  const visiblePosts = posts
+  const visiblePosts = isAuthenticated ? (adminPosts ?? posts) : posts
 
   // Scroll listener for back to top
   useEffect(() => {
@@ -330,6 +331,17 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
       .then(data => setRecentComments(data.comments || []))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return
+    }
+
+    fetch('/api/posts', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => setAdminPosts(Array.isArray(data) ? data : null))
+      .catch(() => setAdminPosts(null))
+  }, [isAuthenticated])
 
   const handleLogout = () => {
     logout()
@@ -359,16 +371,16 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">C</span>
               </div>
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
-            <div className="flex items-center gap-4">
-            <div className="relative">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="relative w-full sm:w-auto">
                 <input
                   type="text"
                   placeholder="搜索文章或标签..."
@@ -377,7 +389,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     setSearchQuery(e.target.value)
                     setCurrentPage(1)
                   }}
-                  className="w-48 px-3 py-1.5 pl-8 text-sm bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-muted-foreground"
+                  className="w-full sm:w-48 px-3 py-1.5 pl-8 text-sm bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-muted-foreground"
                 />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">🔍</span>
                 {(searchQuery || selectedTag) && (
@@ -440,10 +452,10 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Hero Section */}
-        <section className="py-16">
-          <h1 className="text-4xl font-black tracking-tight mb-4">
+        <section className="py-10 sm:py-16">
+          <h1 className="text-3xl font-black tracking-tight mb-4 sm:text-4xl">
             Welcome to my blog
           </h1>
           <p className="text-muted-foreground text-lg">
@@ -459,7 +471,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
         </div>
 
         {/* Main Content with Sidebar */}
-        <div className="flex gap-8 pb-20">
+        <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:gap-8">
           {/* Blog Posts */}
           <main className="flex-1 space-y-6">
             {paginatedPosts.length > 0 ? (
@@ -514,7 +526,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
           </main>
 
           {/* Sidebar */}
-          <aside className="w-56 flex-shrink-0">
+          <aside className="w-full flex-shrink-0 lg:w-56">
             <div className="sticky top-24 space-y-4">
               {/* Player */}
               <div

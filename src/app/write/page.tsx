@@ -8,6 +8,7 @@ import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
 
 interface LocalDraft {
+  slug: string
   title: string
   excerpt: string
   content: string
@@ -37,6 +38,7 @@ export default function WritePage() {
   const { isAuthenticated, isLoading: isAuthLoading, logout } = useAuthStatus()
   const initialDraft = readLocalDraft()
   const [title, setTitle] = useState(initialDraft?.title ?? "")
+  const [slug, setSlug] = useState(initialDraft?.slug ?? "")
   const [excerpt, setExcerpt] = useState(initialDraft?.excerpt ?? "")
   const [content, setContent] = useState(initialDraft?.content ?? "")
   const [category, setCategory] = useState(initialDraft?.category ?? "随笔")
@@ -77,6 +79,7 @@ export default function WritePage() {
     const timeoutId = window.setTimeout(() => {
       const nextSavedAt = new Date().toISOString()
       const payload: LocalDraft = {
+        slug,
         title,
         excerpt,
         content,
@@ -95,7 +98,12 @@ export default function WritePage() {
     }, 600)
 
     return () => window.clearTimeout(timeoutId)
-  }, [bgmSrc, category, content, coverImage, excerpt, isAuthenticated, isAuthLoading, pinned, tags, title])
+  }, [bgmSrc, category, content, coverImage, excerpt, isAuthenticated, isAuthLoading, pinned, slug, tags, title])
+
+  useEffect(() => {
+    if (!title.trim()) return
+    setSlug((current) => current || title.toLowerCase().trim().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, ""))
+  }, [title])
 
   useEffect(() => {
     fetch("/api/music", { cache: "no-store" })
@@ -196,6 +204,7 @@ export default function WritePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
+          slug,
           excerpt,
           content,
           category,
@@ -225,15 +234,15 @@ export default function WritePage() {
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">C</span>
               </div>
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
               <Link href="/home" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 ← 返回
               </Link>
@@ -248,7 +257,7 @@ export default function WritePage() {
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight mb-2">写文章</h1>
           <p className="text-muted-foreground">记录你的想法 · 支持直接粘贴图片</p>
@@ -272,6 +281,18 @@ export default function WritePage() {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-2">文章短链接 slug</label>
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="my-first-post"
+              className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+            />
+            <p className="mt-2 text-xs text-muted-foreground">会根据标题自动生成，也可以自己改，适合做更清晰的文章地址。</p>
+          </div>
+
           {/* Excerpt */}
           <div>
             <label className="block text-sm font-medium mb-2">摘要（可选）</label>
@@ -285,7 +306,7 @@ export default function WritePage() {
           </div>
 
           {/* Category & Tags */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium mb-2">分类</label>
               <select
@@ -498,7 +519,7 @@ export default function WritePage() {
           )}
 
           {/* Pin toggle */}
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -511,7 +532,7 @@ export default function WritePage() {
           </div>
 
           {/* Submit */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <button
               type="submit"
               disabled={isSubmitting}
@@ -529,7 +550,7 @@ export default function WritePage() {
                   const res = await fetch("/api/posts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ title, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), coverImage, bgmSrc, draft: true, pinned }),
+                  body: JSON.stringify({ title, slug, excerpt, content, category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), coverImage, bgmSrc, draft: true, pinned }),
                 })
                   if (res.ok) {
                     clearSavedDraft()

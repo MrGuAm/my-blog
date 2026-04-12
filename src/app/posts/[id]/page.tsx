@@ -42,9 +42,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const dynamic = 'force-dynamic'
 
 export async function generateStaticParams() {
-  const posts = await getAllPosts()
+  const posts = await getAllPosts({ includeDrafts: false, cached: true })
   return posts.map((post) => ({
-    id: post.id,
+    id: post.slug || post.id,
   }))
 }
 

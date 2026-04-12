@@ -1,7 +1,9 @@
 import fs from 'fs'
 import path from 'path'
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { parseFile } from 'music-metadata'
+import { CACHE_TAGS } from '@/lib/server/site-cache'
 
 export interface MusicTrack {
   title: string
@@ -91,6 +93,18 @@ async function readPlaylist() {
   }
 }
 
+const getCachedPlaylist = unstable_cache(readPlaylist, ['music-playlist'], {
+  tags: [CACHE_TAGS.music],
+  revalidate: 3600,
+})
+
 export async function GET() {
-  return NextResponse.json({ tracks: await readPlaylist() })
+  return NextResponse.json(
+    { tracks: await getCachedPlaylist() },
+    {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    }
+  )
 }

@@ -8,6 +8,7 @@ import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
 
 interface LocalDraft {
+  slug: string
   title: string
   excerpt: string
   content: string
@@ -40,6 +41,7 @@ export default function EditPostPage() {
   const [localDraft, setLocalDraft] = useState<LocalDraft | null>(() => readLocalDraft(draftStorageKey))
 
   const [title, setTitle] = useState("")
+  const [slug, setSlug] = useState("")
   const [excerpt, setExcerpt] = useState("")
   const [content, setContent] = useState("")
   const [category, setCategory] = useState("随笔")
@@ -56,6 +58,7 @@ export default function EditPostPage() {
   const [imageUrl, setImageUrl] = useState("")
   const [savedAt, setSavedAt] = useState<string | null>(localDraft?.savedAt ?? null)
   const [availableTracks, setAvailableTracks] = useState<MusicTrack[]>([])
+  const [versions, setVersions] = useState<Array<{ id: string; createdAt: string; note?: string; title: string }>>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -73,6 +76,7 @@ export default function EditPostPage() {
       .then(r => r.json())
       .then(post => {
         setTitle(post.title || "")
+        setSlug(post.slug || "")
         setExcerpt(post.excerpt || "")
         setContent(post.content || "")
         setCategory(post.category || "随笔")
@@ -98,6 +102,7 @@ export default function EditPostPage() {
 
   const restoreLocalDraft = useCallback(() => {
     if (!localDraft) return
+    setSlug(localDraft.slug)
     setTitle(localDraft.title)
     setExcerpt(localDraft.excerpt)
     setContent(localDraft.content)
@@ -117,6 +122,7 @@ export default function EditPostPage() {
       const nextSavedAt = new Date().toISOString()
       const payload: LocalDraft = {
         title,
+        slug,
         excerpt,
         content,
         category,
@@ -135,7 +141,12 @@ export default function EditPostPage() {
     }, 600)
 
     return () => window.clearTimeout(timeoutId)
-  }, [bgmSrc, category, content, coverImage, draft, draftStorageKey, excerpt, isAuthenticated, isAuthLoading, loading, pinned, tags, title])
+  }, [bgmSrc, category, content, coverImage, draft, draftStorageKey, excerpt, isAuthenticated, isAuthLoading, loading, pinned, slug, tags, title])
+
+  useEffect(() => {
+    if (!title.trim()) return
+    setSlug((current) => current || title.toLowerCase().trim().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, ""))
+  }, [title])
 
   useEffect(() => {
     fetch("/api/music", { cache: "no-store" })
@@ -143,6 +154,14 @@ export default function EditPostPage() {
       .then((data) => setAvailableTracks(Array.isArray(data.tracks) ? data.tracks : []))
       .catch(() => setAvailableTracks([]))
   }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    fetch(`/api/posts/${id}/versions`, { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => setVersions(Array.isArray(data.versions) ? data.versions : []))
+      .catch(() => setVersions([]))
+  }, [id, isAuthenticated])
 
   const insertTextAtCursor = useCallback((text: string) => {
     const textarea = textareaRef.current
@@ -233,6 +252,7 @@ export default function EditPostPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
+          slug,
           excerpt,
           content,
           category,
@@ -276,6 +296,39 @@ export default function EditPostPage() {
     } catch {}
   }
 
+  const handleRestoreVersion = async (versionId: string) => {
+    if (!confirm("确定要恢复到这个历史版本吗？")) return
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/posts/${id}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ versionId }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.post) {
+        setMessage(data.error || "恢复失败")
+        return
+      }
+
+      setTitle(data.post.title || "")
+      setSlug(data.post.slug || "")
+      setExcerpt(data.post.excerpt || "")
+      setContent(data.post.content || "")
+      setCategory(data.post.category || "随笔")
+      setTags((data.post.tags || []).join(", "))
+      setCoverImage(data.post.coverImage || "")
+      setBgmSrc(data.post.bgmSrc || "")
+      setPinned(Boolean(data.post.pinned))
+      setDraft(Boolean(data.post.draft))
+      setMessage("已恢复到历史版本")
+    } catch {
+      setMessage("恢复失败")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -288,8 +341,8 @@ export default function EditPostPage() {
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">C</span>
@@ -305,7 +358,7 @@ export default function EditPostPage() {
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight mb-2">编辑文章</h1>
           <p className="text-muted-foreground">修改你的内容 · 支持上传/粘贴图片</p>
@@ -340,6 +393,17 @@ export default function EditPostPage() {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-2">文章短链接 slug</label>
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="my-first-post"
+              className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+            />
+          </div>
+
           {/* Excerpt */}
           <div>
             <label className="block text-sm font-medium mb-2">摘要（可选）</label>
@@ -353,7 +417,7 @@ export default function EditPostPage() {
           </div>
 
           {/* Category & Tags */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium mb-2">分类</label>
               <select
@@ -563,8 +627,31 @@ export default function EditPostPage() {
             </div>
           )}
 
+          {versions.length > 0 && (
+            <div className="rounded-xl border border-border/50 bg-card p-4">
+              <h3 className="text-sm font-semibold mb-3">历史版本</h3>
+              <div className="space-y-2">
+                {versions.slice(0, 6).map((version) => (
+                  <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/40 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium">{version.note || "编辑记录"}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(version.createdAt).toLocaleString("zh-CN")}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRestoreVersion(version.id)}
+                      className="text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                      恢复
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Pin & Draft toggles */}
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -586,7 +673,7 @@ export default function EditPostPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <button
               onClick={() => handleSave(false)}
               disabled={isSubmitting}

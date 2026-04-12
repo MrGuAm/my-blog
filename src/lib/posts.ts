@@ -1,7 +1,9 @@
-import { getPostById, listPosts } from '@/lib/server/store'
+import { getCachedPublicPosts } from '@/lib/server/site-cache'
+import { getPostById, getPostBySlug, listPosts } from '@/lib/server/store'
 
 export interface Post {
   id: string
+  slug?: string
   title: string
   excerpt: string
   date: string
@@ -13,10 +15,13 @@ export interface Post {
   pinned?: boolean
   draft?: boolean
   views?: number
+  updatedAt?: string
 }
 
-export async function getAllPosts(): Promise<Post[]> {
-  const posts: Post[] = await listPosts({ includeDrafts: true })
+export async function getAllPosts(options?: { includeDrafts?: boolean; cached?: boolean }): Promise<Post[]> {
+  const shouldUseCache = options?.cached ?? false
+  const includeDrafts = options?.includeDrafts ?? true
+  const posts: Post[] = shouldUseCache && !includeDrafts ? await getCachedPublicPosts() : await listPosts({ includeDrafts })
   return posts.sort((a: Post, b: Post) => {
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
@@ -25,11 +30,11 @@ export async function getAllPosts(): Promise<Post[]> {
 }
 
 export async function getPost(id: string): Promise<Post | undefined> {
-  return getPostById(id)
+  return getPostById(id) || getPostBySlug(id)
 }
 
 export async function getAllTags(): Promise<string[]> {
-  const posts: Post[] = await listPosts({ includeDrafts: false })
+  const posts: Post[] = await getCachedPublicPosts()
   return Array.from(new Set(posts.flatMap((post) => post.tags))).sort()
 }
 

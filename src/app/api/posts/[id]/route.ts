@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Post } from '@/lib/posts'
 import { isAuthenticatedRequest } from '@/lib/server/auth'
-import { deletePost, getPostById, updatePost } from '@/lib/server/store'
+import { invalidatePostsCache } from '@/lib/server/site-cache'
+import { deletePost, getPostById, getPostBySlug, updatePost } from '@/lib/server/store'
 
-type PostPatch = Partial<Pick<Post, 'pinned' | 'draft' | 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'coverImage' | 'bgmSrc'>>
+type PostPatch = Partial<Pick<Post, 'slug' | 'pinned' | 'draft' | 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'coverImage' | 'bgmSrc'>>
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const post = await getPostById(id)
+  const post = (await getPostById(id)) || (await getPostBySlug(id))
 
   if (!post) {
     return NextResponse.json({ error: '文章不存在' }, { status: 404 })
@@ -29,6 +30,7 @@ export async function GET(
       date: post.date,
       category: post.category,
       tags: post.tags,
+      slug: post.slug,
       coverImage: post.coverImage,
       bgmSrc: post.bgmSrc,
       pinned: post.pinned,
@@ -58,6 +60,7 @@ export async function PATCH(
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })
     }
 
+    invalidatePostsCache()
     return NextResponse.json(post)
   } catch {
     return NextResponse.json({ error: '更新失败' }, { status: 500 })
@@ -78,6 +81,7 @@ export async function DELETE(
       return NextResponse.json({ error: '文章不存在' }, { status: 404 })
     }
 
+    invalidatePostsCache()
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: '删除失败' }, { status: 500 })

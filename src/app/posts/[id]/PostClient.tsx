@@ -76,15 +76,15 @@ export default function PostClient({ post, content, readingTime, headings, relat
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">C</span>
               </div>
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
               <Link href="/home" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                 Home
               </Link>
@@ -131,21 +131,21 @@ export default function PostClient({ post, content, readingTime, headings, relat
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
         {/* Back link */}
         <Link href="/home" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 transition-colors">
           ← 返回首页
         </Link>
 
-        <div className="flex gap-8 items-start">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             {/* Article */}
-            <article className="bg-card rounded-xl border border-border/60 p-8">
+            <article className="bg-card rounded-xl border border-border/60 p-5 sm:p-8">
               <header className="mb-8">
                 {post.coverImage && (
                   <div className="mb-6 overflow-hidden rounded-2xl border border-border/50">
-                    <img src={post.coverImage} alt={post.title} className="h-72 w-full object-cover" />
+                    <img src={post.coverImage} alt={post.title} className="h-52 w-full object-cover sm:h-72" />
                   </div>
                 )}
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
@@ -168,7 +168,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
                     ))}
                   </div>
                 </div>
-                <h1 className="text-3xl font-black tracking-tight">{post.title}</h1>
+                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{post.title}</h1>
                 {post.bgmSrc && (
                   <div className="mt-4 flex items-center gap-3 flex-wrap">
                     <button
@@ -223,7 +223,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
 
           {/* Related Posts Sidebar */}
           {relatedPosts.length > 0 && (
-            <aside className="w-full md:w-72 flex-shrink-0 sticky top-24">
+            <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-72">
               <h3 className="text-sm font-semibold mb-4 text-muted-foreground">相关文章</h3>
               <div className="space-y-3">
                 {relatedPosts.map(rp => (

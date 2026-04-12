@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { getAllPosts, getAllTags } from "@/lib/posts"
 import HomeClient from "./HomeClient"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "首页",
@@ -14,6 +14,6 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const [posts, allTags] = await Promise.all([getAllPosts(), getAllTags()])
+  const [posts, allTags] = await Promise.all([getAllPosts({ includeDrafts: false, cached: true }), getAllTags()])
   return <HomeClient posts={posts} allTags={allTags} />
 }

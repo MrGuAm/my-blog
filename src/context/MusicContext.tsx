@@ -299,10 +299,10 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     selectTrack(previousIndex)
   }, [activeTrackIndex, playlist.length, selectTrack])
 
-  const playNext = useCallback(() => {
+  const playNext = useCallback((openPanel = true) => {
     if (!playlist.length) return
     if (playMode === "repeat-one") {
-      selectTrack(activeTrackIndex)
+      selectTrack(activeTrackIndex, openPanel)
       return
     }
     if (playMode === "shuffle" && playlist.length > 1) {
@@ -310,10 +310,10 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       while (nextIndex === activeTrackIndex) {
         nextIndex = Math.floor(Math.random() * playlist.length)
       }
-      selectTrack(nextIndex)
+      selectTrack(nextIndex, openPanel)
       return
     }
-    selectTrack((activeTrackIndex + 1) % playlist.length)
+    selectTrack((activeTrackIndex + 1) % playlist.length, openPanel)
   }, [activeTrackIndex, playMode, playlist.length, selectTrack])
 
   const togglePlay = useCallback(() => {
@@ -435,7 +435,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           setDuration(audioRef.current?.duration || 0)
           setCurrentTime(audioRef.current?.currentTime || 0)
         }}
-        onEnded={playNext}
+        onEnded={() => playNext(false)}
       />
 
       <div
