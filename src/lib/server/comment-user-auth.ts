@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import type { NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
+import { getUserById } from '@/lib/server/store'
 
 export const USER_SESSION_COOKIE_NAME = 'user_session'
 const USER_SESSION_MAX_AGE = 60 * 60 * 24 * 30
@@ -93,11 +94,23 @@ export function buildExpiredUserSessionCookie() {
   return `${USER_SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Priority=High; Max-Age=0${secure}`
 }
 
-export function getCommentUserFromRequest(request: NextRequest) {
-  return parseUserSessionToken(request.cookies.get(USER_SESSION_COOKIE_NAME)?.value)
+export async function getCommentUserFromRequest(request: NextRequest) {
+  const session = parseUserSessionToken(request.cookies.get(USER_SESSION_COOKIE_NAME)?.value)
+  if (!session) return null
+
+  const user = await getUserById(session.userId)
+  if (!user || user.banned_at) return null
+
+  return session
 }
 
 export async function getCommentUserFromServer() {
   const cookieStore = await cookies()
-  return parseUserSessionToken(cookieStore.get(USER_SESSION_COOKIE_NAME)?.value)
+  const session = parseUserSessionToken(cookieStore.get(USER_SESSION_COOKIE_NAME)?.value)
+  if (!session) return null
+
+  const user = await getUserById(session.userId)
+  if (!user || user.banned_at) return null
+
+  return session
 }

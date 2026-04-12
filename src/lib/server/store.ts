@@ -71,6 +71,8 @@ interface UserRow {
   username: string
   display_name: string
   password_hash: string
+  banned_at?: string | null
+  ban_reason?: string | null
   created_at: string
 }
 
@@ -78,6 +80,9 @@ export interface UserRecord {
   id: string
   username: string
   displayName: string
+  isBanned: boolean
+  bannedAt?: string | null
+  banReason?: string | null
   createdAt: string
 }
 
@@ -198,6 +203,9 @@ function rowToUser(row: UserRow): UserRecord {
     id: row.id,
     username: row.username,
     displayName: row.display_name,
+    isBanned: Boolean(row.banned_at),
+    bannedAt: row.banned_at || null,
+    banReason: row.ban_reason || null,
     createdAt: row.created_at,
   }
 }
@@ -398,6 +406,11 @@ function getDb() {
       ensureSqliteColumn(db, 'user_music_library', 'last_track_time', 'REAL NOT NULL DEFAULT 0')
     })
 
+    runSqliteMigration(db, '006-user-moderation', () => {
+      ensureSqliteColumn(db, 'users', 'banned_at', 'TEXT')
+      ensureSqliteColumn(db, 'users', 'ban_reason', 'TEXT')
+    })
+
     const postCount = db.prepare('SELECT COUNT(*) as count FROM posts').get() as { count: number }
     if (postCount.count === 0) {
       const postsData = readJsonFile<{ posts: Post[] }>(postsJsonPath, { posts: [] })
@@ -593,6 +606,11 @@ async function ensureRemoteSchema() {
   await runRemoteMigration('005-user-music-resume', async () => {
     await sql`ALTER TABLE user_music_library ADD COLUMN IF NOT EXISTS last_track_src TEXT`
     await sql`ALTER TABLE user_music_library ADD COLUMN IF NOT EXISTS last_track_time REAL NOT NULL DEFAULT 0`
+  })
+
+  await runRemoteMigration('006-user-moderation', async () => {
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TEXT`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT`
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
@@ -1179,7 +1197,7 @@ export async function getUserByUsername(username: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, username, display_name, password_hash, created_at
+      SELECT id, username, display_name, password_hash, banned_at, ban_reason, created_at
       FROM users
       WHERE username = ${username}
       LIMIT 1
@@ -1188,11 +1206,33 @@ export async function getUserByUsername(username: string) {
   }
 
   return getDb().prepare(`
-    SELECT id, username, display_name, password_hash, created_at
+    SELECT id, username, display_name, password_hash, banned_at, ban_reason, created_at
     FROM users
     WHERE username = ?
     LIMIT 1
   `).get(username) as UserRow | undefined
+}
+
+export async function getUserById(userId: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, username, display_name, password_hash, banned_at, ban_reason, created_at
+      FROM users
+      WHERE id = ${userId}
+      LIMIT 1
+    `) as UserRow[]
+    return rows[0]
+  }
+
+  return getDb().prepare(`
+    SELECT id, username, display_name, password_hash, banned_at, ban_reason, created_at
+    FROM users
+    WHERE id = ?
+    LIMIT 1
+  `).get(userId) as UserRow | undefined
 }
 
 export async function createUser(input: { id: string; username: string; displayName: string; passwordHash: string }) {
@@ -1203,24 +1243,26 @@ export async function createUser(input: { id: string; username: string; displayN
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     await sql`
-      INSERT INTO users (id, username, display_name, password_hash, created_at)
-      VALUES (${input.id}, ${input.username}, ${input.displayName}, ${input.passwordHash}, ${createdAt})
+      INSERT INTO users (id, username, display_name, password_hash, banned_at, ban_reason, created_at)
+      VALUES (${input.id}, ${input.username}, ${input.displayName}, ${input.passwordHash}, NULL, NULL, ${createdAt})
     `
-    return { ...input, createdAt }
+    return { ...input, createdAt, bannedAt: null, banReason: null }
   }
 
   getDb().prepare(`
-    INSERT INTO users (id, username, display_name, password_hash, created_at)
-    VALUES (@id, @username, @display_name, @password_hash, @created_at)
+    INSERT INTO users (id, username, display_name, password_hash, banned_at, ban_reason, created_at)
+    VALUES (@id, @username, @display_name, @password_hash, @banned_at, @ban_reason, @created_at)
   `).run({
     id: input.id,
     username: input.username,
     display_name: input.displayName,
     password_hash: input.passwordHash,
+    banned_at: null,
+    ban_reason: null,
     created_at: createdAt,
   })
 
-  return { ...input, createdAt }
+  return { ...input, createdAt, bannedAt: null, banReason: null }
 }
 
 export async function listUsers(limit = 50) {
@@ -1229,7 +1271,7 @@ export async function listUsers(limit = 50) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, username, display_name, password_hash, created_at
+      SELECT id, username, display_name, password_hash, banned_at, ban_reason, created_at
       FROM users
       ORDER BY created_at DESC
       LIMIT ${limit}
@@ -1238,13 +1280,65 @@ export async function listUsers(limit = 50) {
   }
 
   const rows = getDb().prepare(`
-    SELECT id, username, display_name, password_hash, created_at
+    SELECT id, username, display_name, password_hash, banned_at, ban_reason, created_at
     FROM users
     ORDER BY created_at DESC
     LIMIT ?
   `).all(limit) as UserRow[]
 
   return rows.map(rowToUser)
+}
+
+export async function setUserBanState(userId: string, banned: boolean, reason?: string | null) {
+  await ensureStoreReady()
+  const bannedAt = banned ? new Date().toISOString() : null
+  const banReason = banned ? reason || '管理员操作' : null
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      UPDATE users
+      SET banned_at = ${bannedAt},
+          ban_reason = ${banReason}
+      WHERE id = ${userId}
+      RETURNING id, username, display_name, password_hash, banned_at, ban_reason, created_at
+    `) as UserRow[]
+    return rows[0] ? rowToUser(rows[0]) : undefined
+  }
+
+  getDb().prepare(`
+    UPDATE users
+    SET banned_at = ?, ban_reason = ?
+    WHERE id = ?
+  `).run(bannedAt, banReason, userId)
+
+  const updated = await getUserById(userId)
+  return updated ? rowToUser(updated) : undefined
+}
+
+export async function deleteUserAccount(userId: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    await sql`UPDATE comments SET user_id = NULL WHERE user_id = ${userId}`
+    await sql`DELETE FROM user_music_library WHERE user_id = ${userId}`
+    const rows = (await sql`
+      DELETE FROM users
+      WHERE id = ${userId}
+      RETURNING id
+    `) as Array<{ id: string }>
+    return rows.length > 0
+  }
+
+  const db = getDb()
+  const tx = db.transaction(() => {
+    db.prepare('UPDATE comments SET user_id = NULL WHERE user_id = ?').run(userId)
+    db.prepare('DELETE FROM user_music_library WHERE user_id = ?').run(userId)
+    return db.prepare('DELETE FROM users WHERE id = ?').run(userId).changes > 0
+  })
+
+  return tx()
 }
 
 export async function getUserMusicLibrary(userId: string) {

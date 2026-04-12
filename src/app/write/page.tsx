@@ -34,9 +34,18 @@ function readLocalDraft() {
   }
 }
 
+function readReturnPath() {
+  if (typeof window === "undefined") return "/home"
+  const params = new URLSearchParams(window.location.search)
+  const from = params.get("from")
+  if (from && from.startsWith("/") && !from.startsWith("//")) return from
+  return "/home"
+}
+
 export default function WritePage() {
   const router = useRouter()
   const { isAuthenticated, isLoading: isAuthLoading, logout } = useAuthStatus()
+  const [returnPath] = useState(() => readReturnPath())
   const initialDraft = readLocalDraft()
   const [title, setTitle] = useState(initialDraft?.title ?? "")
   const [slug, setSlug] = useState(initialDraft?.slug ?? "")
@@ -60,9 +69,9 @@ export default function WritePage() {
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      router.replace('/home?login=1&next=/write')
+      router.replace(`/home?login=1&next=${encodeURIComponent(`/write?from=${returnPath}`)}`)
     }
-  }, [isAuthenticated, isAuthLoading, router])
+  }, [isAuthenticated, isAuthLoading, returnPath, router])
 
   const handleLogout = () => {
    logout()
@@ -228,7 +237,7 @@ export default function WritePage() {
       if (res.ok) {
         clearSavedDraft()
         setMessage("发布成功！")
-        setTimeout(() => router.push("/home"), 1000)
+        setTimeout(() => router.push(returnPath), 1000)
       } else {
         const data = await res.json()
         setMessage(data.error || "发布失败")
@@ -258,7 +267,7 @@ export default function WritePage() {
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
             <div className="flex items-center gap-4 sm:gap-6">
-              <Link href="/home" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link href={returnPath} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 ← 返回
               </Link>
               <button

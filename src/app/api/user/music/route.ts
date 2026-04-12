@@ -3,7 +3,7 @@ import { getCommentUserFromRequest } from '@/lib/server/comment-user-auth'
 import { getUserMusicLibrary, upsertUserMusicLibrary } from '@/lib/server/store'
 
 export async function GET(request: NextRequest) {
-  const user = getCommentUserFromRequest(request)
+  const user = await getCommentUserFromRequest(request)
   if (!user) {
     return NextResponse.json({ authenticated: false, favoriteSrcs: [], recentSrcs: [], lastTrackSrc: null, lastTrackTime: 0 })
   }
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const user = getCommentUserFromRequest(request)
+  const user = await getCommentUserFromRequest(request)
   if (!user) {
     return NextResponse.json({ error: '请先登录评论账号' }, { status: 401 })
   }

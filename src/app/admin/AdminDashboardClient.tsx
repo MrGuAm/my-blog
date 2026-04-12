@@ -77,8 +77,9 @@ export default function AdminDashboardClient({
   const [postsState, setPostsState] = useState(topPosts)
   const [draftsState, setDraftsState] = useState(recentDrafts)
   const [commentsState] = useState(latestComments)
-  const [usersState] = useState(users)
+  const [usersState, setUsersState] = useState(users)
   const [processingPostId, setProcessingPostId] = useState<string | null>(null)
+  const [processingUserId, setProcessingUserId] = useState<string | null>(null)
   const [message, setMessage] = useState("")
 
   const allManagedPosts = useMemo(() => {
@@ -118,6 +119,54 @@ export default function AdminDashboardClient({
       setMessage("网络错误，请重试")
     } finally {
       setProcessingPostId(null)
+    }
+  }
+
+  async function handleUserAction(user: UserRecord, action: "ban" | "unban" | "delete") {
+    const confirmed = action === "delete"
+      ? confirm(`确定要删除评论账号 @${user.username} 吗？`)
+      : confirm(action === "ban" ? `确定要封禁 @${user.username} 吗？` : `确定要解除封禁 @${user.username} 吗？`)
+
+    if (!confirmed) return
+
+    setProcessingUserId(user.id)
+    setMessage("")
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: action === "delete" ? "DELETE" : "PATCH",
+        headers: action === "delete" ? undefined : { "Content-Type": "application/json" },
+        body: action === "delete"
+          ? undefined
+          : JSON.stringify({
+              action,
+              reason: action === "ban" ? "管理员封禁" : "",
+            }),
+      })
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        setMessage(data.error || "用户操作失败")
+        return
+      }
+
+      if (action === "delete") {
+        setUsersState((current) => current.filter((item) => item.id !== user.id))
+        setMessage("评论账号已删除")
+      } else {
+        setUsersState((current) =>
+          current.map((item) =>
+            item.id === user.id
+              ? { ...item, isBanned: action === "ban", bannedAt: action === "ban" ? new Date().toISOString() : null, banReason: action === "ban" ? "管理员封禁" : null }
+              : item
+          )
+        )
+        setMessage(action === "ban" ? "评论账号已封禁" : "评论账号已解除封禁")
+      }
+      router.refresh()
+    } catch {
+      setMessage("网络错误，请重试")
+    } finally {
+      setProcessingUserId(null)
     }
   }
 
@@ -171,7 +220,7 @@ export default function AdminDashboardClient({
           <div className="rounded-3xl border border-border/50 bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold">热门文章</h2>
-              <Link href="/write" className="text-sm text-primary hover:underline">写新文章</Link>
+              <Link href="/write?from=/admin" className="text-sm text-primary hover:underline">写新文章</Link>
             </div>
             <div className="space-y-3">
               {postsState.map((post) => (
@@ -188,7 +237,7 @@ export default function AdminDashboardClient({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">{post.views || 0} 阅读</span>
-                      <Link href={`/write/${post.id}`} className="text-xs text-primary hover:underline">编辑</Link>
+                      <Link href={`/write/${post.id}?from=/admin`} className="text-xs text-primary hover:underline">编辑</Link>
                       <button
                         type="button"
                         onClick={() => handlePostAction(post, "pin")}
@@ -225,7 +274,7 @@ export default function AdminDashboardClient({
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <Link href={`/write/${post.id}`} className="font-medium hover:text-primary">{post.title}</Link>
+                      <Link href={`/write/${post.id}?from=/admin`} className="font-medium hover:text-primary">{post.title}</Link>
                       <p className="mt-1 text-xs text-muted-foreground">最近更新 {new Date(post.updatedAt || post.date).toLocaleString("zh-CN")}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -304,12 +353,38 @@ export default function AdminDashboardClient({
                 <div key={user.id} className="rounded-2xl border border-border/40 px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium">{user.displayName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{user.displayName}</p>
+                        {user.isBanned && (
+                          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] text-red-500">已封禁</span>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">@{user.username}</p>
+                      {user.isBanned && user.banReason && (
+                        <p className="mt-1 text-xs text-red-500">{user.banReason}</p>
+                      )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(user.createdAt).toLocaleDateString("zh-CN")}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(user.createdAt).toLocaleDateString("zh-CN")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleUserAction(user, user.isBanned ? "unban" : "ban")}
+                        disabled={processingUserId === user.id}
+                        className="text-xs text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
+                      >
+                        {user.isBanned ? "解封" : "封禁"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUserAction(user, "delete")}
+                        disabled={processingUserId === user.id}
+                        className="text-xs text-red-500 transition-colors hover:text-red-600 disabled:opacity-50"
+                      >
+                        删除
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

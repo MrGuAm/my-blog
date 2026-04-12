@@ -15,6 +15,9 @@ export async function POST(request: NextRequest) {
   if (!user || !verifyUserPassword(password, user.password_hash)) {
     return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 })
   }
+  if (user.banned_at) {
+    return NextResponse.json({ error: user.ban_reason || '该账号已被管理员封禁' }, { status: 403 })
+  }
 
   const token = createUserSessionToken({
     userId: user.id,

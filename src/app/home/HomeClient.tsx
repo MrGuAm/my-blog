@@ -432,8 +432,9 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                 <button
                   onClick={() => setIsLoginModalOpen(true)}
                   className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  title="仅站点管理员使用"
                 >
-                  登录
+                  管理
                 </button>
               )}
             </div>

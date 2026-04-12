@@ -32,10 +32,19 @@ function readLocalDraft(storageKey: string) {
   }
 }
 
+function readReturnPath() {
+  if (typeof window === "undefined") return "/home"
+  const params = new URLSearchParams(window.location.search)
+  const from = params.get("from")
+  if (from && from.startsWith("/") && !from.startsWith("//")) return from
+  return "/home"
+}
+
 export default function EditPostPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
+  const [returnPath] = useState(() => readReturnPath())
   const draftStorageKey = `champion-blog:edit-post:${id}`
   const { isAuthenticated, isLoading: isAuthLoading } = useAuthStatus()
   const [localDraft, setLocalDraft] = useState<LocalDraft | null>(() => readLocalDraft(draftStorageKey))
@@ -64,7 +73,7 @@ export default function EditPostPage() {
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      router.replace(`/home?login=1&next=/write/${id}`)
+      router.replace(`/home?login=1&next=${encodeURIComponent(`/write/${id}?from=${returnPath}`)}`)
       return
     }
 
@@ -91,7 +100,7 @@ export default function EditPostPage() {
         setMessage("加载失败")
         setLoading(false)
       })
-  }, [id, isAuthenticated, isAuthLoading, router])
+  }, [id, isAuthenticated, isAuthLoading, returnPath, router])
 
   const clearSavedDraft = useCallback(() => {
     if (typeof window === "undefined") return
@@ -270,7 +279,7 @@ export default function EditPostPage() {
         if (!publishDraft) {
           setDraft(false)
         }
-        setTimeout(() => router.push('/home'), 1000)
+        setTimeout(() => router.push(returnPath), 1000)
       } else {
         const data = await res.json()
         setMessage(data.error || "保存失败")
@@ -291,7 +300,7 @@ export default function EditPostPage() {
         headers: { 'Content-Type': 'application/json' },
       })
       if (res.ok) {
-        router.push('/home')
+        router.push(returnPath)
       }
     } catch {}
   }
@@ -350,7 +359,7 @@ export default function EditPostPage() {
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
             <div className="flex items-center gap-6">
-              <Link href="/home" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link href={returnPath} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 ← 返回
               </Link>
             </div>

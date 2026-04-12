@@ -7,12 +7,12 @@ import { createComment, deleteComment, getCommentById, listCommentsByPost, moder
 
 // GET /api/comments/[postId] - 获取某篇文章的所有评论
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ postId: string }> }
 ) {
   const { postId } = await params
-  const commentUser = getCommentUserFromRequest(_request)
-  const isAdmin = isAuthenticatedRequest(_request)
+  const commentUser = await getCommentUserFromRequest(request)
+  const isAdmin = isAuthenticatedRequest(request)
   return NextResponse.json({
     comments: await listCommentsByPost(postId, {
       includePending: isAdmin,
@@ -29,7 +29,7 @@ export async function POST(
 ) {
   const { postId } = await params
   const body = await request.json()
-  const commentUser = getCommentUserFromRequest(request)
+  const commentUser = await getCommentUserFromRequest(request)
   const content = String(body.content || '')
   const author = commentUser?.displayName || String(body.author || '')
 
@@ -81,7 +81,7 @@ export async function DELETE(
     return NextResponse.json({ error: '评论不存在' }, { status: 404 })
   }
 
-  const commentUser = getCommentUserFromRequest(request)
+  const commentUser = await getCommentUserFromRequest(request)
   const canDelete = isAuthenticatedRequest(request) || (comment.userId && comment.userId === commentUser?.userId)
 
   if (!canDelete) {
