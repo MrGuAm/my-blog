@@ -74,6 +74,13 @@ interface UserRow {
   created_at: string
 }
 
+export interface UserRecord {
+  id: string
+  username: string
+  displayName: string
+  createdAt: string
+}
+
 interface CommentRow {
   id: string
   post_id: string
@@ -165,6 +172,15 @@ function rowToComment(row: CommentRow): CommentRecord {
     userId: row.user_id || null,
     status: (row.status as CommentStatus | undefined) || 'approved',
     moderationNote: row.moderation_note || null,
+  }
+}
+
+function rowToUser(row: UserRow): UserRecord {
+  return {
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    createdAt: row.created_at,
   }
 }
 
@@ -1144,4 +1160,28 @@ export async function createUser(input: { id: string; username: string; displayN
   })
 
   return { ...input, createdAt }
+}
+
+export async function listUsers(limit = 50) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, username, display_name, password_hash, created_at
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `) as UserRow[]
+    return rows.map(rowToUser)
+  }
+
+  const rows = getDb().prepare(`
+    SELECT id, username, display_name, password_hash, created_at
+    FROM users
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(limit) as UserRow[]
+
+  return rows.map(rowToUser)
 }

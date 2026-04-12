@@ -459,6 +459,12 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   >
                     审核评论
                   </Link>
+                  <Link
+                    href="/admin"
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    后台
+                  </Link>
                   <button
                     onClick={() => {
                       setShowDrafts(!showDrafts)

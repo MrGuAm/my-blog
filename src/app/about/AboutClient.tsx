@@ -131,6 +131,9 @@ export default function AboutClient() {
                   <Link href="/moderation" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                     审核评论
                   </Link>
+                  <Link href="/admin" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                    后台
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
