@@ -11,7 +11,11 @@ export interface CommentRecord {
   content: string
   date: string
   userId?: string | null
+  status?: CommentStatus
+  moderationNote?: string | null
 }
+
+export type CommentStatus = 'pending' | 'approved' | 'rejected'
 
 export interface PostVersionRecord {
   id: string
@@ -77,6 +81,9 @@ interface CommentRow {
   content: string
   date: string
   user_id?: string | null
+  status?: CommentStatus | null
+  moderation_note?: string | null
+  reviewed_at?: string | null
 }
 
 interface CommentFileData {
@@ -156,6 +163,8 @@ function rowToComment(row: CommentRow): CommentRecord {
     content: row.content,
     date: row.date,
     userId: row.user_id || null,
+    status: (row.status as CommentStatus | undefined) || 'approved',
+    moderationNote: row.moderation_note || null,
   }
 }
 
@@ -166,6 +175,10 @@ function normalizeExcerpt(content: string, excerpt?: string) {
 
 function normalizeTags(tags?: string[]) {
   return (tags || []).map((tag) => tag.trim()).filter(Boolean)
+}
+
+function normalizeCommentStatus(status?: string | null): CommentStatus {
+  return status === 'pending' || status === 'rejected' ? status : 'approved'
 }
 
 function slugify(value: string) {
@@ -184,84 +197,145 @@ function ensureSqliteColumn(db: Database.Database, tableName: string, columnName
   }
 }
 
+function ensureSqliteMigrationsTable(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    );
+  `)
+}
+
+function runSqliteMigration(db: Database.Database, id: string, apply: () => void) {
+  ensureSqliteMigrationsTable(db)
+  const existing = db.prepare('SELECT id FROM schema_migrations WHERE id = ? LIMIT 1').get(id) as { id: string } | undefined
+  if (existing) return
+
+  const run = db.transaction(() => {
+    apply()
+    db.prepare('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)').run(id, new Date().toISOString())
+  })
+
+  run()
+}
+
+async function ensureRemoteMigrationsTable() {
+  const sql = getSql()
+  await sql`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    )
+  `
+}
+
+async function hasRemoteMigration(id: string) {
+  const sql = getSql()
+  const rows = (await sql`SELECT id FROM schema_migrations WHERE id = ${id} LIMIT 1`) as Array<{ id: string }>
+  return Boolean(rows[0]?.id)
+}
+
+async function runRemoteMigration(id: string, apply: () => Promise<void>) {
+  await ensureRemoteMigrationsTable()
+  if (await hasRemoteMigration(id)) return
+  await apply()
+  const sql = getSql()
+  await sql`INSERT INTO schema_migrations (id, applied_at) VALUES (${id}, ${new Date().toISOString()})`
+}
+
 function getDb() {
   if (!global.__championBlogDb) {
     ensureDataDir()
     const db = new Database(dbPath)
     db.pragma('journal_mode = WAL')
 
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS posts (
-        id TEXT PRIMARY KEY,
-        slug TEXT NOT NULL DEFAULT '',
-        title TEXT NOT NULL,
-        excerpt TEXT NOT NULL,
-        date TEXT NOT NULL,
-        category TEXT NOT NULL,
-        tags_json TEXT NOT NULL DEFAULT '[]',
-        content TEXT NOT NULL,
-        cover_image TEXT NOT NULL DEFAULT '',
-        bgm_src TEXT NOT NULL DEFAULT '',
-        pinned INTEGER NOT NULL DEFAULT 0,
-        draft INTEGER NOT NULL DEFAULT 0,
-        views INTEGER NOT NULL DEFAULT 0,
-        updated_at TEXT NOT NULL DEFAULT ''
-      );
+    runSqliteMigration(db, '001-core-schema', () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS posts (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          excerpt TEXT NOT NULL,
+          date TEXT NOT NULL,
+          category TEXT NOT NULL,
+          tags_json TEXT NOT NULL DEFAULT '[]',
+          content TEXT NOT NULL,
+          pinned INTEGER NOT NULL DEFAULT 0,
+          draft INTEGER NOT NULL DEFAULT 0,
+          views INTEGER NOT NULL DEFAULT 0
+        );
 
-      CREATE TABLE IF NOT EXISTS comments (
-        id TEXT PRIMARY KEY,
-        post_id TEXT NOT NULL,
-        author TEXT NOT NULL,
-        content TEXT NOT NULL,
-        date TEXT NOT NULL,
-        user_id TEXT
-      );
+        CREATE TABLE IF NOT EXISTS comments (
+          id TEXT PRIMARY KEY,
+          post_id TEXT NOT NULL,
+          author TEXT NOT NULL,
+          content TEXT NOT NULL,
+          date TEXT NOT NULL
+        );
 
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL UNIQUE,
-        display_name TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          username TEXT NOT NULL UNIQUE,
+          display_name TEXT NOT NULL,
+          password_hash TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+      `)
+    })
 
-      CREATE TABLE IF NOT EXISTS post_versions (
-        id TEXT PRIMARY KEY,
-        post_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        excerpt TEXT NOT NULL,
-        content TEXT NOT NULL,
-        category TEXT NOT NULL,
-        tags_json TEXT NOT NULL DEFAULT '[]',
-        cover_image TEXT NOT NULL DEFAULT '',
-        bgm_src TEXT NOT NULL DEFAULT '',
-        pinned INTEGER NOT NULL DEFAULT 0,
-        draft INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        note TEXT NOT NULL DEFAULT ''
-      );
+    runSqliteMigration(db, '002-post-metadata-and-versions', () => {
+      ensureSqliteColumn(db, 'posts', 'slug', "TEXT NOT NULL DEFAULT ''")
+      ensureSqliteColumn(db, 'posts', 'cover_image', "TEXT NOT NULL DEFAULT ''")
+      ensureSqliteColumn(db, 'posts', 'bgm_src', "TEXT NOT NULL DEFAULT ''")
+      ensureSqliteColumn(db, 'posts', 'updated_at', "TEXT NOT NULL DEFAULT ''")
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS post_versions (
+          id TEXT PRIMARY KEY,
+          post_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          excerpt TEXT NOT NULL,
+          content TEXT NOT NULL,
+          category TEXT NOT NULL,
+          tags_json TEXT NOT NULL DEFAULT '[]',
+          cover_image TEXT NOT NULL DEFAULT '',
+          bgm_src TEXT NOT NULL DEFAULT '',
+          pinned INTEGER NOT NULL DEFAULT 0,
+          draft INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          note TEXT NOT NULL DEFAULT ''
+        );
+        CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
+        CREATE INDEX IF NOT EXISTS idx_post_versions_post_id ON post_versions(post_id);
+      `)
+      db.prepare(`
+        UPDATE posts
+        SET slug = CASE
+          WHEN slug IS NULL OR slug = '' THEN lower(trim(replace(title, ' ', '-')))
+          ELSE slug
+        END,
+            updated_at = CASE
+          WHEN updated_at IS NULL OR updated_at = '' THEN date
+          ELSE updated_at
+        END
+      `).run()
+    })
 
-      CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
-      CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
-      CREATE INDEX IF NOT EXISTS idx_post_versions_post_id ON post_versions(post_id);
-    `)
-
-    ensureSqliteColumn(db, 'posts', 'slug', "TEXT NOT NULL DEFAULT ''")
-    ensureSqliteColumn(db, 'posts', 'cover_image', "TEXT NOT NULL DEFAULT ''")
-    ensureSqliteColumn(db, 'posts', 'bgm_src', "TEXT NOT NULL DEFAULT ''")
-    ensureSqliteColumn(db, 'posts', 'updated_at', "TEXT NOT NULL DEFAULT ''")
-    ensureSqliteColumn(db, 'comments', 'user_id', 'TEXT')
-    db.prepare(`
-      UPDATE posts
-      SET slug = CASE
-        WHEN slug IS NULL OR slug = '' THEN lower(trim(replace(title, ' ', '-')))
-        ELSE slug
-      END,
-          updated_at = CASE
-        WHEN updated_at IS NULL OR updated_at = '' THEN date
-        ELSE updated_at
-      END
-    `).run()
+    runSqliteMigration(db, '003-comment-moderation', () => {
+      ensureSqliteColumn(db, 'comments', 'user_id', 'TEXT')
+      ensureSqliteColumn(db, 'comments', 'status', "TEXT NOT NULL DEFAULT 'approved'")
+      ensureSqliteColumn(db, 'comments', 'moderation_note', 'TEXT')
+      ensureSqliteColumn(db, 'comments', 'reviewed_at', 'TEXT')
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
+        CREATE INDEX IF NOT EXISTS idx_comments_status ON comments(status);
+      `)
+      db.prepare(`
+        UPDATE comments
+        SET status = CASE
+          WHEN status IS NULL OR status = '' THEN 'approved'
+          ELSE status
+        END
+      `).run()
+    })
 
     const postCount = db.prepare('SELECT COUNT(*) as count FROM posts').get() as { count: number }
     if (postCount.count === 0) {
@@ -344,16 +418,16 @@ async function seedRemoteDatabase() {
 
   for (const post of postsData.posts) {
     await sql`
-      INSERT INTO posts (id, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views)
-      VALUES (${post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0})
+      INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at)
+      VALUES (${post.id}, ${post.slug || slugify(post.title) || post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0}, ${post.updatedAt || post.date})
       ON CONFLICT (id) DO NOTHING
     `
   }
 
   for (const comment of Object.values(commentsData.comments).flat()) {
     await sql`
-      INSERT INTO comments (id, post_id, author, content, date, user_id)
-      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date}, ${comment.userId || null})
+      INSERT INTO comments (id, post_id, author, content, date, user_id, status)
+      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date}, ${comment.userId || null}, ${comment.status || 'approved'})
       ON CONFLICT (id) DO NOTHING
     `
   }
@@ -362,83 +436,87 @@ async function seedRemoteDatabase() {
 async function ensureRemoteSchema() {
   const sql = getSql()
 
-  await sql`
-    CREATE TABLE IF NOT EXISTS posts (
-      id TEXT PRIMARY KEY,
-      slug TEXT NOT NULL DEFAULT '',
-      title TEXT NOT NULL,
-      excerpt TEXT NOT NULL,
-      date TEXT NOT NULL,
-      category TEXT NOT NULL,
-      tags_json TEXT NOT NULL DEFAULT '[]',
-      content TEXT NOT NULL,
-      cover_image TEXT NOT NULL DEFAULT '',
-      bgm_src TEXT NOT NULL DEFAULT '',
-      pinned INTEGER NOT NULL DEFAULT 0,
-      draft INTEGER NOT NULL DEFAULT 0,
-      views INTEGER NOT NULL DEFAULT 0,
-      updated_at TEXT NOT NULL DEFAULT ''
-    )
-  `
+  await runRemoteMigration('001-core-schema', async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS posts (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        excerpt TEXT NOT NULL,
+        date TEXT NOT NULL,
+        category TEXT NOT NULL,
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        content TEXT NOT NULL,
+        pinned INTEGER NOT NULL DEFAULT 0,
+        draft INTEGER NOT NULL DEFAULT 0,
+        views INTEGER NOT NULL DEFAULT 0
+      )
+    `
+    await sql`
+      CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY,
+        post_id TEXT NOT NULL,
+        author TEXT NOT NULL,
+        content TEXT NOT NULL,
+        date TEXT NOT NULL
+      )
+    `
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        display_name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    `
+  })
 
-  await sql`
-    CREATE TABLE IF NOT EXISTS comments (
-      id TEXT PRIMARY KEY,
-      post_id TEXT NOT NULL,
-      author TEXT NOT NULL,
-      content TEXT NOT NULL,
-      date TEXT NOT NULL,
-      user_id TEXT
-    )
-  `
+  await runRemoteMigration('002-post-metadata-and-versions', async () => {
+    await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT ''`
+    await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS cover_image TEXT NOT NULL DEFAULT ''`
+    await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS bgm_src TEXT NOT NULL DEFAULT ''`
+    await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT ''`
+    await sql`
+      CREATE TABLE IF NOT EXISTS post_versions (
+        id TEXT PRIMARY KEY,
+        post_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        excerpt TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category TEXT NOT NULL,
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        cover_image TEXT NOT NULL DEFAULT '',
+        bgm_src TEXT NOT NULL DEFAULT '',
+        pinned INTEGER NOT NULL DEFAULT 0,
+        draft INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT ''
+      )
+    `
+    await sql`CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_post_versions_post_id ON post_versions(post_id)`
+    await sql`
+      UPDATE posts
+      SET slug = CASE
+        WHEN slug = '' THEN lower(replace(title, ' ', '-'))
+        ELSE slug
+      END,
+          updated_at = CASE
+        WHEN updated_at = '' THEN date
+        ELSE updated_at
+      END
+    `
+  })
 
-  await sql`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      username TEXT NOT NULL UNIQUE,
-      display_name TEXT NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    )
-  `
-
-  await sql`
-    CREATE TABLE IF NOT EXISTS post_versions (
-      id TEXT PRIMARY KEY,
-      post_id TEXT NOT NULL,
-      title TEXT NOT NULL,
-      excerpt TEXT NOT NULL,
-      content TEXT NOT NULL,
-      category TEXT NOT NULL,
-      tags_json TEXT NOT NULL DEFAULT '[]',
-      cover_image TEXT NOT NULL DEFAULT '',
-      bgm_src TEXT NOT NULL DEFAULT '',
-      pinned INTEGER NOT NULL DEFAULT 0,
-      draft INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      note TEXT NOT NULL DEFAULT ''
-    )
-  `
-
-  await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT ''`
-  await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS cover_image TEXT NOT NULL DEFAULT ''`
-  await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS bgm_src TEXT NOT NULL DEFAULT ''`
-  await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT ''`
-  await sql`ALTER TABLE comments ADD COLUMN IF NOT EXISTS user_id TEXT`
-  await sql`CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)`
-  await sql`CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug)`
-  await sql`CREATE INDEX IF NOT EXISTS idx_post_versions_post_id ON post_versions(post_id)`
-  await sql`
-    UPDATE posts
-    SET slug = CASE
-      WHEN slug = '' THEN lower(replace(title, ' ', '-'))
-      ELSE slug
-    END,
-        updated_at = CASE
-      WHEN updated_at = '' THEN date
-      ELSE updated_at
-    END
-  `
+  await runRemoteMigration('003-comment-moderation', async () => {
+    await sql`ALTER TABLE comments ADD COLUMN IF NOT EXISTS user_id TEXT`
+    await sql`ALTER TABLE comments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved'`
+    await sql`ALTER TABLE comments ADD COLUMN IF NOT EXISTS moderation_note TEXT`
+    await sql`ALTER TABLE comments ADD COLUMN IF NOT EXISTS reviewed_at TEXT`
+    await sql`CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_comments_status ON comments(status)`
+    await sql`UPDATE comments SET status = 'approved' WHERE status IS NULL OR status = ''`
+  })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
   if (Number(postCountRows[0]?.count || 0) === 0) {
@@ -702,38 +780,62 @@ export async function incrementPostViews(id: string) {
   return updated?.views || 0
 }
 
-export async function listCommentsByPost(postId: string) {
+export async function listCommentsByPost(postId: string, options?: { includePending?: boolean; includeRejected?: boolean; viewerUserId?: string | null }) {
   await ensureStoreReady()
+  const includePending = options?.includePending ?? false
+  const includeRejected = options?.includeRejected ?? false
+  const viewerUserId = options?.viewerUserId || null
 
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
-    const rows = (await sql`
-      SELECT id, post_id, author, content, date, user_id
-      FROM comments
-      WHERE post_id = ${postId}
-      ORDER BY date DESC, id DESC
-    `) as CommentRow[]
+    const rows = (includePending || includeRejected || viewerUserId
+      ? await sql`
+        SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
+        FROM comments
+        WHERE post_id = ${postId}
+          AND (
+            status = 'approved'
+            OR (${includePending} = true AND status = 'pending')
+            OR (${includeRejected} = true AND status = 'rejected')
+            OR (${viewerUserId} IS NOT NULL AND user_id = ${viewerUserId})
+          )
+        ORDER BY date DESC, id DESC
+      `
+      : await sql`
+        SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
+        FROM comments
+        WHERE post_id = ${postId} AND status = 'approved'
+        ORDER BY date DESC, id DESC
+      `) as CommentRow[]
     return rows.map(rowToComment)
   }
 
   const rows = getDb().prepare(`
-    SELECT id, post_id, author, content, date, user_id
+    SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
     FROM comments
     WHERE post_id = ?
+      AND (
+        status = 'approved'
+        OR (? = 1 AND status = 'pending')
+        OR (? = 1 AND status = 'rejected')
+        OR (? IS NOT NULL AND user_id = ?)
+      )
     ORDER BY date DESC, id DESC
-  `).all(postId) as CommentRow[]
+  `).all(postId, includePending ? 1 : 0, includeRejected ? 1 : 0, viewerUserId, viewerUserId) as CommentRow[]
 
   return rows.map(rowToComment)
 }
 
-export async function listRecentComments(limit = 10) {
+export async function listRecentComments(limit = 10, options?: { includePending?: boolean }) {
   await ensureStoreReady()
+  const includePending = options?.includePending ?? false
 
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, post_id, author, content, date, user_id
+      SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
       FROM comments
+      WHERE status = 'approved' OR (${includePending} = true AND status = 'pending')
       ORDER BY date DESC, id DESC
       LIMIT ${limit}
     `) as CommentRow[]
@@ -741,16 +843,17 @@ export async function listRecentComments(limit = 10) {
   }
 
   const rows = getDb().prepare(`
-    SELECT id, post_id, author, content, date, user_id
+    SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
     FROM comments
+    WHERE status = 'approved' OR (? = 1 AND status = 'pending')
     ORDER BY date DESC, id DESC
     LIMIT ?
-  `).all(limit) as CommentRow[]
+  `).all(includePending ? 1 : 0, limit) as CommentRow[]
 
   return rows.map(rowToComment)
 }
 
-export async function createComment(input: { postId: string; author: string; content: string; userId?: string | null }) {
+export async function createComment(input: { postId: string; author: string; content: string; userId?: string | null; status?: CommentStatus; moderationNote?: string | null }) {
   await ensureStoreReady()
 
   const comment: CommentRecord = {
@@ -760,20 +863,22 @@ export async function createComment(input: { postId: string; author: string; con
     content: input.content.trim(),
     date: new Date().toISOString().split('T')[0],
     userId: input.userId || null,
+    status: normalizeCommentStatus(input.status),
+    moderationNote: input.moderationNote || null,
   }
 
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     await sql`
-      INSERT INTO comments (id, post_id, author, content, date, user_id)
-      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date}, ${comment.userId || null})
+      INSERT INTO comments (id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at)
+      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date}, ${comment.userId || null}, ${comment.status || 'approved'}, ${comment.moderationNote || null}, ${comment.status === 'pending' ? null : new Date().toISOString()})
     `
     return comment
   }
 
   getDb().prepare(`
-    INSERT INTO comments (id, post_id, author, content, date, user_id)
-    VALUES (@id, @post_id, @author, @content, @date, @user_id)
+    INSERT INTO comments (id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at)
+    VALUES (@id, @post_id, @author, @content, @date, @user_id, @status, @moderation_note, @reviewed_at)
   `).run({
     id: comment.id,
     post_id: comment.postId,
@@ -781,6 +886,9 @@ export async function createComment(input: { postId: string; author: string; con
     content: comment.content,
     date: comment.date,
     user_id: comment.userId || null,
+    status: comment.status || 'approved',
+    moderation_note: comment.moderationNote || null,
+    reviewed_at: comment.status === 'pending' ? null : new Date().toISOString(),
   })
 
   return comment
@@ -792,7 +900,7 @@ export async function getCommentById(postId: string, commentId: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, post_id, author, content, date, user_id
+      SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
       FROM comments
       WHERE id = ${commentId} AND post_id = ${postId}
       LIMIT 1
@@ -801,13 +909,40 @@ export async function getCommentById(postId: string, commentId: string) {
   }
 
   const row = getDb().prepare(`
-    SELECT id, post_id, author, content, date, user_id
+    SELECT id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
     FROM comments
     WHERE id = ? AND post_id = ?
     LIMIT 1
   `).get(commentId, postId) as CommentRow | undefined
 
   return row ? rowToComment(row) : undefined
+}
+
+export async function moderateComment(postId: string, commentId: string, status: CommentStatus, moderationNote?: string | null) {
+  await ensureStoreReady()
+  const nextStatus = normalizeCommentStatus(status)
+  const reviewedAt = new Date().toISOString()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      UPDATE comments
+      SET status = ${nextStatus},
+          moderation_note = ${moderationNote || null},
+          reviewed_at = ${reviewedAt}
+      WHERE id = ${commentId} AND post_id = ${postId}
+      RETURNING id, post_id, author, content, date, user_id, status, moderation_note, reviewed_at
+    `) as CommentRow[]
+    return rows[0] ? rowToComment(rows[0]) : undefined
+  }
+
+  getDb().prepare(`
+    UPDATE comments
+    SET status = ?, moderation_note = ?, reviewed_at = ?
+    WHERE id = ? AND post_id = ?
+  `).run(nextStatus, moderationNote || null, reviewedAt, commentId, postId)
+
+  return getCommentById(postId, commentId)
 }
 
 export async function getPostBySlug(slug: string) {

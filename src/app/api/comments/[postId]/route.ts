@@ -3,7 +3,7 @@ import { isAuthenticatedRequest } from '@/lib/server/auth'
 import { getCommentUserFromRequest } from '@/lib/server/comment-user-auth'
 import { checkCommentRateLimit, validateCommentContent } from '@/lib/server/comment-guard'
 import { invalidateCommentsCache } from '@/lib/server/site-cache'
-import { createComment, deleteComment, getCommentById, listCommentsByPost } from '@/lib/server/store'
+import { createComment, deleteComment, getCommentById, listCommentsByPost, moderateComment } from '@/lib/server/store'
 
 // GET /api/comments/[postId] - 获取某篇文章的所有评论
 export async function GET(
@@ -11,7 +11,15 @@ export async function GET(
   { params }: { params: Promise<{ postId: string }> }
 ) {
   const { postId } = await params
-  return NextResponse.json({ comments: await listCommentsByPost(postId) })
+  const commentUser = getCommentUserFromRequest(_request)
+  const isAdmin = isAuthenticatedRequest(_request)
+  return NextResponse.json({
+    comments: await listCommentsByPost(postId, {
+      includePending: isAdmin,
+      includeRejected: isAdmin,
+      viewerUserId: commentUser?.userId || null,
+    }),
+  })
 }
 
 // POST /api/comments/[postId] - 添加评论
@@ -44,11 +52,16 @@ export async function POST(
     author,
     content,
     userId: commentUser?.userId || null,
+    status: commentUser?.userId || isAuthenticatedRequest(request) ? 'approved' : 'pending',
+    moderationNote: commentUser?.userId || isAuthenticatedRequest(request) ? null : '等待管理员审核',
   })
 
   invalidateCommentsCache()
 
-  return NextResponse.json({ comment: newComment })
+  return NextResponse.json({
+    comment: newComment,
+    message: newComment.status === 'pending' ? '评论已提交，等待审核后会公开显示' : '评论发布成功！',
+  })
 }
 
 export async function DELETE(
@@ -82,4 +95,31 @@ export async function DELETE(
   invalidateCommentsCache()
 
   return NextResponse.json({ success: true })
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ postId: string }> }
+) {
+  if (!isAuthenticatedRequest(request)) {
+    return NextResponse.json({ error: '请先登录' }, { status: 401 })
+  }
+
+  const { postId } = await params
+  const body = await request.json()
+  const commentId = String(body.commentId || '')
+  const status = String(body.status || '')
+  const moderationNote = typeof body.moderationNote === 'string' ? body.moderationNote : null
+
+  if (!commentId || !['approved', 'rejected', 'pending'].includes(status)) {
+    return NextResponse.json({ error: '审核参数不正确' }, { status: 400 })
+  }
+
+  const comment = await moderateComment(postId, commentId, status as 'approved' | 'rejected' | 'pending', moderationNote)
+  if (!comment) {
+    return NextResponse.json({ error: '评论不存在' }, { status: 404 })
+  }
+
+  invalidateCommentsCache()
+  return NextResponse.json({ comment })
 }

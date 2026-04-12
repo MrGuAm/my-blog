@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
+import type { Post } from "@/lib/posts"
 
 interface LocalDraft {
   slug: string
@@ -53,6 +54,7 @@ export default function WritePage() {
   const [imageUrl, setImageUrl] = useState("")
   const [savedAt, setSavedAt] = useState<string | null>(initialDraft?.savedAt ?? null)
   const [availableTracks, setAvailableTracks] = useState<MusicTrack[]>([])
+  const [dashboardPosts, setDashboardPosts] = useState<Post[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -111,6 +113,14 @@ export default function WritePage() {
       .then((data) => setAvailableTracks(Array.isArray(data.tracks) ? data.tracks : []))
       .catch(() => setAvailableTracks([]))
   }, [])
+
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) return
+    fetch("/api/posts", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => setDashboardPosts(Array.isArray(data) ? data : []))
+      .catch(() => setDashboardPosts([]))
+  }, [isAuthenticated, isAuthLoading])
 
   const insertTextAtCursor = useCallback((text: string) => {
     const textarea = textareaRef.current
@@ -230,6 +240,11 @@ export default function WritePage() {
     }
   }
 
+  const draftPosts = dashboardPosts.filter((post) => post.draft)
+  const recentEditedPosts = [...dashboardPosts]
+    .sort((a, b) => new Date(b.updatedAt || b.date).getTime() - new Date(a.updatedAt || a.date).getTime())
+    .slice(0, 4)
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -267,6 +282,52 @@ export default function WritePage() {
             </p>
           )}
         </div>
+
+        {(draftPosts.length > 0 || recentEditedPosts.length > 0) && (
+          <div className="mb-8 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border/50 bg-card p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">草稿箱</h2>
+                <span className="text-xs text-muted-foreground">{draftPosts.length} 篇</span>
+              </div>
+              <div className="space-y-2">
+                {draftPosts.length > 0 ? draftPosts.slice(0, 4).map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/write/${post.id}`}
+                    className="block rounded-xl border border-border/40 px-3 py-2 hover:border-primary/40 hover:bg-accent/20 transition-colors"
+                  >
+                    <p className="text-sm font-medium">{post.title}</p>
+                    <p className="text-xs text-muted-foreground">最近更新 {new Date(post.updatedAt || post.date).toLocaleString("zh-CN")}</p>
+                  </Link>
+                )) : (
+                  <p className="text-sm text-muted-foreground">现在没有草稿，可以放心开写。</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border/50 bg-card p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">最近编辑</h2>
+                <span className="text-xs text-muted-foreground">继续写作更方便</span>
+              </div>
+              <div className="space-y-2">
+                {recentEditedPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={post.draft ? `/write/${post.id}` : `/posts/${post.slug || post.id}`}
+                    className="block rounded-xl border border-border/40 px-3 py-2 hover:border-primary/40 hover:bg-accent/20 transition-colors"
+                  >
+                    <p className="text-sm font-medium">{post.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {post.draft ? "草稿" : "已发布"} · {new Date(post.updatedAt || post.date).toLocaleString("zh-CN")}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}

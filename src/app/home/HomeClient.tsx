@@ -40,7 +40,7 @@ function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive
   )
 }
 
-function SyncedLyrics({ lyrics, activeIndex }: { lyrics: Array<{ time: number; text: string }>; activeIndex: number }) {
+function SyncedLyrics({ lyrics, activeIndex, onSeek }: { lyrics: Array<{ time: number; text: string }>; activeIndex: number; onSeek: (time: number) => void }) {
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const innerRef = useRef<HTMLDivElement | null>(null)
   const activeLineRef = useRef<HTMLParagraphElement | null>(null)
@@ -76,13 +76,14 @@ function SyncedLyrics({ lyrics, activeIndex }: { lyrics: Array<{ time: number; t
           key={`${line.time}-${index}`}
           ref={index === activeIndex ? activeLineRef : null}
           style={{ transformOrigin: "center center" }}
+          onClick={() => onSeek(line.time)}
           className={`px-3 py-2 text-xs leading-5 transition-all duration-300 ${
             index === activeIndex
               ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
               : index < activeIndex
                 ? "text-foreground/65 scale-100 opacity-35"
                 : "text-muted-foreground scale-100 opacity-50"
-          }`}
+          } cursor-pointer`}
         >
           {line.text}
         </p>
@@ -203,10 +204,24 @@ function Character({ type, isHovered }: { type: number; isHovered: boolean }) {
 }
 
 // Post card with character that follows mouse
-function PostCard({ post, characterType, isAuthenticated, onTagClick }: { post: Post; characterType: number; isAuthenticated: boolean; onTagClick: (tag: string) => void }) {
+function PostCard({
+  post,
+  characterType,
+  isAuthenticated,
+  onTagClick,
+  onPlayBgm,
+  isCurrentBgm,
+}: {
+  post: Post
+  characterType: number
+  isAuthenticated: boolean
+  onTagClick: (tag: string) => void
+  onPlayBgm: (src?: string | null) => void
+  isCurrentBgm: boolean
+}) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const postHref = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.id}`
+  const postHref = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.slug || post.id}`
   return (
     <div
       className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
@@ -235,9 +250,20 @@ function PostCard({ post, characterType, isAuthenticated, onTagClick }: { post: 
             </span>
           )}
           {post.bgmSrc && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#FF9B6B]/15 text-[#FF9B6B] font-medium">
-              绑定 BGM
-            </span>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onPlayBgm(post.bgmSrc)
+              }}
+              className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${
+                isCurrentBgm
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-[#FF9B6B]/15 text-[#FF9B6B] hover:bg-[#FF9B6B]/25"
+              }`}
+            >
+              {isCurrentBgm ? "当前 BGM" : "播放 BGM"}
+            </button>
           )}
         </div>
         <div className="flex gap-1.5 ml-auto">
@@ -300,6 +326,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
     handleMouseDown,
     handleProgressClick,
     formatTime,
+    seekToTime,
   } = useMusic()
   const { isAuthenticated, logout } = useAuthStatus()
   const [showDrafts, setShowDrafts] = useState(false)
@@ -481,6 +508,8 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   post={post}
                   characterType={index % 4}
                   isAuthenticated={isAuthenticated}
+                  onPlayBgm={(src) => playTrackBySrc(src)}
+                  isCurrentBgm={Boolean(post.bgmSrc && track.src === post.bgmSrc)}
                   onTagClick={(tag) => {
                     setSelectedTag(tag)
                     setCurrentPage(1)
@@ -688,7 +717,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                   {currentLyrics.length > 0 && (
                     <div>
                       <h3 className="text-sm font-semibold mb-2">当前歌词</h3>
-                      <SyncedLyrics lyrics={parsedLyrics} activeIndex={activeLyricIndex} />
+                      <SyncedLyrics lyrics={parsedLyrics} activeIndex={activeLyricIndex} onSeek={seekToTime} />
                     </div>
                   )}
                   {favoriteTracks.length > 0 && (
@@ -728,7 +757,7 @@ export default function HomeClient({ posts, allTags }: HomeClientProps) {
                     filteredPosts.slice(0, 3).map((post) => (
                         <Link
                           key={post.id}
-                          href={post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.id}`}
+                          href={post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.slug || post.id}`}
                           className="block text-sm hover:text-primary transition-colors group"
                         >
                           <p className="truncate group-hover:text-primary">{post.title}</p>

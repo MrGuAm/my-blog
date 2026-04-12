@@ -1,5 +1,5 @@
 import { revalidateTag, unstable_cache } from 'next/cache'
-import { listPosts, listRecentComments } from '@/lib/server/store'
+import { getPostById, getPostBySlug, listPosts, listRecentComments } from '@/lib/server/store'
 
 export const CACHE_TAGS = {
   posts: 'posts',
@@ -21,6 +21,15 @@ export const getCachedRecentComments = unstable_cache(
   async () => listRecentComments(10),
   ['recent-comments'],
   { tags: [CACHE_TAGS.comments], revalidate: 120 }
+)
+
+export const getCachedPublicPost = unstable_cache(
+  async (idOrSlug: string) => {
+    const post = (await getPostById(idOrSlug)) || (await getPostBySlug(idOrSlug))
+    return post && !post.draft ? post : null
+  },
+  ['public-post-detail'],
+  { tags: [CACHE_TAGS.posts], revalidate: 300 }
 )
 
 export function invalidatePostsCache() {

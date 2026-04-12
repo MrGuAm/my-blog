@@ -30,7 +30,15 @@ function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive
   )
 }
 
-function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: number; text: string }>; activeIndex: number }) {
+function SyncedLyricsPanel({
+  lyrics,
+  activeIndex,
+  onSeek,
+}: {
+  lyrics: Array<{ time: number; text: string }>
+  activeIndex: number
+  onSeek: (time: number) => void
+}) {
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const innerRef = useRef<HTMLDivElement | null>(null)
   const activeLineRef = useRef<HTMLParagraphElement | null>(null)
@@ -65,13 +73,14 @@ function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: numb
         <p
           key={`${line.time}-${index}`}
           ref={index === activeIndex ? activeLineRef : null}
+          onClick={() => onSeek(line.time)}
           className={`px-3 py-2 text-xs leading-5 transition-all duration-300 ${
             index === activeIndex
               ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
               : index < activeIndex
                 ? "text-foreground/65 scale-100 opacity-35"
                 : "text-muted-foreground scale-100 opacity-50"
-          }`}
+          } cursor-pointer`}
           style={{ transformOrigin: "center center" }}
         >
           {line.text}
@@ -149,6 +158,7 @@ interface MusicContextValue {
   handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void
   handleProgressClick: (e: React.MouseEvent<HTMLDivElement>) => void
   formatTime: (seconds: number) => string
+  seekToTime: (seconds: number) => void
 }
 
 const MusicContext = createContext<MusicContextValue>({
@@ -178,6 +188,7 @@ const MusicContext = createContext<MusicContextValue>({
   handleMouseDown: () => {},
   handleProgressClick: () => {},
   formatTime: () => "0:00",
+  seekToTime: () => {},
 })
 
 export function MusicProvider({ children }: { children: ReactNode }) {
@@ -369,8 +380,17 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setDragProgress(null)
   }, [])
 
+  const seekToTime = useCallback((seconds: number) => {
+    if (!audioRef.current?.duration) return
+    const nextTime = Math.max(0, Math.min(seconds, audioRef.current.duration))
+    audioRef.current.currentTime = nextTime
+    setCurrentTime(nextTime)
+    setProgress((nextTime / audioRef.current.duration) * 100 || 0)
+    setDragProgress(null)
+  }, [])
+
   useEffect(() => {
-    fetch("/api/music", { cache: "no-store" })
+    fetch("/api/music")
       .then((response) => response.json())
       .then((data) => {
         if (!Array.isArray(data.tracks) || data.tracks.length === 0) return
@@ -418,6 +438,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         handleMouseDown,
         handleProgressClick,
         formatTime,
+        seekToTime,
       }}
     >
       <audio
@@ -599,7 +620,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                 {currentLyrics.length > 0 && (
                   <div className="rounded-xl bg-secondary/20 p-3">
                     <p className="text-xs font-medium mb-2">歌词</p>
-                    <SyncedLyricsPanel lyrics={parsedLyrics} activeIndex={activeLyricIndex} />
+                    <SyncedLyricsPanel lyrics={parsedLyrics} activeIndex={activeLyricIndex} onSeek={seekToTime} />
                   </div>
                 )}
               </div>

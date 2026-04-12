@@ -6,7 +6,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://my-blog-amber-chi.vercel.app"
 
   const postEntries = posts.map(post => ({
-    url: `${baseUrl}/posts/${post.id}`,
+    url: `${baseUrl}/posts/${post.slug || post.id}`,
     lastModified: new Date(post.date),
     changeFrequency: "monthly" as const,
     priority: post.pinned ? 0.8 : 0.6

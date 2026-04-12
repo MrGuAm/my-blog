@@ -38,6 +38,8 @@ interface Comment {
   content: string
   date: string
   userId?: string | null
+  status?: "pending" | "approved" | "rejected"
+  moderationNote?: string | null
 }
 
 interface CommentsProps {
@@ -52,6 +54,7 @@ export default function Comments({ post }: CommentsProps) {
   const [content, setContent] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+  const [moderatingCommentId, setModeratingCommentId] = useState<string | null>(null)
   const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const activeAuthor = userSession.isAuthenticated ? userSession.displayName ?? "" : author
@@ -91,6 +94,31 @@ export default function Comments({ post }: CommentsProps) {
     }
   }
 
+  const handleModerate = async (commentId: string, status: "approved" | "rejected") => {
+    setModeratingCommentId(commentId)
+    setSubmitMsg(null)
+
+    try {
+      const res = await fetch(`/api/comments/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId, status }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSubmitMsg({ type: "error", text: data.error || "审核失败" })
+      } else {
+        setComments((current) => current.map((comment) => (comment.id === commentId ? data.comment : comment)))
+        setSubmitMsg({ type: "success", text: status === "approved" ? "评论已通过" : "评论已拒绝" })
+      }
+    } catch {
+      setSubmitMsg({ type: "error", text: "网络错误，请重试" })
+    } finally {
+      setModeratingCommentId(null)
+      setTimeout(() => setSubmitMsg(null), 3000)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const nextAuthor = activeAuthor
@@ -113,7 +141,7 @@ export default function Comments({ post }: CommentsProps) {
           setAuthor("")
         }
         setContent("")
-        setSubmitMsg({ type: "success", text: "评论发布成功！" })
+        setSubmitMsg({ type: "success", text: data.message || "评论发布成功！" })
       } else {
         setSubmitMsg({ type: "error", text: data.error || "评论失败" })
       }
@@ -140,6 +168,17 @@ export default function Comments({ post }: CommentsProps) {
                 <span className="font-medium text-sm">{comment.author}</span>
                 <span className="text-xs text-muted-foreground">·</span>
                 <span className="text-xs text-muted-foreground">{comment.date}</span>
+                {comment.status && comment.status !== "approved" && (
+                  <span
+                    className={`text-[11px] px-2 py-0.5 rounded-full ${
+                      comment.status === "pending"
+                        ? "bg-amber-500/15 text-amber-600"
+                        : "bg-red-500/15 text-red-500"
+                    }`}
+                  >
+                    {comment.status === "pending" ? "待审核" : "已拒绝"}
+                  </span>
+                )}
                 {(isAuthenticated || (userSession.isAuthenticated && comment.userId === userSession.userId)) && (
                   <button
                     type="button"
@@ -152,6 +191,29 @@ export default function Comments({ post }: CommentsProps) {
                 )}
               </div>
               <p className="text-sm text-muted-foreground"><span dangerouslySetInnerHTML={{ __html: parseMarkdown(comment.content) }} /></p>
+              {comment.status === "pending" && isAuthenticated && (
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleModerate(comment.id, "approved")}
+                    disabled={moderatingCommentId === comment.id}
+                    className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {moderatingCommentId === comment.id ? "处理中..." : "通过"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModerate(comment.id, "rejected")}
+                    disabled={moderatingCommentId === comment.id}
+                    className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    拒绝
+                  </button>
+                </div>
+              )}
+              {comment.moderationNote && comment.status !== "approved" && (
+                <p className="mt-2 text-xs text-muted-foreground">{comment.moderationNote}</p>
+              )}
             </div>
           ))}
         </div>

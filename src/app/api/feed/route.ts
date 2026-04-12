@@ -6,8 +6,8 @@ export async function GET() {
   const items = posts.map(post => `
     <item>
       <title><![CDATA[${post.title}]]></title>
-      <link>https://my-blog-amber-chi.vercel.app/posts/${post.id}</link>
-      <guid>https://my-blog-amber-chi.vercel.app/posts/${post.id}</guid>
+      <link>https://my-blog-amber-chi.vercel.app/posts/${post.slug || post.id}</link>
+      <guid>https://my-blog-amber-chi.vercel.app/posts/${post.slug || post.id}</guid>
       <description><![CDATA[${post.excerpt}]]></description>
       <pubDate>${new Date(post.date).toUTCString()}</pubDate>
       <category>${post.category}</category>

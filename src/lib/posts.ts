@@ -1,4 +1,4 @@
-import { getCachedPublicPosts } from '@/lib/server/site-cache'
+import { getCachedPublicPost, getCachedPublicPosts } from '@/lib/server/site-cache'
 import { getPostById, getPostBySlug, listPosts } from '@/lib/server/store'
 
 export interface Post {
@@ -30,7 +30,9 @@ export async function getAllPosts(options?: { includeDrafts?: boolean; cached?: 
 }
 
 export async function getPost(id: string): Promise<Post | undefined> {
-  return getPostById(id) || getPostBySlug(id)
+  const cachedPost = await getCachedPublicPost(id)
+  if (cachedPost) return cachedPost
+  return (await getPostById(id)) || (await getPostBySlug(id)) || undefined
 }
 
 export async function getAllTags(): Promise<string[]> {
