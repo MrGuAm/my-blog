@@ -31,32 +31,48 @@ function MarqueeText({ text, isActive, charCount = 6 }: { text: string; isActive
 }
 
 function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: number; text: string }>; activeIndex: number }) {
+  const viewportRef = useRef<HTMLDivElement | null>(null)
+  const innerRef = useRef<HTMLDivElement | null>(null)
+  const activeLineRef = useRef<HTMLParagraphElement | null>(null)
+
+  useEffect(() => {
+    const viewport = viewportRef.current
+    const activeLine = activeLineRef.current
+    const inner = innerRef.current
+    if (!inner) return
+
+    if (!viewport || !activeLine || activeIndex < 0) {
+      inner.style.transform = "translateY(0px)"
+      return
+    }
+
+    const nextOffset = viewport.clientHeight / 2 - (activeLine.offsetTop + activeLine.offsetHeight / 2)
+    inner.style.transform = `translateY(${nextOffset}px)`
+  }, [activeIndex, lyrics])
+
   if (lyrics.length === 0) {
     return <p className="text-xs text-muted-foreground leading-5">当前歌曲没有可滚动的时间轴歌词。</p>
   }
 
-  const safeIndex = activeIndex >= 0 ? activeIndex : 0
-  const lineHeight = 28
-  const viewportHeight = lineHeight * 5
-  const paddingOffset = lineHeight * 2
-
   return (
-    <div className="overflow-hidden px-1 text-center" style={{ height: viewportHeight }}>
+    <div ref={viewportRef} className="overflow-hidden px-1 text-center" style={{ height: 160 }}>
       <div
+        ref={innerRef}
         className="transition-transform duration-500 ease-out will-change-transform"
-        style={{ transform: `translateY(${paddingOffset - safeIndex * lineHeight}px)` }}
+        style={{ transform: "translateY(0px)" }}
       >
       {lyrics.map((line, index) => (
         <p
           key={`${line.time}-${index}`}
-          className={`truncate whitespace-nowrap px-2 py-1 text-xs leading-5 transition-all duration-300 ${
+          ref={index === activeIndex ? activeLineRef : null}
+          className={`px-3 py-2 text-xs leading-5 transition-all duration-300 ${
             index === activeIndex
               ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
               : index < activeIndex
                 ? "text-foreground/65 scale-100 opacity-35"
                 : "text-muted-foreground scale-100 opacity-50"
           }`}
-          style={{ height: lineHeight, lineHeight: `${lineHeight}px`, transformOrigin: "center center" }}
+          style={{ transformOrigin: "center center" }}
         >
           {line.text}
         </p>
