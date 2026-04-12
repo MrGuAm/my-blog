@@ -49,7 +49,7 @@ function SyncedLyricsPanel({ lyrics, activeIndex }: { lyrics: Array<{ time: numb
       {lyrics.map((line, index) => (
         <p
           key={`${line.time}-${index}`}
-          className={`py-1 text-xs leading-5 transition-all duration-300 ${
+          className={`truncate whitespace-nowrap px-2 py-1 text-xs leading-5 transition-all duration-300 ${
             index === activeIndex
               ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
               : index < activeIndex

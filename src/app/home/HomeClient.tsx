@@ -60,7 +60,7 @@ function SyncedLyrics({ lyrics, activeIndex }: { lyrics: Array<{ time: number; t
         <p
           key={`${line.time}-${index}`}
           style={{ height: lineHeight, lineHeight: `${lineHeight}px`, transformOrigin: "center center" }}
-          className={`py-1 text-xs leading-5 transition-all duration-300 ${
+          className={`truncate whitespace-nowrap px-2 py-1 text-xs leading-5 transition-all duration-300 ${
             index === activeIndex
               ? "text-primary font-bold text-sm scale-[1.14] opacity-100 tracking-[0.01em]"
               : index < activeIndex
