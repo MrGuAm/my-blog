@@ -66,6 +66,7 @@ export default function EditPostPage() {
   const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit")
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
+  const [mediaDialogMode, setMediaDialogMode] = useState<"content" | "cover">("content")
   const [imageUrl, setImageUrl] = useState("")
   const [savedAt, setSavedAt] = useState<string | null>(localDraft?.savedAt ?? null)
   const [availableTracks, setAvailableTracks] = useState<MusicTrack[]>([])
@@ -456,7 +457,19 @@ export default function EditPostPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-2">封面图（可选）</label>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium">封面图（可选）</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMediaDialogMode("cover")
+                    setMediaDialogOpen(true)
+                  }}
+                  className="text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  从媒体库选择
+                </button>
+              </div>
               <input
                 type="url"
                 value={coverImage}
@@ -464,6 +477,11 @@ export default function EditPostPage() {
                 placeholder="https://example.com/cover.jpg"
                 className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
               />
+              {coverImage && (
+                <div className="mt-3 overflow-hidden rounded-xl border border-border/40">
+                  <img src={coverImage} alt="封面预览" className="h-36 w-full object-cover" />
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">文章 BGM（可选）</label>
@@ -536,7 +554,10 @@ export default function EditPostPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMediaDialogOpen(true)}
+                  onClick={() => {
+                    setMediaDialogMode("content")
+                    setMediaDialogOpen(true)
+                  }}
                   className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors flex items-center gap-1"
                   title="打开媒体库"
                 >
@@ -650,6 +671,10 @@ export default function EditPostPage() {
             isOpen={mediaDialogOpen}
             onClose={() => setMediaDialogOpen(false)}
             onSelect={(url) => {
+              if (mediaDialogMode === "cover") {
+                setCoverImage(url)
+                return
+              }
               const imgTag = `\n<img src="${url}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
               insertTextAtCursor(imgTag)
             }}
