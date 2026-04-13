@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { listComments } from "@/lib/server/comments"
+import { getMediaLibraryWarning, listMediaAssets } from "@/lib/server/media"
 import { listPosts, listUsers } from "@/lib/server/store"
-import { listMediaAssets } from "@/lib/server/media"
 import AdminDashboardClient from "./AdminDashboardClient"
 
 export const metadata: Metadata = {
@@ -23,6 +23,7 @@ export default async function AdminPage() {
     listUsers(30),
     listMediaAssets(),
   ])
+  const mediaWarning = getMediaLibraryWarning()
 
   const stats = {
     totalPosts: posts.length,
@@ -75,6 +76,7 @@ export default async function AdminPage() {
       latestComments={latestComments}
       users={users}
       mediaAssets={mediaAssets.slice(0, 6)}
+      mediaWarning={mediaWarning}
       topTagItems={topTagItems}
     />
   )

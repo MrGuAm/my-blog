@@ -19,7 +19,20 @@ const allowedMimeTypes = new Map([
   ['image/svg+xml', '.svg'],
 ])
 
-function ensureMediaDir() {
+export function canWriteMediaLibrary() {
+  return !process.env.VERCEL
+}
+
+export function getMediaLibraryWarning() {
+  if (canWriteMediaLibrary()) return null
+  return '当前 Vercel 运行环境是只读文件系统，后台可以正常查看媒体库，但暂不支持在线上传或删除本地素材。'
+}
+
+function ensureMediaDirForWrite() {
+  if (!canWriteMediaLibrary()) {
+    throw new Error('当前部署环境不支持直接写入本地媒体库，请后续接入对象存储。')
+  }
+
   fs.mkdirSync(mediaDir, { recursive: true })
 }
 
@@ -33,7 +46,9 @@ function sanitizeBaseName(value: string) {
 }
 
 export async function listMediaAssets(): Promise<MediaAsset[]> {
-  ensureMediaDir()
+  if (!fs.existsSync(mediaDir)) {
+    return []
+  }
 
   return fs
     .readdirSync(mediaDir, { withFileTypes: true })
@@ -53,7 +68,7 @@ export async function listMediaAssets(): Promise<MediaAsset[]> {
 }
 
 export async function saveMediaFile(file: File) {
-  ensureMediaDir()
+  ensureMediaDirForWrite()
 
   const extension = allowedMimeTypes.get(file.type)
   if (!extension) {
@@ -78,7 +93,11 @@ export async function saveMediaFile(file: File) {
 }
 
 export async function deleteMediaFile(fileName: string) {
-  ensureMediaDir()
+  if (!canWriteMediaLibrary()) {
+    throw new Error('当前部署环境不支持直接删除本地媒体库素材，请后续接入对象存储。')
+  }
+
+  if (!fs.existsSync(mediaDir)) return false
   const safeName = path.basename(fileName)
   const absolutePath = path.join(mediaDir, safeName)
   if (!fs.existsSync(absolutePath)) return false

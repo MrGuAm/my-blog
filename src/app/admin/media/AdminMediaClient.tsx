@@ -12,12 +12,13 @@ function formatSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export default function AdminMediaClient({ initialAssets }: { initialAssets: MediaAsset[] }) {
+export default function AdminMediaClient({ initialAssets, initialWarning = null }: { initialAssets: MediaAsset[]; initialWarning?: string | null }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { logout } = useAuthStatus()
   const [assets, setAssets] = useState(initialAssets)
   const [isUploading, setIsUploading] = useState(false)
   const [message, setMessage] = useState("")
+  const [warning, setWarning] = useState(initialWarning)
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
 
@@ -25,6 +26,7 @@ export default function AdminMediaClient({ initialAssets }: { initialAssets: Med
     const response = await fetch("/api/admin/media", { cache: "no-store" })
     const data = await response.json()
     setAssets(Array.isArray(data.assets) ? data.assets : [])
+    setWarning(typeof data.warning === "string" ? data.warning : null)
   }
 
   const handleUpload = async (file?: File | null) => {
@@ -113,6 +115,7 @@ export default function AdminMediaClient({ initialAssets }: { initialAssets: Med
             <h1 className="text-3xl font-black tracking-tight">站内媒体素材</h1>
             <p className="mt-2 text-muted-foreground">集中管理文章中要复用的图片素材。</p>
             {message && <p className="mt-3 text-sm text-primary">{message}</p>}
+            {warning && <p className="mt-2 text-sm text-amber-600">{warning}</p>}
           </div>
           <div className="flex flex-col gap-3 md:items-end">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -32,10 +32,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border/60 rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
-        <h2 className="text-2xl font-black mb-1 text-center">站点管理</h2>
-        <p className="text-sm text-muted-foreground text-center mb-6">输入管理员密码继续</p>
+      <div className="absolute inset-0 bg-black/32 backdrop-blur-xl" onClick={onClose} />
+      <div className="apple-panel relative mx-4 w-full max-w-sm rounded-[2rem] p-8 shadow-2xl">
+        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] text-sm font-semibold text-white shadow-lg shadow-slate-900/15">
+          C
+        </div>
+        <p className="text-center text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">Admin Access</p>
+        <h2 className="mt-2 text-center text-3xl font-semibold tracking-[-0.04em]">站点管理</h2>
+        <p className="mt-2 text-sm text-muted-foreground text-center mb-6">输入管理员密码继续</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
@@ -45,14 +49,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
               onChange={(e) => { setPassword(e.target.value); setError("") }}
               placeholder="••••••••"
               autoFocus
-              className="w-full h-12 px-4 pr-12 rounded-xl border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              className="apple-input h-12 w-full px-4 pr-20"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              {showPassword ? "👁" : "👁‍🗨"}
+              {showPassword ? "隐藏" : "显示"}
             </button>
           </div>
 
@@ -62,7 +66,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
 
           <button
             type="submit"
-            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+            className="h-12 w-full rounded-full bg-[#111827] text-sm font-medium text-white transition-colors hover:bg-[#1f2937]"
           >
             进入管理
           </button>
@@ -70,7 +74,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
 
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors text-xl"
+          className="absolute top-5 right-5 text-muted-foreground hover:text-foreground transition-colors text-xl"
         >
           ×
         </button>

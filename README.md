@@ -227,6 +227,10 @@ npm run build
 - 当前代码已经支持自动切换：
   - 没有 `DATABASE_URL`：使用本地 SQLite
   - 有 `DATABASE_URL`：使用远程 Postgres（推荐 Neon）
+- 当前站内媒体库默认仍是本地文件系统方案：
+  - 本地开发可直接上传到 `public/uploads`
+  - Vercel 运行时是只读文件系统，线上后台可查看已随代码部署的素材，但不适合继续在线上传或删除
+  - 如果你要把媒体库完全放到线上可写，下一步建议接入对象存储
 - 在 Vercel 中至少配置这三个环境变量：
   - `AUTH_PASSWORD`
   - `AUTH_SECRET`

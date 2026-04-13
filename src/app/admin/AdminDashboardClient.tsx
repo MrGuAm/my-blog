@@ -78,6 +78,7 @@ export default function AdminDashboardClient({
   latestComments,
   users,
   mediaAssets,
+  mediaWarning,
   topTagItems,
 }: {
   stats: DashboardStats
@@ -86,6 +87,7 @@ export default function AdminDashboardClient({
   latestComments: DashboardComment[]
   users: UserRecord[]
   mediaAssets: MediaAssetSummary[]
+  mediaWarning?: string | null
   topTagItems: Array<{ label: string; value: number; tone?: string }>
 }) {
   const router = useRouter()
@@ -224,6 +226,7 @@ export default function AdminDashboardClient({
           <h1 className="text-3xl font-black tracking-tight">站点控制台</h1>
           <p className="mt-2 text-muted-foreground">把文章、评论、用户和内容运营信息收在一个入口里。</p>
           {message && <p className="mt-3 text-sm text-primary">{message}</p>}
+          {mediaWarning && <p className="mt-2 text-sm text-amber-600">{mediaWarning}</p>}
         </div>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

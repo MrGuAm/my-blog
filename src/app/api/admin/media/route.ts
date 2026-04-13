@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticatedRequest } from '@/lib/server/auth'
-import { deleteMediaFile, listMediaAssets, saveMediaFile } from '@/lib/server/media'
+import { deleteMediaFile, getMediaLibraryWarning, listMediaAssets, saveMediaFile } from '@/lib/server/media'
 
 export async function GET(request: NextRequest) {
   if (!isAuthenticatedRequest(request)) {
     return NextResponse.json({ error: '请先登录管理员账号' }, { status: 401 })
   }
 
-  return NextResponse.json({ assets: await listMediaAssets() })
+  return NextResponse.json({ assets: await listMediaAssets(), warning: getMediaLibraryWarning() })
 }
 
 export async function POST(request: NextRequest) {

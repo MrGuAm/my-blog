@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
@@ -25,160 +25,51 @@ interface RecentComment {
   date: string
 }
 
-function CharacterEye({ isHovered, containerRef, pupilColor, size }: { isHovered: boolean; containerRef: React.RefObject<HTMLDivElement | null>; pupilColor: string; size: number }) {
-  const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
-  const displayedOffset = isHovered ? pupilOffset : { x: 0, y: 0 };
-
-  useEffect(() => {
-    if (!isHovered || !containerRef.current) {
-      return;
-    }
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const deltaX = e.clientX - centerX;
-      const deltaY = e.clientY - centerY;
-      const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), size * 0.3);
-      const angle = Math.atan2(deltaY, deltaX);
-      setPupilOffset({
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-      });
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [isHovered, containerRef, size]);
-
-  if (!isHovered) {
-    // Closed eyes - simple line
-    return (
-      <div className="relative" style={{ width: size, height: size * 0.4 }}>
-        <div className="absolute left-0 w-full h-0.5 bg-[#2D2D2D] rounded-full top-1/2 -translate-y-1/2" />
-      </div>
-    );
-  }
-
-  // Open eyes with pupil
+function CardAccent() {
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <div
-        className="absolute rounded-full bg-white"
-        style={{ width: size * 0.8, height: size * 0.8, left: size * 0.1, top: size * 0.1 }}
-      >
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: size * 0.4,
-            height: size * 0.4,
-            backgroundColor: pupilColor,
-            left: '50%',
-            top: '50%',
-            transform: `translate(calc(-50% + ${displayedOffset.x}px), calc(-50% + ${displayedOffset.y}px))`,
-            transition: 'transform 0.1s ease-out'
-          }}
-        />
-      </div>
+    <div className="flex items-center gap-1.5 opacity-80">
+      <span className="h-2.5 w-2.5 rounded-full bg-slate-900/80 dark:bg-white/85" />
+      <span className="h-2 w-2 rounded-full bg-slate-400/80 dark:bg-white/45" />
+      <span className="h-1.5 w-8 rounded-full bg-slate-300 dark:bg-white/20" />
     </div>
-  );
+  )
 }
 
-// Full character component
-function Character({ type, isHovered }: { type: number; isHovered: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const configs = [
-    { bg: '#6C3FF5', width: 40, height: 60, eyeColor: 'white', pupilColor: '#2D2D2D', eyeSize: 8 },
-    { bg: '#2D2D2D', width: 32, height: 48, eyeColor: 'white', pupilColor: '#2D2D2D', eyeSize: 7 },
-    { bg: '#FF9B6B', width: 48, height: 28, eyeColor: '#2D2D2D', pupilColor: '#2D2D2D', eyeSize: 6 },
-    { bg: '#E8D754', width: 32, height: 40, eyeColor: '#2D2D2D', pupilColor: '#2D2D2D', eyeSize: 6 },
-  ];
-  const config = configs[type % configs.length];
-
-  return (
-    <div
-      ref={ref}
-      className="relative rounded-lg"
-      style={{
-        width: config.width,
-        height: config.height,
-        backgroundColor: config.bg,
-      }}
-    >
-      <div className="absolute flex gap-2" style={{
-        left: type === 2 ? 8 : 6,
-        top: type === 2 ? 6 : 8
-      }}>
-        <CharacterEye
-          isHovered={isHovered}
-          containerRef={ref}
-          pupilColor={config.pupilColor}
-          size={config.eyeSize}
-        />
-        <CharacterEye
-          isHovered={isHovered}
-          containerRef={ref}
-          pupilColor={config.pupilColor}
-          size={config.eyeSize}
-        />
-      </div>
-      {/* Mouth for yellow character */}
-      {type === 3 && (
-        <div
-          className="absolute h-0.5 bg-[#2D2D2D] rounded-full"
-          style={{ width: 12, left: 10, bottom: 8 }}
-        />
-      )}
-    </div>
-  );
-}
-
-// Post card with character that follows mouse
+// Minimal post card
 function PostCard({
   post,
-  characterType,
   isAuthenticated,
   onTagClick,
   onPlayBgm,
   isCurrentBgm,
 }: {
   post: Post
-  characterType: number
   isAuthenticated: boolean
   onTagClick: (tag: string) => void
   onPlayBgm: (src?: string | null) => void
   isCurrentBgm: boolean
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-
   const postHref = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.slug || post.id}`
   return (
-    <div
-      className="block p-6 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all group relative overflow-hidden"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <article className="apple-panel group overflow-hidden rounded-[2rem] p-5 transition-all duration-300 hover:-translate-y-0.5 sm:p-6">
       {post.coverImage && (
-        <div className="mb-4 overflow-hidden rounded-xl border border-border/40">
+        <div className="mb-5 overflow-hidden rounded-[1.75rem] border border-white/70 dark:border-white/10">
           <img src={post.coverImage} alt={post.title} className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
         </div>
       )}
-      <div className="flex items-center gap-3 mb-3 flex-wrap">
-        <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+      <div className="mb-4 flex flex-wrap items-center gap-2.5">
+        <span className="apple-pill">
           {post.category}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{post.date}</span>
           {post.pinned && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
+            <span className="rounded-full bg-[#111827] px-2.5 py-1 text-xs font-medium text-white dark:bg-white dark:text-slate-900">
               置顶
             </span>
           )}
           {post.draft && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">
+            <span className="apple-pill">
               草稿
             </span>
           )}
@@ -189,45 +80,44 @@ function PostCard({
                 event.stopPropagation()
                 onPlayBgm(post.bgmSrc)
               }}
-              className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                 isCurrentBgm
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-[#FF9B6B]/15 text-[#FF9B6B] hover:bg-[#FF9B6B]/25"
+                  ? "bg-[#111827] text-white dark:bg-white dark:text-slate-900"
+                  : "border border-white/70 bg-white/72 text-foreground/80 backdrop-blur-xl hover:bg-white dark:border-white/10 dark:bg-white/8 dark:text-white/80"
               }`}
             >
               {isCurrentBgm ? "当前 BGM" : "播放 BGM"}
             </button>
           )}
         </div>
-        <div className="flex gap-1.5 ml-auto">
+        <div className="ml-auto flex flex-wrap gap-2">
           {post.tags.map(tag => (
             <button
               key={tag}
               onClick={(e) => { e.stopPropagation(); onTagClick(tag); }}
-              className="text-xs px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              className="apple-pill hover:bg-white dark:hover:bg-white/12"
             >
               #{tag}
             </button>
           ))}
         </div>
       </div>
-      <Link href={postHref}>
-        <h2 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
+      <Link href={postHref} className="block">
+        <h2 className="text-2xl font-semibold tracking-[-0.04em] text-foreground transition-colors group-hover:text-foreground/80">
           {post.title}
         </h2>
-        <p className="text-muted-foreground text-sm">{post.excerpt}</p>
-        <div className="mt-4 flex items-center gap-2 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-          {post.draft ? "编辑 →" : "Read more →"}
+        <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-[15px]">{post.excerpt}</p>
+        <div className="mt-6 flex items-center justify-between">
+          <span className="text-sm font-medium text-foreground/80">
+            {post.draft ? "继续编辑" : "继续阅读"}
+          </span>
+          <div className="flex items-center gap-3">
+            <CardAccent />
+            <span className="text-lg text-foreground/65 transition-transform duration-300 group-hover:translate-x-1">→</span>
+          </div>
         </div>
       </Link>
-      {/* Character decoration */}
-      <div className="absolute bottom-3 right-3 transition-all duration-300">
-        <Character
-          type={characterType}
-          isHovered={isHovered}
-        />
-      </div>
-    </div>
+    </article>
   );
 }
 
@@ -335,16 +225,16 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
   const playModeLabel = playMode === "loop" ? "列表循环" : playMode === "repeat-one" ? "单曲循环" : "随机播放"
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen text-foreground">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+      <nav className="apple-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60 flex items-center justify-center">
-                <span className="text-white text-sm font-bold">C</span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#111827] text-sm font-semibold text-white shadow-lg shadow-slate-900/10 dark:bg-white dark:text-slate-900">
+                <span className="text-sm font-bold text-current">C</span>
               </div>
-              <span className="font-black text-lg">Champion&apos;s Blog</span>
+              <span className="text-lg font-semibold tracking-[-0.03em] text-foreground">Champion&apos;s Blog</span>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="relative w-full sm:w-auto">
@@ -356,7 +246,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                     setSearchQuery(e.target.value)
                     setCurrentPage(1)
                   }}
-                  className="w-full sm:w-48 px-3 py-1.5 pl-8 text-sm bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-muted-foreground"
+                  className="apple-input w-full pl-9 pr-9 sm:w-56"
                 />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">🔍</span>
                 {(searchQuery || selectedTag) && (
@@ -369,39 +259,39 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                 )}
               </div>
               {selectedTag && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                <span className="apple-pill">
                   #{selectedTag}
                 </span>
               )}
               <span className="text-xs text-muted-foreground hidden lg:inline">
                 共 {filteredPosts.length} 篇
               </span>
-              <Link href="/home" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+              <Link href="/home" className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70">
                 Home
               </Link>
-              <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link href="/about" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70">
                 About
               </Link>
-              <Link href="/music" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link href="/music" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70">
                 Music
               </Link>
               {isAuthenticated ? (
                 <>
                   <Link
                     href="/write"
-                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                    className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
                   >
                     写文章
                   </Link>
                   <Link
                     href="/moderation"
-                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70"
                   >
                     审核评论
                   </Link>
                   <Link
                     href="/admin"
-                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70"
                   >
                     后台
                   </Link>
@@ -410,13 +300,13 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                       setShowDrafts(!showDrafts)
                       setCurrentPage(1)
                     }}
-                    className={`text-sm font-medium transition-colors ${showDrafts ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                    className={`text-sm font-medium transition-colors ${showDrafts ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'}`}
                   >
                     {showDrafts ? '隐藏草稿' : '显示草稿'}
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
+                    className="text-sm font-medium text-red-500 transition-colors hover:text-red-600"
                   >
                     退出
                   </button>
@@ -424,7 +314,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
               ) : (
                 <button
                   onClick={() => setIsLoginModalOpen(true)}
-                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  className="apple-button-secondary"
                   title="仅站点管理员使用"
                 >
                   管理
@@ -437,32 +327,39 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Hero Section */}
-        <section className="py-10 sm:py-16">
-          <h1 className="text-3xl font-black tracking-tight mb-4 sm:text-4xl">
-            Welcome to my blog
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            记录生活,分享想法
-          </p>
+        <section className="pb-10 pt-8 sm:pb-16 sm:pt-12">
+          <div className="apple-panel rounded-[2.5rem] px-6 py-8 sm:px-10 sm:py-12">
+            <span className="apple-pill inline-flex">Notes · Stories · Sound</span>
+            <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-[-0.07em] text-foreground sm:text-6xl">
+              一个更安静、更克制的个人博客。
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+              用来记录生活、技术和那些值得留下来的想法，也把音乐和写作放在同一个流畅的阅读空间里。
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <span className="apple-pill">{filteredPosts.length} 篇文章</span>
+              <span className="apple-pill">{allTags.length} 个标签</span>
+              <span className="apple-pill">{playlist.length} 首音乐</span>
+            </div>
+          </div>
         </section>
 
-        {/* Decorative line */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-1 rounded-full bg-gradient-to-r from-[#6C3FF5] to-[#FF9B6B]" />
-          <div className="w-3 h-3 rounded-full bg-[#E8D754]" />
-          <div className="w-2 h-2 rounded-full bg-[#2D2D2D]" />
-        </div>
-
         {/* Main Content with Sidebar */}
-        <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:gap-8">
+        <div className="flex flex-col gap-6 pb-24 lg:flex-row lg:gap-10">
           {/* Blog Posts */}
-          <main className="flex-1 space-y-6">
+          <main className="flex-1 space-y-5">
+            <div className="mb-2 flex items-end justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">Latest Writing</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-foreground">最近更新</h2>
+              </div>
+              <p className="hidden text-sm text-muted-foreground sm:block">向下翻，慢慢读。</p>
+            </div>
             {paginatedPosts.length > 0 ? (
-              paginatedPosts.map((post, index) => (
+              paginatedPosts.map((post) => (
                 <PostCard
                   key={post.id}
                   post={post}
-                  characterType={index % 4}
                   isAuthenticated={isAuthenticated}
                   onPlayBgm={(src) => playTrackBySrc(src)}
                   isCurrentBgm={Boolean(post.bgmSrc && track.src === post.bgmSrc)}
@@ -473,7 +370,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                 />
               ))
             ) : (
-              <div className="text-center py-16">
+              <div className="apple-panel-soft rounded-[2rem] py-16 text-center">
                 <p className="text-muted-foreground mb-2">没有找到匹配的文章</p>
                 <button
                   onClick={() => { setSearchQuery(""); setSelectedTag(null); setCurrentPage(1) }}
@@ -484,7 +381,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
               </div>
             )}
             {filteredPosts.length > postsPerPage && (
-              <div className="flex items-center justify-between rounded-xl border border-border/50 bg-card px-4 py-3">
+              <div className="apple-panel-soft flex items-center justify-between rounded-[1.5rem] px-4 py-3">
                 <span className="text-sm text-muted-foreground">
                   第 {safeCurrentPage} / {totalPages} 页
                 </span>
@@ -493,7 +390,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                     type="button"
                   onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                     disabled={safeCurrentPage === 1}
-                    className="px-3 py-1.5 text-sm rounded-lg border border-border/50 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="apple-button-secondary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     上一页
                   </button>
@@ -501,7 +398,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                     type="button"
                   onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                     disabled={safeCurrentPage === totalPages}
-                    className="px-3 py-1.5 text-sm rounded-lg border border-border/50 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="apple-button-secondary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     下一页
                   </button>
@@ -515,7 +412,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
             <div className="space-y-4">
               {/* Player */}
               <div
-                className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden"
+                className="apple-panel overflow-hidden rounded-[1.75rem]"
                 onMouseEnter={() => setIsSidebarHovering(true)}
                 onMouseLeave={() => { if (!isDragging) setIsSidebarHovering(false) }}
               >
@@ -668,7 +565,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
             </div>
 
             {/* Latest Posts */}
-            <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
+            <div className="apple-panel-soft overflow-hidden rounded-[1.75rem]">
               <div className="px-3 pb-3 pt-3">
                 <h3 className="text-sm font-semibold mb-2">最新文章</h3>
                 <div className="space-y-2">
@@ -692,7 +589,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
 
             {/* Latest Comments */}
             {recentComments.length > 0 && (
-              <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
+              <div className="apple-panel-soft overflow-hidden rounded-[1.75rem]">
                 <div className="px-3 pb-3 pt-3">
                   <h3 className="text-sm font-semibold mb-2">最新评论</h3>
                   <div className="space-y-2">
@@ -712,7 +609,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
             )}
 
             {/* Tags */}
-            <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
+            <div className="apple-panel-soft overflow-hidden rounded-[1.75rem]">
               <div className="px-3 pb-3 pt-3">
                 <h3 className="text-sm font-semibold mb-2">标签</h3>
                 <div className="flex flex-wrap gap-1.5">
@@ -757,7 +654,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
       />
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-8">
+      <footer className="border-t border-white/60 py-10 dark:border-white/10">
         <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
           © 2026 Champion&apos;s Blog
         </div>
@@ -777,7 +674,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
       {/* Back to Top Button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`fixed bottom-6 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center text-lg z-40 ${
+        className={`apple-panel fixed bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full text-lg text-foreground transition-all duration-300 hover:bg-white dark:hover:bg-white/12 ${
           showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
         } ${floatingHovering ? "right-[17rem]" : "right-[80px]"}`}
         aria-label="回到顶部"

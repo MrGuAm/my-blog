@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
-import { listMediaAssets } from "@/lib/server/media"
+import { getMediaLibraryWarning, listMediaAssets } from "@/lib/server/media"
 import AdminMediaClient from "./AdminMediaClient"
 
 export const metadata: Metadata = {
@@ -16,5 +16,5 @@ export default async function AdminMediaPage() {
   }
 
   const assets = await listMediaAssets()
-  return <AdminMediaClient initialAssets={assets} />
+  return <AdminMediaClient initialAssets={assets} initialWarning={getMediaLibraryWarning()} />
 }
