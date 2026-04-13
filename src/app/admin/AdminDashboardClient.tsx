@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link"
 import { useMemo, useState } from "react"
@@ -17,11 +18,21 @@ interface DashboardStats {
   pendingComments: number
   rejectedComments: number
   userCount: number
+  bannedUserCount: number
+  mediaCount: number
 }
 
 interface DashboardComment extends CommentRecord {
   postTitle: string
   postSlug: string
+}
+
+interface MediaAssetSummary {
+  id: string
+  name: string
+  url: string
+  size: number
+  updatedAt: string
 }
 
 function StatCard({ label, value, hint }: { label: string; value: string | number; hint: string }) {
@@ -65,12 +76,16 @@ export default function AdminDashboardClient({
   recentDrafts,
   latestComments,
   users,
+  mediaAssets,
+  topTagItems,
 }: {
   stats: DashboardStats
   topPosts: Post[]
   recentDrafts: Post[]
   latestComments: DashboardComment[]
   users: UserRecord[]
+  mediaAssets: MediaAssetSummary[]
+  topTagItems: Array<{ label: string; value: number; tone?: string }>
 }) {
   const router = useRouter()
   const { logout } = useAuthStatus()
@@ -214,6 +229,8 @@ export default function AdminDashboardClient({
           <StatCard label="累计阅读" value={stats.totalViews} hint={`${stats.pinnedPosts} 篇置顶文章`} />
           <StatCard label="评论状态" value={stats.pendingComments} hint={`${stats.approvedComments} 已通过 / ${stats.rejectedComments} 已拒绝`} />
           <StatCard label="评论用户" value={stats.userCount} hint="已注册的评论账号数量" />
+          <StatCard label="封禁账号" value={stats.bannedUserCount} hint="当前被管理员限制的评论账号" />
+          <StatCard label="媒体素材" value={stats.mediaCount} hint="已上传到站内媒体库的图片数量" />
         </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -307,6 +324,30 @@ export default function AdminDashboardClient({
         <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
           <MiniBarChart title="文章分类分布" items={categoryChart.length ? categoryChart : [{ label: "暂无数据", value: 0 }]} />
           <MiniBarChart title="评论审核概览" items={moderationChart} />
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <MiniBarChart title="热门标签" items={topTagItems.length ? topTagItems : [{ label: "暂无标签", value: 0 }]} />
+          <div className="rounded-3xl border border-border/50 bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold">最近素材</h2>
+              <span className="text-xs text-muted-foreground">媒体库预览</span>
+            </div>
+            {mediaAssets.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {mediaAssets.map((asset) => (
+                  <div key={asset.id} className="overflow-hidden rounded-2xl border border-border/40 bg-background/60">
+                    <img src={asset.url} alt={asset.name} className="h-28 w-full object-cover" />
+                    <div className="px-3 py-2">
+                      <p className="truncate text-xs font-medium">{asset.name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">媒体库还没有图片。</p>
+            )}
+          </div>
         </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">

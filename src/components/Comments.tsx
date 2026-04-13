@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Post } from "@/lib/posts"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import { useUserSession } from "@/hooks/useUserSession"
@@ -38,8 +38,14 @@ interface Comment {
   content: string
   date: string
   userId?: string | null
+  parentCommentId?: string | null
+  isAdmin?: boolean
   status?: "pending" | "approved" | "rejected"
   moderationNote?: string | null
+}
+
+interface CommentNode extends Comment {
+  replies: CommentNode[]
 }
 
 interface CommentsProps {
@@ -52,12 +58,52 @@ export default function Comments({ post }: CommentsProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [author, setAuthor] = useState("")
   const [content, setContent] = useState("")
+  const [replyToCommentId, setReplyToCommentId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
   const [moderatingCommentId, setModeratingCommentId] = useState<string | null>(null)
   const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const activeAuthor = userSession.isAuthenticated ? userSession.displayName ?? "" : author
+  const activeAuthor = userSession.isAuthenticated ? userSession.displayName ?? "" : isAuthenticated ? "站长" : author
+
+  const commentTree = useMemo(() => {
+    const nodes = new Map<string, CommentNode>()
+    comments.forEach((comment) => {
+      nodes.set(comment.id, { ...comment, replies: [] })
+    })
+
+    const roots: CommentNode[] = []
+    comments.forEach((comment) => {
+      const node = nodes.get(comment.id)
+      if (!node) return
+
+      if (comment.parentCommentId) {
+        const parent = nodes.get(comment.parentCommentId)
+        if (parent) {
+          parent.replies.push(node)
+          return
+        }
+      }
+
+      roots.push(node)
+    })
+
+    const sortNodes = (items: CommentNode[], nested = false) => {
+      items.sort((a, b) => {
+        const aValue = Number(a.id)
+        const bValue = Number(b.id)
+        const fallback = a.date.localeCompare(b.date)
+        if (nested) {
+          return Number.isFinite(aValue) && Number.isFinite(bValue) ? aValue - bValue : fallback
+        }
+        return Number.isFinite(aValue) && Number.isFinite(bValue) ? bValue - aValue : -fallback
+      })
+      items.forEach((item) => sortNodes(item.replies, true))
+    }
+
+    sortNodes(roots)
+    return roots
+  }, [comments])
 
   useEffect(() => {
     const loadComments = async () => {
@@ -131,7 +177,7 @@ export default function Comments({ post }: CommentsProps) {
       const res = await fetch(`/api/comments/${post.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ author: nextAuthor, content }),
+        body: JSON.stringify({ author: nextAuthor, content, parentCommentId: replyToCommentId }),
       })
       const data = await res.json()
 
@@ -141,6 +187,7 @@ export default function Comments({ post }: CommentsProps) {
           setAuthor("")
         }
         setContent("")
+        setReplyToCommentId(null)
         setSubmitMsg({ type: "success", text: data.message || "评论发布成功！" })
       } else {
         setSubmitMsg({ type: "error", text: data.error || "评论失败" })
@@ -153,6 +200,85 @@ export default function Comments({ post }: CommentsProps) {
     setTimeout(() => setSubmitMsg(null), 3000)
   }
 
+  const renderCommentNode = (comment: CommentNode, depth = 0) => {
+    const canDelete = isAuthenticated || (userSession.isAuthenticated && comment.userId === userSession.userId)
+    const isReplyingToThis = replyToCommentId === comment.id
+
+    return (
+      <div key={comment.id} className={`${depth > 0 ? "ml-4 border-l border-border/40 pl-4 sm:ml-6" : ""}`}>
+        <div className="rounded-xl border border-border/40 bg-card p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="font-medium text-sm">{comment.author}</span>
+            {comment.isAdmin && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">站长</span>
+            )}
+            <span className="text-xs text-muted-foreground">·</span>
+            <span className="text-xs text-muted-foreground">{comment.date}</span>
+            {comment.status && comment.status !== "approved" && (
+              <span
+                className={`text-[11px] px-2 py-0.5 rounded-full ${
+                  comment.status === "pending"
+                    ? "bg-amber-500/15 text-amber-600"
+                    : "bg-red-500/15 text-red-500"
+                }`}
+              >
+                {comment.status === "pending" ? "待审核" : "已拒绝"}
+              </span>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => handleDelete(comment.id)}
+                disabled={deletingCommentId === comment.id}
+                className="ml-auto text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+              >
+                {deletingCommentId === comment.id ? "删除中..." : "删除"}
+              </button>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground"><span dangerouslySetInnerHTML={{ __html: parseMarkdown(comment.content) }} /></p>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setReplyToCommentId(isReplyingToThis ? null : comment.id)}
+              className="text-xs text-primary hover:text-primary/80 transition-colors"
+            >
+              {isReplyingToThis ? "取消回复" : "回复"}
+            </button>
+            {comment.status === "pending" && isAuthenticated && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleModerate(comment.id, "approved")}
+                  disabled={moderatingCommentId === comment.id}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {moderatingCommentId === comment.id ? "处理中..." : "通过"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModerate(comment.id, "rejected")}
+                  disabled={moderatingCommentId === comment.id}
+                  className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:opacity-50"
+                >
+                  拒绝
+                </button>
+              </>
+            )}
+          </div>
+          {comment.moderationNote && comment.status !== "approved" && (
+            <p className="mt-2 text-xs text-muted-foreground">{comment.moderationNote}</p>
+          )}
+        </div>
+        {comment.replies.length > 0 && (
+          <div className="mt-3 space-y-3">
+            {comment.replies.map((reply) => renderCommentNode(reply, depth + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="mt-12">
       <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
@@ -162,60 +288,7 @@ export default function Comments({ post }: CommentsProps) {
       {/* Comments List */}
       {comments.length > 0 ? (
         <div className="space-y-4 mb-8">
-          {comments.map(comment => (
-            <div key={comment.id} className="p-4 bg-card rounded-xl border border-border/40">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-medium text-sm">{comment.author}</span>
-                <span className="text-xs text-muted-foreground">·</span>
-                <span className="text-xs text-muted-foreground">{comment.date}</span>
-                {comment.status && comment.status !== "approved" && (
-                  <span
-                    className={`text-[11px] px-2 py-0.5 rounded-full ${
-                      comment.status === "pending"
-                        ? "bg-amber-500/15 text-amber-600"
-                        : "bg-red-500/15 text-red-500"
-                    }`}
-                  >
-                    {comment.status === "pending" ? "待审核" : "已拒绝"}
-                  </span>
-                )}
-                {(isAuthenticated || (userSession.isAuthenticated && comment.userId === userSession.userId)) && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(comment.id)}
-                    disabled={deletingCommentId === comment.id}
-                    className="ml-auto text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                  >
-                    {deletingCommentId === comment.id ? "删除中..." : "删除"}
-                  </button>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground"><span dangerouslySetInnerHTML={{ __html: parseMarkdown(comment.content) }} /></p>
-              {comment.status === "pending" && isAuthenticated && (
-                <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleModerate(comment.id, "approved")}
-                    disabled={moderatingCommentId === comment.id}
-                    className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    {moderatingCommentId === comment.id ? "处理中..." : "通过"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModerate(comment.id, "rejected")}
-                    disabled={moderatingCommentId === comment.id}
-                    className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:opacity-50"
-                  >
-                    拒绝
-                  </button>
-                </div>
-              )}
-              {comment.moderationNote && comment.status !== "approved" && (
-                <p className="mt-2 text-xs text-muted-foreground">{comment.moderationNote}</p>
-              )}
-            </div>
-          ))}
+          {commentTree.map((comment) => renderCommentNode(comment))}
         </div>
       ) : (
         <p className="text-center text-sm text-muted-foreground py-8 mb-8">
@@ -225,11 +298,28 @@ export default function Comments({ post }: CommentsProps) {
 
       {/* Comment Form */}
       <form onSubmit={handleSubmit} className="p-4 bg-card rounded-xl border border-border/40">
+        {replyToCommentId && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">正在回复一条评论</span>
+            <button
+              type="button"
+              onClick={() => setReplyToCommentId(null)}
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        )}
         <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-secondary/20 px-3 py-2">
           {userSession.isAuthenticated ? (
             <div className="min-w-0">
               <p className="text-sm font-medium">已登录为 {userSession.displayName}</p>
               <p className="text-xs text-muted-foreground">@{userSession.username}</p>
+            </div>
+          ) : isAuthenticated ? (
+            <div className="min-w-0">
+              <p className="text-sm font-medium">当前将以站长身份评论</p>
+              <p className="text-xs text-muted-foreground">该评论会带有站长标识并直接公开</p>
             </div>
           ) : (
             <div className="min-w-0">
@@ -257,7 +347,7 @@ export default function Comments({ post }: CommentsProps) {
             )}
           </div>
         </div>
-        {!userSession.isAuthenticated && (
+        {!userSession.isAuthenticated && !isAuthenticated && (
           <div className="mb-3">
             <label className="block text-sm font-medium mb-1">昵称</label>
             <input
@@ -275,7 +365,7 @@ export default function Comments({ post }: CommentsProps) {
           <textarea
             value={content}
             onChange={e => setContent(e.target.value)}
-            placeholder="说点什么..."
+            placeholder={replyToCommentId ? "写下你的回复..." : "说点什么..."}
             rows={3}
             maxLength={500}
             className="w-full px-3 py-2 bg-secondary/50 border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm resize-none"

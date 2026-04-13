@@ -30,11 +30,20 @@ export async function POST(
   const { postId } = await params
   const body = await request.json()
   const commentUser = await getCommentUserFromRequest(request)
+  const isAdminActor = isAuthenticatedRequest(request) && !commentUser?.userId
+  const parentCommentId = typeof body.parentCommentId === 'string' && body.parentCommentId.trim() ? body.parentCommentId.trim() : null
   const content = String(body.content || '')
-  const author = commentUser?.displayName || String(body.author || '')
+  const author = commentUser?.displayName || (isAdminActor ? '站长' : String(body.author || ''))
 
   if (!author?.trim() || !content?.trim()) {
     return NextResponse.json({ error: '昵称和评论内容不能为空' }, { status: 400 })
+  }
+
+  if (parentCommentId) {
+    const parentComment = await getCommentById(postId, parentCommentId)
+    if (!parentComment) {
+      return NextResponse.json({ error: '回复的目标评论不存在' }, { status: 404 })
+    }
   }
 
   const validationError = validateCommentContent(content)
@@ -52,8 +61,10 @@ export async function POST(
     author,
     content,
     userId: commentUser?.userId || null,
-    status: commentUser?.userId || isAuthenticatedRequest(request) ? 'approved' : 'pending',
-    moderationNote: commentUser?.userId || isAuthenticatedRequest(request) ? null : '等待管理员审核',
+    parentCommentId,
+    isAdmin: isAdminActor,
+    status: commentUser?.userId || isAdminActor ? 'approved' : 'pending',
+    moderationNote: commentUser?.userId || isAdminActor ? null : '等待管理员审核',
   })
 
   invalidateCommentsCache()

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
+import MediaLibraryDialog from "@/components/MediaLibraryDialog"
 
 interface LocalDraft {
   slug: string
@@ -64,6 +65,7 @@ export default function EditPostPage() {
   const [loading, setLoading] = useState(true)
   const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit")
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
+  const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
   const [savedAt, setSavedAt] = useState<string | null>(localDraft?.savedAt ?? null)
   const [availableTracks, setAvailableTracks] = useState<MusicTrack[]>([])
@@ -532,6 +534,14 @@ export default function EditPostPage() {
                 >
                   🖼️ 链接
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaDialogOpen(true)}
+                  className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors flex items-center gap-1"
+                  title="打开媒体库"
+                >
+                  🗂️ 媒体库
+                </button>
                 <span className="text-xs text-muted-foreground ml-2">· 支持拖拽 / Ctrl+V 粘贴 / 📁上传</span>
               </div>
 
@@ -635,6 +645,15 @@ export default function EditPostPage() {
               </div>
             </div>
           )}
+
+          <MediaLibraryDialog
+            isOpen={mediaDialogOpen}
+            onClose={() => setMediaDialogOpen(false)}
+            onSelect={(url) => {
+              const imgTag = `\n<img src="${url}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
+              insertTextAtCursor(imgTag)
+            }}
+          />
 
           {versions.length > 0 && (
             <div className="rounded-xl border border-border/50 bg-card p-4">

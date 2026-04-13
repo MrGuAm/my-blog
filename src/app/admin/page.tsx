@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { listComments, listPosts, listUsers } from "@/lib/server/store"
+import { listMediaAssets } from "@/lib/server/media"
 import AdminDashboardClient from "./AdminDashboardClient"
 
 export const metadata: Metadata = {
@@ -15,10 +16,11 @@ export default async function AdminPage() {
     redirect("/home?login=1&next=/admin")
   }
 
-  const [posts, comments, users] = await Promise.all([
+  const [posts, comments, users, mediaAssets] = await Promise.all([
     listPosts({ includeDrafts: true }),
     listComments({ statuses: ["approved", "pending", "rejected"], limit: 200 }),
     listUsers(30),
+    listMediaAssets(),
   ])
 
   const stats = {
@@ -31,6 +33,8 @@ export default async function AdminPage() {
     pendingComments: comments.filter((comment) => comment.status === "pending").length,
     rejectedComments: comments.filter((comment) => comment.status === "rejected").length,
     userCount: users.length,
+    bannedUserCount: users.filter((user) => user.isBanned).length,
+    mediaCount: mediaAssets.length,
   }
 
   const topPosts = [...posts]
@@ -52,6 +56,16 @@ export default async function AdminPage() {
     }
   })
 
+  const topTags = [...posts]
+    .filter((post) => !post.draft)
+    .flatMap((post) => post.tags)
+    .reduce<Map<string, number>>((map, tag) => map.set(tag, (map.get(tag) || 0) + 1), new Map())
+
+  const topTagItems = [...topTags.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, value]) => ({ label, value, tone: "bg-[#FF9B6B]" }))
+
   return (
     <AdminDashboardClient
       stats={stats}
@@ -59,6 +73,8 @@ export default async function AdminPage() {
       recentDrafts={recentDrafts}
       latestComments={latestComments}
       users={users}
+      mediaAssets={mediaAssets.slice(0, 6)}
+      topTagItems={topTagItems}
     />
   )
 }
