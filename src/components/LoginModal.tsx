@@ -34,7 +34,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/32 backdrop-blur-xl" onClick={onClose} />
       <div className="apple-panel relative mx-4 w-full max-w-sm rounded-[2rem] p-8 shadow-2xl">
-        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] text-sm font-semibold text-white shadow-lg shadow-slate-900/15">
+        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#5a4030] text-sm font-semibold text-white shadow-lg shadow-amber-900/15">
           C
         </div>
         <p className="text-center text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">Admin Access</p>
@@ -66,7 +66,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
 
           <button
             type="submit"
-            className="h-12 w-full rounded-full bg-[#111827] text-sm font-medium text-white transition-colors hover:bg-[#1f2937]"
+            className="h-12 w-full rounded-full bg-[#5a4030] text-sm font-medium text-white transition-colors hover:bg-[#6a4c39]"
           >
             进入管理
           </button>

@@ -98,7 +98,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#111827] text-sm font-semibold text-white shadow-lg shadow-slate-900/10 dark:bg-white dark:text-slate-900">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#5a4030] text-sm font-semibold text-white shadow-lg shadow-amber-900/10 dark:bg-[#f5e9dc] dark:text-[#35261d]">
                 <span className="text-sm font-bold text-current">C</span>
               </div>
               <span className="text-lg font-semibold tracking-[-0.03em]">Champion&apos;s Blog</span>
@@ -212,7 +212,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
                     <button
                       type="button"
                       onClick={() => playTrackBySrc(post.bgmSrc)}
-                      className="rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1f2937] dark:bg-white dark:text-slate-900 dark:hover:bg-white/90"
+                      className="rounded-full bg-[#5a4030] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#6a4c39] dark:bg-[#f5e9dc] dark:text-[#35261d] dark:hover:bg-[#fff6ee]"
                     >
                       {track.src === post.bgmSrc ? "播放本文 BGM 中" : "播放本文 BGM"}
                     </button>

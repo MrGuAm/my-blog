@@ -28,9 +28,9 @@ interface RecentComment {
 function CardAccent() {
   return (
     <div className="flex items-center gap-1.5 opacity-80">
-      <span className="h-2.5 w-2.5 rounded-full bg-slate-900/80 dark:bg-white/85" />
-      <span className="h-2 w-2 rounded-full bg-slate-400/80 dark:bg-white/45" />
-      <span className="h-1.5 w-8 rounded-full bg-slate-300 dark:bg-white/20" />
+      <span className="h-2.5 w-2.5 rounded-full bg-[#5a4030]/85 dark:bg-[#f5e9dc]/90" />
+      <span className="h-2 w-2 rounded-full bg-[#b79378]/85 dark:bg-[#e4c7ab]/65" />
+      <span className="h-1.5 w-8 rounded-full bg-[#d8c1ab] dark:bg-[#e8d7c4]/30" />
     </div>
   )
 }
@@ -64,7 +64,7 @@ function PostCard({
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{post.date}</span>
           {post.pinned && (
-            <span className="rounded-full bg-[#111827] px-2.5 py-1 text-xs font-medium text-white dark:bg-white dark:text-slate-900">
+            <span className="rounded-full bg-[#5a4030] px-2.5 py-1 text-xs font-medium text-white dark:bg-[#f5e9dc] dark:text-[#35261d]">
               置顶
             </span>
           )}
@@ -82,7 +82,7 @@ function PostCard({
               }}
               className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                 isCurrentBgm
-                  ? "bg-[#111827] text-white dark:bg-white dark:text-slate-900"
+                  ? "bg-[#5a4030] text-white dark:bg-[#f5e9dc] dark:text-[#35261d]"
                   : "border border-white/70 bg-white/72 text-foreground/80 backdrop-blur-xl hover:bg-white dark:border-white/10 dark:bg-white/8 dark:text-white/80"
               }`}
             >
@@ -231,7 +231,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#111827] text-sm font-semibold text-white shadow-lg shadow-slate-900/10 dark:bg-white dark:text-slate-900">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#5a4030] text-sm font-semibold text-white shadow-lg shadow-amber-900/10 dark:bg-[#f5e9dc] dark:text-[#35261d]">
                 <span className="text-sm font-bold text-current">C</span>
               </div>
               <span className="text-lg font-semibold tracking-[-0.03em] text-foreground">Champion&apos;s Blog</span>
