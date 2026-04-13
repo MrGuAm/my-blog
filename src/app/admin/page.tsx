@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
-import { listComments, listPosts, listUsers } from "@/lib/server/store"
+import { listComments } from "@/lib/server/comments"
+import { listPosts, listUsers } from "@/lib/server/store"
 import { listMediaAssets } from "@/lib/server/media"
 import AdminDashboardClient from "./AdminDashboardClient"
 

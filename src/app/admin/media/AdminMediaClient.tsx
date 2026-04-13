@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link"
-import { useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MediaAsset } from "@/lib/server/media"
 
@@ -18,6 +18,8 @@ export default function AdminMediaClient({ initialAssets }: { initialAssets: Med
   const [assets, setAssets] = useState(initialAssets)
   const [isUploading, setIsUploading] = useState(false)
   const [message, setMessage] = useState("")
+  const [keyword, setKeyword] = useState("")
+  const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
@@ -64,6 +66,29 @@ export default function AdminMediaClient({ initialAssets }: { initialAssets: Med
     }
   }
 
+  const filteredAssets = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase()
+    const now = Date.now()
+    return assets.filter((asset) => {
+      if (normalizedKeyword && !asset.name.toLowerCase().includes(normalizedKeyword)) {
+        return false
+      }
+
+      if (timeFilter === "all") return true
+      const days = timeFilter === "7d" ? 7 : 30
+      return now - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
+    })
+  }, [assets, keyword, timeFilter])
+
+  const copyValue = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setMessage(`${label}已复制`)
+    } catch {
+      setMessage("复制失败，请重试")
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
@@ -89,7 +114,35 @@ export default function AdminMediaClient({ initialAssets }: { initialAssets: Med
             <p className="mt-2 text-muted-foreground">集中管理文章中要复用的图片素材。</p>
             {message && <p className="mt-3 text-sm text-primary">{message}</p>}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 md:items-end">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                type="text"
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder="搜索素材名称"
+                className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm sm:w-64"
+              />
+              <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
+                {[
+                  ["all", "全部"],
+                  ["7d", "7 天内"],
+                  ["30d", "30 天内"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setTimeFilter(value as "all" | "7d" | "30d")}
+                    className={`rounded-full px-3 py-1 transition-colors ${
+                      timeFilter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
             <input
               ref={fileInputRef}
               type="file"
@@ -115,12 +168,13 @@ export default function AdminMediaClient({ initialAssets }: { initialAssets: Med
             >
               刷新
             </button>
+            </div>
           </div>
         </div>
 
-        {assets.length > 0 ? (
+        {filteredAssets.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {assets.map((asset) => (
+            {filteredAssets.map((asset) => (
               <div key={asset.id} className="rounded-2xl border border-border/50 bg-card p-3">
                 <div className="overflow-hidden rounded-xl border border-border/40">
                   <img src={asset.url} alt={asset.name} className="h-52 w-full object-cover" />
@@ -134,10 +188,24 @@ export default function AdminMediaClient({ initialAssets }: { initialAssets: Med
                 <div className="mt-3 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => navigator.clipboard.writeText(asset.url).then(() => setMessage("素材链接已复制"))}
+                    onClick={() => copyValue(asset.url, "素材链接")}
                     className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
                   >
-                    复制链接
+                    链接
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyValue(`![${asset.name}](${asset.url})`, "Markdown")}
+                    className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                  >
+                    Markdown
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyValue(`<img src="${asset.url}" alt="${asset.name}" />`, "HTML")}
+                    className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                  >
+                    HTML
                   </button>
                   <button
                     type="button"
@@ -149,6 +217,10 @@ export default function AdminMediaClient({ initialAssets }: { initialAssets: Med
                 </div>
               </div>
             ))}
+          </div>
+        ) : assets.length > 0 ? (
+          <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
+            当前筛选条件下没有素材，换个关键词或时间范围试试。
           </div>
         ) : (
           <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">

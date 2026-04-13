@@ -106,7 +106,7 @@ export interface UserMusicLibrary {
   updatedAt: string
 }
 
-interface CommentRow {
+export interface CommentRow {
   id: string
   post_id: string
   author: string
@@ -136,7 +136,7 @@ declare global {
   var __championBlogStoreReady: Promise<void> | undefined
 }
 
-function isRemoteDatabaseEnabled() {
+export function isRemoteDatabaseEnabled() {
   return Boolean(databaseUrl)
 }
 
@@ -189,7 +189,7 @@ function rowToPostVersion(row: PostVersionRow): PostVersionRecord {
   }
 }
 
-function rowToComment(row: CommentRow): CommentRecord {
+export function rowToComment(row: CommentRow): CommentRecord {
   return {
     id: row.id,
     postId: row.post_id,
@@ -236,7 +236,7 @@ function normalizeTags(tags?: string[]) {
   return (tags || []).map((tag) => tag.trim()).filter(Boolean)
 }
 
-function normalizeCommentStatus(status?: string | null): CommentStatus {
+export function normalizeCommentStatus(status?: string | null): CommentStatus {
   return status === 'pending' || status === 'rejected' ? status : 'approved'
 }
 
@@ -272,7 +272,7 @@ function runSqliteMigration(db: Database.Database, id: string, apply: () => void
 
   const run = db.transaction(() => {
     apply()
-    db.prepare('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)').run(id, new Date().toISOString())
+    db.prepare('INSERT OR IGNORE INTO schema_migrations (id, applied_at) VALUES (?, ?)').run(id, new Date().toISOString())
   })
 
   run()
@@ -302,7 +302,59 @@ async function runRemoteMigration(id: string, apply: () => Promise<void>) {
   await sql`INSERT INTO schema_migrations (id, applied_at) VALUES (${id}, ${new Date().toISOString()})`
 }
 
-function getDb() {
+function syncSqliteSeedContent(db: Database.Database) {
+  const postsData = readJsonFile<{ posts: Post[] }>(postsJsonPath, { posts: [] })
+  const commentsData = readJsonFile<CommentFileData>(commentsJsonPath, { comments: {} })
+  const insertPost = db.prepare(`
+    INSERT OR IGNORE INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at)
+    VALUES (@id, @slug, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @draft, @views, @updated_at)
+  `)
+  const insertComment = db.prepare(`
+    INSERT OR IGNORE INTO comments (id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at)
+    VALUES (@id, @post_id, @author, @content, @date, @user_id, @parent_comment_id, @is_admin, @status, @moderation_note, @reviewed_at)
+  `)
+
+  const syncSeeds = db.transaction(() => {
+    for (const post of postsData.posts) {
+      insertPost.run({
+        id: post.id,
+        slug: post.slug || post.id,
+        title: post.title,
+        excerpt: post.excerpt,
+        date: post.date,
+        category: post.category,
+        tags_json: JSON.stringify(post.tags || []),
+        content: post.content,
+        cover_image: post.coverImage || '',
+        bgm_src: post.bgmSrc || '',
+        pinned: post.pinned ? 1 : 0,
+        draft: post.draft ? 1 : 0,
+        views: post.views || 0,
+        updated_at: post.updatedAt || post.date,
+      })
+    }
+
+    for (const comment of Object.values(commentsData.comments).flat()) {
+      insertComment.run({
+        id: comment.id,
+        post_id: comment.postId,
+        author: comment.author,
+        content: comment.content,
+        date: comment.date,
+        user_id: comment.userId || null,
+        parent_comment_id: comment.parentCommentId || null,
+        is_admin: comment.isAdmin ? 1 : 0,
+        status: normalizeCommentStatus(comment.status),
+        moderation_note: comment.moderationNote || null,
+        reviewed_at: comment.status === 'pending' ? null : new Date().toISOString(),
+      })
+    }
+  })
+
+  syncSeeds()
+}
+
+export function getDb() {
   if (!global.__championBlogDb) {
     ensureDataDir()
     const db = new Database(dbPath)
@@ -485,13 +537,17 @@ function getDb() {
       insertMany(Object.values(commentsData.comments).flat())
     }
 
+    runSqliteMigration(db, '008-seed-content-sync', () => {
+      syncSqliteSeedContent(db)
+    })
+
     global.__championBlogDb = db
   }
 
   return global.__championBlogDb
 }
 
-function getSql() {
+export function getSql() {
   if (!databaseUrl) {
     throw new Error('DATABASE_URL is not configured')
   }
@@ -639,13 +695,17 @@ async function ensureRemoteSchema() {
     await sql`CREATE INDEX IF NOT EXISTS idx_comments_parent_comment_id ON comments(parent_comment_id)`
   })
 
+  await runRemoteMigration('008-seed-content-sync', async () => {
+    await seedRemoteDatabase()
+  })
+
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
   if (Number(postCountRows[0]?.count || 0) === 0) {
     await seedRemoteDatabase()
   }
 }
 
-async function ensureStoreReady() {
+export async function ensureStoreReady() {
   if (!isRemoteDatabaseEnabled()) {
     getDb()
     return
@@ -901,233 +961,6 @@ export async function incrementPostViews(id: string) {
   return updated?.views || 0
 }
 
-export async function listCommentsByPost(postId: string, options?: { includePending?: boolean; includeRejected?: boolean; viewerUserId?: string | null }) {
-  await ensureStoreReady()
-  const includePending = options?.includePending ?? false
-  const includeRejected = options?.includeRejected ?? false
-  const viewerUserId = options?.viewerUserId || null
-
-  if (isRemoteDatabaseEnabled()) {
-    const sql = getSql()
-    const rows = (includePending || includeRejected || viewerUserId
-      ? await sql`
-        SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-        FROM comments
-        WHERE post_id = ${postId}
-          AND (
-            status = 'approved'
-            OR (${includePending} = true AND status = 'pending')
-            OR (${includeRejected} = true AND status = 'rejected')
-            OR (${viewerUserId} IS NOT NULL AND user_id = ${viewerUserId})
-          )
-        ORDER BY date DESC, id DESC
-      `
-      : await sql`
-        SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-        FROM comments
-        WHERE post_id = ${postId} AND status = 'approved'
-        ORDER BY date DESC, id DESC
-      `) as CommentRow[]
-    return rows.map(rowToComment)
-  }
-
-  const rows = getDb().prepare(`
-    SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-    FROM comments
-    WHERE post_id = ?
-      AND (
-        status = 'approved'
-        OR (? = 1 AND status = 'pending')
-        OR (? = 1 AND status = 'rejected')
-        OR (? IS NOT NULL AND user_id = ?)
-      )
-    ORDER BY date DESC, id DESC
-  `).all(postId, includePending ? 1 : 0, includeRejected ? 1 : 0, viewerUserId, viewerUserId) as CommentRow[]
-
-  return rows.map(rowToComment)
-}
-
-export async function listRecentComments(limit = 10, options?: { includePending?: boolean }) {
-  await ensureStoreReady()
-  const includePending = options?.includePending ?? false
-
-  if (isRemoteDatabaseEnabled()) {
-    const sql = getSql()
-    const rows = (await sql`
-      SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-      FROM comments
-      WHERE status = 'approved' OR (${includePending} = true AND status = 'pending')
-      ORDER BY date DESC, id DESC
-      LIMIT ${limit}
-    `) as CommentRow[]
-    return rows.map(rowToComment)
-  }
-
-  const rows = getDb().prepare(`
-    SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-    FROM comments
-    WHERE status = 'approved' OR (? = 1 AND status = 'pending')
-    ORDER BY date DESC, id DESC
-    LIMIT ?
-  `).all(includePending ? 1 : 0, limit) as CommentRow[]
-
-  return rows.map(rowToComment)
-}
-
-export async function listComments(options?: {
-  statuses?: CommentStatus[]
-  limit?: number
-}) {
-  await ensureStoreReady()
-  const statuses = options?.statuses?.length ? options.statuses : ['approved', 'pending', 'rejected']
-  const limit = options?.limit ?? 100
-
-  if (isRemoteDatabaseEnabled()) {
-    const sql = getSql()
-    const rows = (await sql`
-      SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-      FROM comments
-      ORDER BY date DESC, id DESC
-      LIMIT ${limit}
-    `) as CommentRow[]
-    return rows.map(rowToComment).filter((comment) => statuses.includes(comment.status || 'approved'))
-  }
-
-  const rows = getDb().prepare(`
-    SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-    FROM comments
-    ORDER BY date DESC, id DESC
-    LIMIT ?
-  `).all(limit) as CommentRow[]
-
-  return rows.map(rowToComment).filter((comment) => statuses.includes(comment.status || 'approved'))
-}
-
-export async function createComment(input: {
-  postId: string
-  author: string
-  content: string
-  userId?: string | null
-  parentCommentId?: string | null
-  isAdmin?: boolean
-  status?: CommentStatus
-  moderationNote?: string | null
-}) {
-  await ensureStoreReady()
-
-  const comment: CommentRecord = {
-    id: Date.now().toString(),
-    postId: input.postId,
-    author: input.author.trim(),
-    content: input.content.trim(),
-    date: new Date().toISOString().split('T')[0],
-    userId: input.userId || null,
-    parentCommentId: input.parentCommentId || null,
-    isAdmin: Boolean(input.isAdmin),
-    status: normalizeCommentStatus(input.status),
-    moderationNote: input.moderationNote || null,
-  }
-
-  if (isRemoteDatabaseEnabled()) {
-    const sql = getSql()
-    await sql`
-      INSERT INTO comments (id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at)
-      VALUES (${comment.id}, ${comment.postId}, ${comment.author}, ${comment.content}, ${comment.date}, ${comment.userId || null}, ${comment.parentCommentId || null}, ${comment.isAdmin ? 1 : 0}, ${comment.status || 'approved'}, ${comment.moderationNote || null}, ${comment.status === 'pending' ? null : new Date().toISOString()})
-    `
-    return comment
-  }
-
-  getDb().prepare(`
-    INSERT INTO comments (id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at)
-    VALUES (@id, @post_id, @author, @content, @date, @user_id, @parent_comment_id, @is_admin, @status, @moderation_note, @reviewed_at)
-  `).run({
-    id: comment.id,
-    post_id: comment.postId,
-    author: comment.author,
-    content: comment.content,
-    date: comment.date,
-    user_id: comment.userId || null,
-    parent_comment_id: comment.parentCommentId || null,
-    is_admin: comment.isAdmin ? 1 : 0,
-    status: comment.status || 'approved',
-    moderation_note: comment.moderationNote || null,
-    reviewed_at: comment.status === 'pending' ? null : new Date().toISOString(),
-  })
-
-  return comment
-}
-
-export async function getCommentById(postId: string, commentId: string) {
-  await ensureStoreReady()
-
-  if (isRemoteDatabaseEnabled()) {
-    const sql = getSql()
-    const rows = (await sql`
-      SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-      FROM comments
-      WHERE id = ${commentId} AND post_id = ${postId}
-      LIMIT 1
-    `) as CommentRow[]
-    return rows[0] ? rowToComment(rows[0]) : undefined
-  }
-
-  const row = getDb().prepare(`
-    SELECT id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-    FROM comments
-    WHERE id = ? AND post_id = ?
-    LIMIT 1
-  `).get(commentId, postId) as CommentRow | undefined
-
-  return row ? rowToComment(row) : undefined
-}
-
-export async function moderateComment(postId: string, commentId: string, status: CommentStatus, moderationNote?: string | null) {
-  await ensureStoreReady()
-  const nextStatus = normalizeCommentStatus(status)
-  const reviewedAt = new Date().toISOString()
-
-  if (isRemoteDatabaseEnabled()) {
-    const sql = getSql()
-    const rows = (await sql`
-      UPDATE comments
-      SET status = ${nextStatus},
-          moderation_note = ${moderationNote || null},
-          reviewed_at = ${reviewedAt}
-      WHERE id = ${commentId} AND post_id = ${postId}
-      RETURNING id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at
-    `) as CommentRow[]
-    return rows[0] ? rowToComment(rows[0]) : undefined
-  }
-
-  getDb().prepare(`
-    UPDATE comments
-    SET status = ?, moderation_note = ?, reviewed_at = ?
-    WHERE id = ? AND post_id = ?
-  `).run(nextStatus, moderationNote || null, reviewedAt, commentId, postId)
-
-  return getCommentById(postId, commentId)
-}
-
-async function listCommentRelationsByPost(postId: string) {
-  await ensureStoreReady()
-
-  if (isRemoteDatabaseEnabled()) {
-    const sql = getSql()
-    const rows = (await sql`
-      SELECT id, parent_comment_id
-      FROM comments
-      WHERE post_id = ${postId}
-    `) as Array<{ id: string; parent_comment_id?: string | null }>
-    return rows
-  }
-
-  return getDb().prepare(`
-    SELECT id, parent_comment_id
-    FROM comments
-    WHERE post_id = ?
-  `).all(postId) as Array<{ id: string; parent_comment_id?: string | null }>
-}
-
 export async function getPostBySlug(slug: string) {
   await ensureStoreReady()
 
@@ -1231,43 +1064,6 @@ export async function getPostVersion(postId: string, versionId: string) {
     LIMIT 1
   `).get(postId, versionId) as PostVersionRow | undefined
   return row ? rowToPostVersion(row) : undefined
-}
-
-export async function deleteComment(postId: string, commentId: string) {
-  await ensureStoreReady()
-  const relations = await listCommentRelationsByPost(postId)
-  const targetIds = new Set<string>([commentId])
-
-  let changed = true
-  while (changed) {
-    changed = false
-    for (const relation of relations) {
-      if (relation.parent_comment_id && targetIds.has(relation.parent_comment_id) && !targetIds.has(relation.id)) {
-        targetIds.add(relation.id)
-        changed = true
-      }
-    }
-  }
-
-  const ids = Array.from(targetIds)
-
-  if (isRemoteDatabaseEnabled()) {
-    const sql = getSql()
-    let deletedCount = 0
-    for (const id of ids) {
-      const rows = (await sql`
-        DELETE FROM comments
-        WHERE post_id = ${postId} AND id = ${id}
-        RETURNING id
-      `) as Array<{ id: string }>
-      deletedCount += rows.length
-    }
-    return deletedCount > 0
-  }
-
-  const placeholders = ids.map(() => '?').join(', ')
-  const result = getDb().prepare(`DELETE FROM comments WHERE post_id = ? AND id IN (${placeholders})`).run(postId, ...ids)
-  return result.changes > 0
 }
 
 export async function getUserByUsername(username: string) {

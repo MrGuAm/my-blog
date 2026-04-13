@@ -5,7 +5,8 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
-import type { CommentRecord, UserRecord } from "@/lib/server/store"
+import type { CommentRecord } from "@/lib/server/comments"
+import type { UserRecord } from "@/lib/server/store"
 import type { Post } from "@/lib/posts"
 
 interface DashboardStats {
@@ -211,6 +212,7 @@ export default function AdminDashboardClient({
             <Link href="/home" className="text-sm text-muted-foreground transition-colors hover:text-primary">首页</Link>
             <Link href="/write" className="text-sm text-muted-foreground transition-colors hover:text-primary">写文章</Link>
             <Link href="/moderation" className="text-sm text-muted-foreground transition-colors hover:text-primary">评论审核</Link>
+            <Link href="/admin/media" className="text-sm text-muted-foreground transition-colors hover:text-primary">媒体库</Link>
             <Link href="/music" className="text-sm text-muted-foreground transition-colors hover:text-primary">音乐页</Link>
             <button onClick={logout} className="text-sm text-red-500 transition-colors hover:text-red-600">退出</button>
           </div>

@@ -1,5 +1,6 @@
 import { revalidateTag, unstable_cache } from 'next/cache'
-import { getPostById, getPostBySlug, listPosts, listRecentComments } from '@/lib/server/store'
+import { listRecentComments } from '@/lib/server/comments'
+import { getPostById, getPostBySlug, listPosts } from '@/lib/server/store'
 
 export const CACHE_TAGS = {
   posts: 'posts',

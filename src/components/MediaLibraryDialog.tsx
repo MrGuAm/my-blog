@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 interface MediaAsset {
   id: string
@@ -29,6 +29,8 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [message, setMessage] = useState("")
+  const [keyword, setKeyword] = useState("")
+  const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
 
   const loadAssets = async () => {
     setIsLoading(true)
@@ -49,7 +51,30 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
     loadAssets()
   }, [isOpen])
 
+  const filteredAssets = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase()
+    const now = Date.now()
+    return assets.filter((asset) => {
+      if (normalizedKeyword && !asset.name.toLowerCase().includes(normalizedKeyword)) {
+        return false
+      }
+
+      if (timeFilter === "all") return true
+      const days = timeFilter === "7d" ? 7 : 30
+      return now - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
+    })
+  }, [assets, keyword, timeFilter])
+
   if (!isOpen) return null
+
+  const copyAssetValue = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setMessage(`${label}已复制`)
+    } catch {
+      setMessage("复制失败，请重试")
+    }
+  }
 
   const handleUpload = async (file?: File | null) => {
     if (!file) return
@@ -134,11 +159,39 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
         {message && <p className="px-6 pt-3 text-sm text-primary">{message}</p>}
 
         <div className="overflow-y-auto px-6 py-5">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <input
+              type="text"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="搜索素材名称"
+              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm sm:max-w-xs"
+            />
+            <div className="inline-flex rounded-full border border-border/50 bg-background p-1 text-sm">
+              {[
+                ["all", "全部"],
+                ["7d", "7 天内"],
+                ["30d", "30 天内"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTimeFilter(value as "all" | "7d" | "30d")}
+                  className={`rounded-full px-3 py-1 transition-colors ${
+                    timeFilter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {isLoading ? (
             <p className="text-sm text-muted-foreground">正在加载素材库...</p>
-          ) : assets.length > 0 ? (
+          ) : filteredAssets.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {assets.map((asset) => (
+              {filteredAssets.map((asset) => (
                 <div key={asset.id} className="rounded-2xl border border-border/50 bg-background/60 p-3">
                   <button
                     type="button"
@@ -169,6 +222,20 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
                     </button>
                     <button
                       type="button"
+                      onClick={() => copyAssetValue(`![${asset.name}](${asset.url})`, "Markdown ")}
+                      className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                    >
+                      Markdown
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyAssetValue(`<img src="${asset.url}" alt="${asset.name}" />`, "HTML ")}
+                      className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                    >
+                      HTML
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleDelete(asset)}
                       className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10"
                     >
@@ -177,6 +244,10 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
                   </div>
                 </div>
               ))}
+            </div>
+          ) : assets.length > 0 ? (
+            <div className="rounded-2xl border border-border/50 bg-background/60 p-8 text-center text-muted-foreground">
+              当前筛选条件下没有素材，换个关键词或时间范围试试。
             </div>
           ) : (
             <div className="rounded-2xl border border-border/50 bg-background/60 p-8 text-center text-muted-foreground">

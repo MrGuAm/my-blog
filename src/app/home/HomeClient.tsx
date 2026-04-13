@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 import LoginModal from "@/components/LoginModal"
 import MarqueeText from "@/components/music/MarqueeText"
-import SyncedLyricsPanel from "@/components/music/SyncedLyricsPanel"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 
@@ -247,11 +246,6 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
     playNext,
     selectTrack,
     playTrackBySrc,
-    currentLyrics,
-    parsedLyrics,
-    activeLyricIndex,
-    recentTracks,
-    favoriteTracks,
     toggleFavorite,
     isFavorite,
     progress,
@@ -260,7 +254,6 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
     handleMouseDown,
     handleProgressClick,
     formatTime,
-    seekToTime,
   } = useMusic()
   const { isAuthenticated, logout } = useAuthStatus()
   const [showDrafts, setShowDrafts] = useState(false)
@@ -519,7 +512,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
 
           {/* Sidebar */}
           <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-56 lg:self-start">
-            <div className="space-y-4 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+            <div className="space-y-4">
               {/* Player */}
               <div
                 className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden"
@@ -673,43 +666,6 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                 </div>
               )}
             </div>
-
-            {(currentLyrics.length > 0 || favoriteTracks.length > 0 || recentTracks.length > 0) && (
-              <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
-                <div className="px-3 py-3 space-y-3">
-                  {currentLyrics.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold mb-2">当前歌词</h3>
-                      <SyncedLyricsPanel lyrics={parsedLyrics} activeIndex={activeLyricIndex} onSeek={seekToTime} height={176} />
-                    </div>
-                  )}
-                  {favoriteTracks.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold mb-2">收藏歌曲</h3>
-                      <div className="space-y-2">
-                        {favoriteTracks.slice(0, 3).map((song) => (
-                          <button key={song.src} onClick={() => playTrackBySrc(song.src, false)} className="block text-left text-xs hover:text-primary transition-colors">
-                            {song.title}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {recentTracks.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold mb-2">最近播放</h3>
-                      <div className="space-y-2">
-                        {recentTracks.slice(0, 3).map((song) => (
-                          <button key={song.src} onClick={() => playTrackBySrc(song.src, false)} className="block text-left text-xs hover:text-primary transition-colors">
-                            {song.title}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Latest Posts */}
             <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
