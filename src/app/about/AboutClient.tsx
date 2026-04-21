@@ -34,6 +34,36 @@ export default function AboutClient({ siteSettings }: { siteSettings: SiteSettin
       tone: paletteTones[2],
     },
   ]
+  const contactLinks = [
+    siteSettings.contactEmail
+      ? {
+          label: "邮箱",
+          value: siteSettings.contactEmail,
+          href: `mailto:${siteSettings.contactEmail}`,
+        }
+      : null,
+    siteSettings.githubUrl
+      ? {
+          label: "GitHub",
+          value: siteSettings.githubUrl.replace(/^https?:\/\//, ""),
+          href: siteSettings.githubUrl,
+        }
+      : null,
+    siteSettings.xProfileUrl
+      ? {
+          label: "X",
+          value: siteSettings.xProfileUrl.replace(/^https?:\/\//, ""),
+          href: siteSettings.xProfileUrl,
+        }
+      : null,
+    siteSettings.primaryLinkUrl
+      ? {
+          label: siteSettings.primaryLinkLabel,
+          value: siteSettings.primaryLinkUrl.replace(/^https?:\/\//, ""),
+          href: siteSettings.primaryLinkUrl,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ label: string; value: string; href: string }>
 
   return (
     <div className="min-h-screen text-foreground">
@@ -86,6 +116,29 @@ export default function AboutClient({ siteSettings }: { siteSettings: SiteSettin
               <p className="text-muted-foreground">{section.copy}</p>
             </section>
           ))}
+
+          {contactLinks.length > 0 ? (
+            <section className="editorial-card-soft">
+              <div className="mb-4 flex items-center gap-3">
+                <PaletteBadge tone={paletteTones[2].tone} mouthTone={paletteTones[2].mouthTone} mood={paletteTones[2].mood} />
+                <h2 className="text-xl font-bold">联系与外链</h2>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {contactLinks.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target={item.href.startsWith("http") ? "_blank" : undefined}
+                    rel={item.href.startsWith("http") ? "noreferrer" : undefined}
+                    className="rounded-[1.5rem] border border-border/50 bg-background/60 px-4 py-4 transition-colors hover:border-primary/50 hover:bg-accent/20"
+                  >
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>
+                    <p className="mt-2 break-all text-sm font-medium">{item.value}</p>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       </div>
       {/* Footer */}

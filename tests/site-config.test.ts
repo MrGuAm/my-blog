@@ -29,6 +29,11 @@ test("normalizeSiteSettings falls back to defaults for empty values", () => {
     authorName: "",
     twitterHandle: "   ",
     seoKeywords: "",
+    contactEmail: "   ",
+    githubUrl: "",
+    xProfileUrl: "",
+    primaryLinkLabel: "",
+    primaryLinkUrl: "",
     homeTitle: "新的首页标题",
     footerText: "",
   })
@@ -37,6 +42,11 @@ test("normalizeSiteSettings falls back to defaults for empty values", () => {
   assert.equal(normalized.authorName, defaultSiteSettings.authorName)
   assert.equal(normalized.twitterHandle, defaultSiteSettings.twitterHandle)
   assert.equal(normalized.seoKeywords, defaultSiteSettings.seoKeywords)
+  assert.equal(normalized.contactEmail, defaultSiteSettings.contactEmail)
+  assert.equal(normalized.githubUrl, defaultSiteSettings.githubUrl)
+  assert.equal(normalized.xProfileUrl, defaultSiteSettings.xProfileUrl)
+  assert.equal(normalized.primaryLinkLabel, defaultSiteSettings.primaryLinkLabel)
+  assert.equal(normalized.primaryLinkUrl, defaultSiteSettings.primaryLinkUrl)
   assert.equal(normalized.homeTitle, "新的首页标题")
   assert.equal(normalized.footerText, defaultSiteSettings.footerText)
 })

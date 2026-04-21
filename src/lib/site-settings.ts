@@ -5,6 +5,11 @@ export interface SiteSettings {
   authorName: string
   twitterHandle: string
   seoKeywords: string
+  contactEmail: string
+  githubUrl: string
+  xProfileUrl: string
+  primaryLinkLabel: string
+  primaryLinkUrl: string
   footerText: string
   siteDescription: string
   aboutMetaDescription: string
@@ -33,6 +38,11 @@ export const defaultSiteSettings: SiteSettings = {
   authorName: siteConfig.author,
   twitterHandle: siteConfig.twitterHandle,
   seoKeywords: siteConfig.keywords.join(", "),
+  contactEmail: "",
+  githubUrl: "https://github.com/MrGuAm",
+  xProfileUrl: "",
+  primaryLinkLabel: "我的项目",
+  primaryLinkUrl: siteConfig.url,
   footerText: `© 2026 ${siteConfig.name}`,
   siteDescription: siteConfig.description,
   aboutMetaDescription: `关于 ${siteConfig.name} - 这是一个分享生活和技术的个人博客`,
@@ -60,6 +70,10 @@ function normalizeText(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback
 }
 
+function normalizeOptionalText(value: unknown, fallback = "") {
+  return typeof value === "string" ? value.trim() || fallback : fallback
+}
+
 export function normalizeSiteSettings(input?: Partial<SiteSettings> | null): SiteSettings {
   const source = input || {}
   return {
@@ -67,6 +81,11 @@ export function normalizeSiteSettings(input?: Partial<SiteSettings> | null): Sit
     authorName: normalizeText(source.authorName, defaultSiteSettings.authorName),
     twitterHandle: normalizeText(source.twitterHandle, defaultSiteSettings.twitterHandle),
     seoKeywords: normalizeText(source.seoKeywords, defaultSiteSettings.seoKeywords),
+    contactEmail: normalizeOptionalText(source.contactEmail, defaultSiteSettings.contactEmail),
+    githubUrl: normalizeOptionalText(source.githubUrl, defaultSiteSettings.githubUrl),
+    xProfileUrl: normalizeOptionalText(source.xProfileUrl, defaultSiteSettings.xProfileUrl),
+    primaryLinkLabel: normalizeText(source.primaryLinkLabel, defaultSiteSettings.primaryLinkLabel),
+    primaryLinkUrl: normalizeOptionalText(source.primaryLinkUrl, defaultSiteSettings.primaryLinkUrl),
     footerText: normalizeText(source.footerText, defaultSiteSettings.footerText),
     siteDescription: normalizeText(source.siteDescription, defaultSiteSettings.siteDescription),
     aboutMetaDescription: normalizeText(source.aboutMetaDescription, defaultSiteSettings.aboutMetaDescription),

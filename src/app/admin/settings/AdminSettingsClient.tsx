@@ -135,6 +135,53 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             />
           </FieldBlock>
 
+          <div>
+            <p className="section-kicker">Links</p>
+            <h2 className="mt-2 text-xl font-bold">联系与外链</h2>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <FieldBlock label="联系邮箱" hint="会在 About 页渲染成可点击邮箱。">
+              <input
+                value={settings.contactEmail}
+                onChange={(event) => updateField("contactEmail", event.target.value)}
+                className={getInputClassName({})}
+              />
+            </FieldBlock>
+            <FieldBlock label="GitHub 地址">
+              <input
+                value={settings.githubUrl}
+                onChange={(event) => updateField("githubUrl", event.target.value)}
+                className={getInputClassName({})}
+              />
+            </FieldBlock>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <FieldBlock label="X / Twitter 主页地址">
+              <input
+                value={settings.xProfileUrl}
+                onChange={(event) => updateField("xProfileUrl", event.target.value)}
+                className={getInputClassName({})}
+              />
+            </FieldBlock>
+            <FieldBlock label="主链接标题" hint="比如：作品集 / GitHub / 现在在做的项目。">
+              <input
+                value={settings.primaryLinkLabel}
+                onChange={(event) => updateField("primaryLinkLabel", event.target.value)}
+                className={getInputClassName({})}
+              />
+            </FieldBlock>
+          </div>
+
+          <FieldBlock label="主链接地址">
+            <input
+              value={settings.primaryLinkUrl}
+              onChange={(event) => updateField("primaryLinkUrl", event.target.value)}
+              className={getInputClassName({})}
+            />
+          </FieldBlock>
+
           <FieldBlock label="页脚文案" hint="适合放版权信息或一句更个性化的收尾。">
             <input
               value={settings.footerText}
@@ -285,6 +332,14 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             <h2 className="mt-2 text-xl font-bold">{settings.brandName}</h2>
             <p className="mt-2 text-sm text-muted-foreground">作者：{settings.authorName}</p>
             <p className="mt-1 text-sm text-muted-foreground">Twitter：{settings.twitterHandle}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {settings.contactEmail ? <span className="rounded-full bg-background/70 px-3 py-1 text-xs">邮箱</span> : null}
+              {settings.githubUrl ? <span className="rounded-full bg-background/70 px-3 py-1 text-xs">GitHub</span> : null}
+              {settings.xProfileUrl ? <span className="rounded-full bg-background/70 px-3 py-1 text-xs">X</span> : null}
+              {settings.primaryLinkUrl ? (
+                <span className="rounded-full bg-background/70 px-3 py-1 text-xs">{settings.primaryLinkLabel}</span>
+              ) : null}
+            </div>
             <p className="mt-3 text-sm text-muted-foreground">{settings.footerText}</p>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">SEO：{settings.siteDescription}</p>
             <p className="mt-2 text-xs leading-5 text-muted-foreground">关键词：{settings.seoKeywords}</p>
