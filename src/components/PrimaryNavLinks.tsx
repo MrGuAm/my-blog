@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import LoginModal from "@/components/LoginModal"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
+import LoginModal from "@/components/LoginModal"
 
 type NavKey = "home" | "about" | "music" | "write" | "moderation" | "admin" | "media" | "tags"
 
@@ -25,6 +25,18 @@ function getSafeNextPath(value: string | null | undefined) {
   return value.startsWith("/") && !value.startsWith("//") ? value : null
 }
 
+function desktopNavClass(isActive: boolean) {
+  return navClass(isActive)
+}
+
+function mobileNavClass(isActive: boolean) {
+  return `rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${
+    isActive
+      ? "bg-primary text-primary-foreground"
+      : "border border-white/60 bg-white/70 text-foreground/80 hover:bg-white dark:border-white/10 dark:bg-white/8 dark:text-white/80"
+  }`
+}
+
 export default function PrimaryNavLinks({
   active,
   loginRequested = false,
@@ -32,8 +44,22 @@ export default function PrimaryNavLinks({
   onDismissLoginRequest,
 }: PrimaryNavLinksProps) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isAuthenticated, logout } = useAuthStatus()
   const loginModalOpen = isLoginModalOpen || (loginRequested && !isAuthenticated)
+  const baseItems = [
+    { href: "/home", label: "Home", key: "home" as NavKey },
+    { href: "/about", label: "About", key: "about" as NavKey },
+    { href: "/music", label: "Music", key: "music" as NavKey },
+  ]
+  const authItems = [
+    { href: "/write", label: "写文章", key: "write" as NavKey },
+    { href: "/moderation", label: "审核评论", key: "moderation" as NavKey },
+    { href: "/admin", label: "后台", key: "admin" as NavKey },
+    { href: "/admin/media", label: "媒体库", key: "media" as NavKey },
+  ]
+  const tagItem = active === "tags" ? [{ href: "/tags", label: "全部标签", key: "tags" as NavKey }] : []
+  const navItems = [...baseItems, ...tagItem, ...(isAuthenticated ? authItems : [])]
 
   const handleClose = () => {
     setIsLoginModalOpen(false)
@@ -50,56 +76,105 @@ export default function PrimaryNavLinks({
     onDismissLoginRequest?.()
   }
 
+  const handleOpenLogin = () => {
+    setIsMobileMenuOpen(false)
+    setIsLoginModalOpen(true)
+  }
+
+  const handleLogout = async () => {
+    setIsMobileMenuOpen(false)
+    await logout()
+  }
+
   return (
     <>
-      <Link href="/home" className={navClass(active === "home")}>
-        Home
-      </Link>
-      <Link href="/about" className={navClass(active === "about")}>
-        About
-      </Link>
-      <Link href="/music" className={navClass(active === "music")}>
-        Music
-      </Link>
-      {isAuthenticated ? (
-        <>
-          <Link href="/write" className={navClass(active === "write")}>
-            写文章
+      <div className="hidden items-center gap-4 md:flex lg:gap-6">
+        {navItems.map((item) => (
+          <Link key={item.href} href={item.href} className={desktopNavClass(active === item.key)}>
+            {item.label}
           </Link>
-          <Link href="/moderation" className={navClass(active === "moderation")}>
-            审核评论
-          </Link>
-          <Link href="/admin" className={navClass(active === "admin")}>
-            后台
-          </Link>
-          <Link href="/admin/media" className={navClass(active === "media")}>
-            媒体库
-          </Link>
+        ))}
+        {isAuthenticated ? (
           <button
             type="button"
-            onClick={logout}
+            onClick={handleLogout}
             className="text-sm font-medium text-red-500 transition-colors hover:text-red-600"
           >
             退出
           </button>
-        </>
-      ) : (
-        <>
-          {active === "tags" ? (
-            <Link href="/tags" className={navClass(true)}>
-              全部标签
-            </Link>
-          ) : null}
+        ) : (
           <button
             type="button"
-            onClick={() => setIsLoginModalOpen(true)}
+            onClick={handleOpenLogin}
             className="apple-button-secondary"
             title="仅站点管理员使用"
           >
             管理
           </button>
-        </>
-      )}
+        )}
+      </div>
+
+      <div className="md:hidden">
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="apple-button-secondary px-3 py-1.5"
+          aria-label="打开导航菜单"
+        >
+          菜单
+        </button>
+      </div>
+
+      {isMobileMenuOpen ? (
+        <div className="fixed inset-0 z-[90] md:hidden">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="apple-panel absolute inset-x-4 top-20 rounded-[1.75rem] p-4 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="section-kicker">Navigation</p>
+                <p className="mt-1 text-base font-semibold tracking-[-0.03em]">站点菜单</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="apple-button-secondary px-3 py-1.5"
+                aria-label="关闭导航菜单"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid gap-2">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={mobileNavClass(active === item.key)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-2xl border border-red-500/25 px-4 py-3 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-500/8"
+                >
+                  退出
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleOpenLogin}
+                  className="brand-solid-button w-full py-3"
+                >
+                  进入管理
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <LoginModal
         isOpen={loginModalOpen}

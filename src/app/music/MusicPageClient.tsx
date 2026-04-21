@@ -5,6 +5,95 @@ import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import SyncedLyricsPanel from "@/components/music/SyncedLyricsPanel"
 import { useMusic } from "@/context/MusicContext"
 
+type TrackSummary = {
+  src: string
+  title: string
+  artist: string
+  coverUrl?: string
+}
+
+function TrackArtwork({
+  title,
+  coverUrl,
+  className,
+  pulse = false,
+}: {
+  title: string
+  coverUrl?: string
+  className: string
+  pulse?: boolean
+}) {
+  return (
+    <div className={`overflow-hidden rounded-3xl bg-gradient-to-br from-[#7b9bff] to-[#f697c2] ${className}`}>
+      {coverUrl ? (
+        <img src={coverUrl} alt={title} className={`h-full w-full object-cover ${pulse ? "animate-pulse" : ""}`} />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-5xl">🎵</div>
+      )}
+    </div>
+  )
+}
+
+function TrackListButton({
+  song,
+  onSelect,
+}: {
+  song: TrackSummary
+  onSelect: (src: string) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(song.src)}
+      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-accent/30"
+    >
+      <div className="h-10 w-10 overflow-hidden rounded-xl bg-secondary/40">
+        {song.coverUrl ? (
+          <img src={song.coverUrl} alt={song.title} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center">🎵</div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{song.title}</p>
+        <p className="truncate text-xs text-muted-foreground">{song.artist}</p>
+      </div>
+    </button>
+  )
+}
+
+function TrackSection({
+  title,
+  count,
+  emptyText,
+  tracks,
+  onSelect,
+}: {
+  title: string
+  count: number
+  emptyText: string
+  tracks: TrackSummary[]
+  onSelect: (src: string) => void
+}) {
+  return (
+    <div className="editorial-card-soft">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-bold">{title}</h2>
+        <span className="text-xs text-muted-foreground">{count} 首</span>
+      </div>
+      <div className="space-y-2">
+        {tracks.length > 0 ? (
+          tracks.map((song) => (
+            <TrackListButton key={song.src} song={song} onSelect={onSelect} />
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">{emptyText}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function MusicPageClient() {
   const {
     playlist,
@@ -30,35 +119,36 @@ export default function MusicPageClient() {
   return (
     <div className="min-h-screen text-foreground">
       <nav className="apple-nav sticky top-0 z-50">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <div className="brand-mark">
-              <span className="text-sm font-bold text-white">C</span>
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <div className="brand-mark">
+                <span className="text-sm font-bold text-white">C</span>
+              </div>
+              <span className="text-lg font-semibold tracking-[-0.03em]">音乐角落</span>
             </div>
-            <span className="text-lg font-semibold tracking-[-0.03em]">音乐角落</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-            <PrimaryNavLinks active="music" />
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6">
+              <PrimaryNavLinks active="music" />
+            </div>
           </div>
         </div>
       </nav>
 
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="editorial-card">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-              <div className="h-40 w-40 overflow-hidden rounded-3xl bg-gradient-to-br from-[#7b9bff] to-[#f697c2]">
-                {track.coverUrl ? (
-                  <img src={track.coverUrl} alt={track.title} className={`h-full w-full object-cover ${isPlaying ? "animate-pulse" : ""}`} />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-5xl">🎵</div>
-                )}
-              </div>
+        <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] sm:gap-6">
+          <div className="editorial-card !p-5 sm:!p-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <TrackArtwork
+                title={track.title}
+                coverUrl={track.coverUrl}
+                pulse={isPlaying}
+                className="h-28 w-28 sm:h-40 sm:w-40"
+              />
               <div className="min-w-0 flex-1">
                 <p className="section-kicker">Now Playing</p>
-                <h1 className="mt-2 text-[2.2rem] font-semibold tracking-[-0.06em]">{track.title}</h1>
-                <p className="mt-2 text-lg text-muted-foreground">{track.artist}</p>
-                {track.album && <p className="mt-1 text-sm text-muted-foreground">专辑：{track.album}</p>}
+                <h1 className="mt-2 text-[2rem] font-semibold tracking-[-0.06em] sm:text-[2.2rem]">{track.title}</h1>
+                <p className="mt-2 text-base text-muted-foreground sm:text-lg">{track.artist}</p>
+                {track.album ? <p className="mt-1 text-sm text-muted-foreground">专辑：{track.album}</p> : null}
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button type="button" onClick={playPrevious} className="apple-button-secondary">上一首</button>
                   <button type="button" onClick={togglePlay} className="brand-solid-button px-5 py-2">
@@ -78,13 +168,13 @@ export default function MusicPageClient() {
             </div>
           </div>
 
-          <div className="editorial-card-soft !p-6">
+          <div className="editorial-card-soft !p-5 sm:!p-6">
             <h2 className="mb-4 text-lg font-bold">同步歌词</h2>
             <SyncedLyricsPanel
               lyrics={parsedLyrics}
               activeIndex={activeLyricIndex}
               onSeek={seekToTime}
-              height={352}
+              height={320}
               variant="page"
               emptyText="当前歌曲没有可点击的时间轴歌词。"
             />
@@ -93,55 +183,21 @@ export default function MusicPageClient() {
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-6">
-            <div className="editorial-card-soft">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-bold">收藏歌曲</h2>
-                <span className="text-xs text-muted-foreground">{favoriteTracks.length} 首</span>
-              </div>
-              <div className="space-y-2">
-                {favoriteTracks.length > 0 ? favoriteTracks.map((song) => (
-                  <button
-                    key={song.src}
-                    type="button"
-                    onClick={() => playTrackBySrc(song.src, false)}
-                    className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left hover:bg-accent/30"
-                  >
-                    <div className="h-10 w-10 overflow-hidden rounded-xl bg-secondary/40">
-                      {song.coverUrl ? <img src={song.coverUrl} alt={song.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center">🎵</div>}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{song.title}</p>
-                      <p className="truncate text-xs text-muted-foreground">{song.artist}</p>
-                    </div>
-                  </button>
-                )) : <p className="text-sm text-muted-foreground">还没有收藏歌曲。</p>}
-              </div>
-            </div>
+            <TrackSection
+              title="收藏歌曲"
+              count={favoriteTracks.length}
+              emptyText="还没有收藏歌曲。"
+              tracks={favoriteTracks}
+              onSelect={(src) => playTrackBySrc(src, false)}
+            />
 
-            <div className="editorial-card-soft">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-bold">最近播放</h2>
-                <span className="text-xs text-muted-foreground">{recentTracks.length} 首</span>
-              </div>
-              <div className="space-y-2">
-                {recentTracks.length > 0 ? recentTracks.map((song) => (
-                  <button
-                    key={song.src}
-                    type="button"
-                    onClick={() => playTrackBySrc(song.src, false)}
-                    className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left hover:bg-accent/30"
-                  >
-                    <div className="h-10 w-10 overflow-hidden rounded-xl bg-secondary/40">
-                      {song.coverUrl ? <img src={song.coverUrl} alt={song.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center">🎵</div>}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{song.title}</p>
-                      <p className="truncate text-xs text-muted-foreground">{song.artist}</p>
-                    </div>
-                  </button>
-                )) : <p className="text-sm text-muted-foreground">最近还没有播放记录。</p>}
-              </div>
-            </div>
+            <TrackSection
+              title="最近播放"
+              count={recentTracks.length}
+              emptyText="最近还没有播放记录。"
+              tracks={recentTracks}
+              onSelect={(src) => playTrackBySrc(src, false)}
+            />
           </div>
 
           <div className="editorial-card-soft">

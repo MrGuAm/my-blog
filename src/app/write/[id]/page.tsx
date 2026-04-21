@@ -365,20 +365,20 @@ export default function EditPostPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+      <nav className="apple-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60 flex items-center justify-center">
-                <span className="text-white text-sm font-bold">C</span>
+              <div className="brand-mark">
+                <span className="text-sm font-bold text-current">C</span>
               </div>
-              <span className="font-black text-lg">Champion&apos;s Blog</span>
+              <span className="text-lg font-semibold tracking-[-0.03em]">Champion&apos;s Blog</span>
             </div>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6">
               <button
                 type="button"
                 onClick={() => navigateBack(router, returnPath)}
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                className="apple-button-secondary px-3 py-1.5"
               >
                 ← 返回
               </button>

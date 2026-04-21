@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
@@ -36,7 +36,26 @@ function CardAccent() {
   )
 }
 
-// Minimal post card
+function StatItem({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex items-baseline gap-1.5 whitespace-nowrap text-foreground/82">
+      <span className="text-[2rem] leading-none font-semibold tracking-[-0.06em] tabular-nums">{value}</span>
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+    </div>
+  )
+}
+
+function SidebarSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="apple-panel-soft overflow-hidden rounded-[1.75rem]">
+      <div className="px-3 pb-3 pt-3">
+        <h3 className="mb-2 text-sm font-semibold">{title}</h3>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function PostCard({
   post,
   isAuthenticated,
@@ -260,7 +279,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                     setShowDrafts(!showDrafts)
                     setCurrentPage(1)
                   }}
-                  className={`text-sm font-medium transition-colors ${showDrafts ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'}`}
+                  className={`apple-button-secondary px-3 py-1.5 ${showDrafts ? "bg-white text-foreground dark:bg-white/12" : ""}`}
                 >
                   {showDrafts ? '隐藏草稿' : '显示草稿'}
                 </button>
@@ -284,19 +303,10 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
               <p className="section-copy mt-3 max-w-2xl">
                 保持白色基底，用少量柔和彩色元素提气，不会太冷，也不会太花，整体更像一个干净但有个性的个人博客。
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 sm:gap-x-8">
-                  <div className="flex items-baseline gap-1.5 whitespace-nowrap text-foreground/82">
-                    <span className="text-[2rem] font-semibold tracking-[-0.06em] tabular-nums leading-none">{filteredPosts.length}</span>
-                    <span className="text-sm font-medium text-muted-foreground">篇文章</span>
-                  </div>
-                  <div className="flex items-baseline gap-1.5 whitespace-nowrap text-foreground/82">
-                    <span className="text-[2rem] font-semibold tracking-[-0.06em] tabular-nums leading-none">{allTags.length}</span>
-                    <span className="text-sm font-medium text-muted-foreground">个标签</span>
-                  </div>
-                  <div className="flex items-baseline gap-1.5 whitespace-nowrap text-foreground/82">
-                    <span className="text-[2rem] font-semibold tracking-[-0.06em] tabular-nums leading-none">{playlist.length}</span>
-                    <span className="text-sm font-medium text-muted-foreground">首音乐</span>
-                  </div>
+              <div className="mt-4 grid max-w-md grid-cols-3 gap-3 sm:flex sm:max-w-none sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-2">
+                <StatItem value={filteredPosts.length} label="篇文章" />
+                <StatItem value={allTags.length} label="个标签" />
+                <StatItem value={playlist.length} label="首音乐" />
               </div>
             </div>
             <div className="self-center lg:max-w-[220px] lg:-translate-x-6 lg:-translate-y-2">
@@ -526,9 +536,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
             </div>
 
             {/* Latest Posts */}
-            <div className="apple-panel-soft overflow-hidden rounded-[1.75rem]">
-              <div className="px-3 pb-3 pt-3">
-                <h3 className="text-sm font-semibold mb-2">最新文章</h3>
+            <SidebarSection title="最新文章">
                 <div className="space-y-2">
                   {filteredPosts.length > 0 ? (
                     filteredPosts.slice(0, 3).map((post) => (
@@ -545,14 +553,11 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                     <p className="text-xs text-muted-foreground">暂无文章</p>
                   )}
                 </div>
-              </div>
-            </div>
+            </SidebarSection>
 
             {/* Latest Comments */}
             {recentComments.length > 0 && (
-              <div className="apple-panel-soft overflow-hidden rounded-[1.75rem]">
-                <div className="px-3 pb-3 pt-3">
-                  <h3 className="text-sm font-semibold mb-2">最新评论</h3>
+              <SidebarSection title="最新评论">
                   <div className="space-y-2">
                     {recentComments.slice(0, 3).map(comment => (
                       <Link
@@ -565,14 +570,11 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                       </Link>
                     ))}
                   </div>
-                </div>
-              </div>
+              </SidebarSection>
             )}
 
             {/* Tags */}
-            <div className="apple-panel-soft overflow-hidden rounded-[1.75rem]">
-              <div className="px-3 pb-3 pt-3">
-                <h3 className="text-sm font-semibold mb-2">标签</h3>
+            <SidebarSection title="标签">
                 <div className="flex flex-wrap gap-1.5">
                   {allTags.map(tag => (
                     <button
@@ -591,8 +593,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
                     </button>
                   ))}
                 </div>
-              </div>
-            </div>
+            </SidebarSection>
             </div>
           </aside>
         </div>
@@ -604,23 +605,12 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
         </div>
       </footer>
 
-      {/* Marquee Animation */}
-      <style jsx global>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-100%); }
-        }
-        .animate-marquee {
-          animation: marquee 20s linear infinite;
-        }
-      `}</style>
-
       {/* Back to Top Button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         className={`brand-solid-button fixed bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full text-lg transition-all duration-300 ${
           showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        } ${floatingHovering ? "right-[20rem]" : "right-[80px]"}`}
+        } right-4 sm:right-6 ${floatingHovering ? "lg:right-[20rem]" : "lg:right-[80px]"}`}
         aria-label="回到顶部"
       >
         ↑

@@ -746,16 +746,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-100%); }
-        }
-        .animate-marquee {
-          animation: marquee 20s linear infinite;
-        }
-      ` }} />
-
       {children}
     </MusicContext.Provider>
   )

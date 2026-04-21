@@ -201,17 +201,19 @@ export default function AdminDashboardClient({
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+      <nav className="apple-nav sticky top-0 z-50">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60">
-              <span className="text-sm font-bold text-white">C</span>
+            <div className="brand-mark">
+              <span className="text-sm font-bold text-current">C</span>
             </div>
-            <span className="text-lg font-black">后台总览</span>
+            <span className="text-lg font-semibold tracking-[-0.03em]">后台总览</span>
           </div>
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-6">
             <PrimaryNavLinks active="admin" />
           </div>
+        </div>
         </div>
       </nav>
 

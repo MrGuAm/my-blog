@@ -97,10 +97,10 @@ export default function PostClient({ post, content, readingTime, headings, relat
               </div>
               <span className="text-lg font-semibold tracking-[-0.03em]">Champion&apos;s Blog</span>
             </div>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4 md:gap-6">
               <PrimaryNavLinks />
               {isAuthenticated ? (
-                <>
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     onClick={() => router.push(`/write/${post.id}`)}
                     className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70"
@@ -113,7 +113,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
                   >
                     {post.pinned ? '取消置顶' : '置顶'}
                   </button>
-                </>
+                </div>
               ) : null}
             </div>
           </div>
@@ -149,7 +149,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
                   <span className="text-sm text-muted-foreground">{readingTime} 分钟阅读</span>
                   <span className="text-sm text-muted-foreground">·</span>
                   <span className="text-sm text-muted-foreground">{views} 次阅读</span>
-                  <div className="ml-auto flex flex-wrap gap-2">
+                  <div className="flex basis-full flex-wrap gap-2 sm:ml-auto sm:basis-auto">
                     {post.tags.map(tag => (
                       <Link
                         key={tag}
@@ -290,7 +290,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         className={`brand-solid-button fixed bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full text-lg transition-all duration-300 ${
           showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        } ${isHovering ? "right-[20rem]" : "right-[80px]"}`}
+        } right-4 sm:right-6 ${isHovering ? "lg:right-[20rem]" : "lg:right-[80px]"}`}
         aria-label="回到顶部"
       >
         ↑
