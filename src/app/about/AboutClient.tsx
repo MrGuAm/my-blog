@@ -6,34 +6,33 @@ import SiteBrand from "@/components/SiteBrand"
 import SiteFooter from "@/components/SiteFooter"
 import type { SiteSettings } from "@/lib/site-settings"
 
-const aboutSections = [
-  {
-    title: "🏠 这是什么博客?",
-    copy: "这是一个分享生活和技术的个人博客。记录我平时的想法、学习笔记和生活点滴。希望这些内容能对你有所帮助!",
-    tone: paletteTones[3],
-  },
-  {
-    title: "👨‍💻 我是谁?",
-    copy: "我叫 Champion,一个热爱技术、喜欢音乐的开发者。平时喜欢折腾各种有趣的项目, 也喜欢听歌、写代码、分享经验。",
-    tone: paletteTones[1],
-  },
-  {
-    title: "🎯 我的目标",
-    copy: "持续学习,持续输出。用博客记录成长,让知识留下痕迹。",
-    tone: paletteTones[0],
-  },
-  {
-    title: "📬 联系我",
-    copy: "如果你有任何问题或建议,欢迎通过博客留言或发送邮件交流!",
-    tone: paletteTones[2],
-  },
-]
-
 export default function AboutClient({ siteSettings }: { siteSettings: SiteSettings }) {
   const aboutHighlights = [
     { title: "关键词", copy: siteSettings.aboutHighlightKeywords },
     { title: "写作感觉", copy: siteSettings.aboutHighlightStyle },
     { title: "想留下的", copy: siteSettings.aboutHighlightGoal },
+  ]
+  const aboutSections = [
+    {
+      title: siteSettings.aboutSectionOneTitle,
+      copy: siteSettings.aboutSectionOneCopy,
+      tone: paletteTones[3],
+    },
+    {
+      title: siteSettings.aboutSectionTwoTitle,
+      copy: siteSettings.aboutSectionTwoCopy,
+      tone: paletteTones[1],
+    },
+    {
+      title: siteSettings.aboutSectionThreeTitle,
+      copy: siteSettings.aboutSectionThreeCopy,
+      tone: paletteTones[0],
+    },
+    {
+      title: siteSettings.aboutSectionFourTitle,
+      copy: siteSettings.aboutSectionFourCopy,
+      tone: paletteTones[2],
+    },
   ]
 
   return (

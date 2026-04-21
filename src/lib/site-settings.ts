@@ -15,6 +15,14 @@ export interface SiteSettings {
   aboutHighlightKeywords: string
   aboutHighlightStyle: string
   aboutHighlightGoal: string
+  aboutSectionOneTitle: string
+  aboutSectionOneCopy: string
+  aboutSectionTwoTitle: string
+  aboutSectionTwoCopy: string
+  aboutSectionThreeTitle: string
+  aboutSectionThreeCopy: string
+  aboutSectionFourTitle: string
+  aboutSectionFourCopy: string
 }
 
 export const defaultSiteSettings: SiteSettings = {
@@ -32,6 +40,14 @@ export const defaultSiteSettings: SiteSettings = {
   aboutHighlightKeywords: "技术、音乐、生活",
   aboutHighlightStyle: "轻一点，真一点",
   aboutHighlightGoal: "长期可回看的内容",
+  aboutSectionOneTitle: "🏠 这是什么博客?",
+  aboutSectionOneCopy: "这是一个分享生活和技术的个人博客。记录我平时的想法、学习笔记和生活点滴。希望这些内容能对你有所帮助!",
+  aboutSectionTwoTitle: "👨‍💻 我是谁?",
+  aboutSectionTwoCopy: "我叫 Champion,一个热爱技术、喜欢音乐的开发者。平时喜欢折腾各种有趣的项目, 也喜欢听歌、写代码、分享经验。",
+  aboutSectionThreeTitle: "🎯 我的目标",
+  aboutSectionThreeCopy: "持续学习,持续输出。用博客记录成长,让知识留下痕迹。",
+  aboutSectionFourTitle: "📬 联系我",
+  aboutSectionFourCopy: "如果你有任何问题或建议,欢迎通过博客留言或发送邮件交流!",
 }
 
 function normalizeText(value: unknown, fallback: string) {
@@ -55,5 +71,13 @@ export function normalizeSiteSettings(input?: Partial<SiteSettings> | null): Sit
     aboutHighlightKeywords: normalizeText(source.aboutHighlightKeywords, defaultSiteSettings.aboutHighlightKeywords),
     aboutHighlightStyle: normalizeText(source.aboutHighlightStyle, defaultSiteSettings.aboutHighlightStyle),
     aboutHighlightGoal: normalizeText(source.aboutHighlightGoal, defaultSiteSettings.aboutHighlightGoal),
+    aboutSectionOneTitle: normalizeText(source.aboutSectionOneTitle, defaultSiteSettings.aboutSectionOneTitle),
+    aboutSectionOneCopy: normalizeText(source.aboutSectionOneCopy, defaultSiteSettings.aboutSectionOneCopy),
+    aboutSectionTwoTitle: normalizeText(source.aboutSectionTwoTitle, defaultSiteSettings.aboutSectionTwoTitle),
+    aboutSectionTwoCopy: normalizeText(source.aboutSectionTwoCopy, defaultSiteSettings.aboutSectionTwoCopy),
+    aboutSectionThreeTitle: normalizeText(source.aboutSectionThreeTitle, defaultSiteSettings.aboutSectionThreeTitle),
+    aboutSectionThreeCopy: normalizeText(source.aboutSectionThreeCopy, defaultSiteSettings.aboutSectionThreeCopy),
+    aboutSectionFourTitle: normalizeText(source.aboutSectionFourTitle, defaultSiteSettings.aboutSectionFourTitle),
+    aboutSectionFourCopy: normalizeText(source.aboutSectionFourCopy, defaultSiteSettings.aboutSectionFourCopy),
   }
 }

@@ -62,6 +62,17 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
     }
   }
 
+  const aboutDetailFields: Array<{
+    titleKey: keyof SiteSettings
+    copyKey: keyof SiteSettings
+    label: string
+  }> = [
+    { titleKey: "aboutSectionOneTitle", copyKey: "aboutSectionOneCopy", label: "About 模块 1" },
+    { titleKey: "aboutSectionTwoTitle", copyKey: "aboutSectionTwoCopy", label: "About 模块 2" },
+    { titleKey: "aboutSectionThreeTitle", copyKey: "aboutSectionThreeCopy", label: "About 模块 3" },
+    { titleKey: "aboutSectionFourTitle", copyKey: "aboutSectionFourCopy", label: "About 模块 4" },
+  ]
+
   return (
     <SectionPageShell
       navLabel="站点设置"
@@ -205,6 +216,30 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             </FieldBlock>
           </div>
 
+          <div className="grid gap-4">
+            {aboutDetailFields.map(({ titleKey, copyKey, label }) => (
+              <div key={String(titleKey)} className="rounded-[1.5rem] border border-border/50 bg-background/40 p-4">
+                <p className="mb-4 text-sm font-semibold">{label}</p>
+                <div className="grid gap-4">
+                  <FieldBlock label="模块标题">
+                    <input
+                      value={settings[titleKey] as string}
+                      onChange={(event) => updateField(titleKey, event.target.value as SiteSettings[typeof titleKey])}
+                      className={getInputClassName({})}
+                    />
+                  </FieldBlock>
+                  <FieldBlock label="模块正文">
+                    <textarea
+                      value={settings[copyKey] as string}
+                      onChange={(event) => updateField(copyKey, event.target.value as SiteSettings[typeof copyKey])}
+                      className={getInputClassName({ multiline: true })}
+                    />
+                  </FieldBlock>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div>
             <p className="section-kicker">Music</p>
             <h2 className="mt-2 text-xl font-bold">音乐页 SEO</h2>
@@ -247,6 +282,19 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 <div key={label} className="rounded-2xl bg-background/70 px-4 py-3">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
                   <p className="mt-2 text-sm font-medium">{value}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 space-y-3">
+              {[
+                [settings.aboutSectionOneTitle, settings.aboutSectionOneCopy],
+                [settings.aboutSectionTwoTitle, settings.aboutSectionTwoCopy],
+                [settings.aboutSectionThreeTitle, settings.aboutSectionThreeCopy],
+                [settings.aboutSectionFourTitle, settings.aboutSectionFourCopy],
+              ].map(([title, copy]) => (
+                <div key={title} className="rounded-2xl bg-background/70 px-4 py-3">
+                  <p className="text-sm font-semibold">{title}</p>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{copy}</p>
                 </div>
               ))}
             </div>
