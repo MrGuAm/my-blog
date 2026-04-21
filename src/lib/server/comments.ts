@@ -1,14 +1,14 @@
-import type { CommentRecord, CommentRow, CommentStatus } from './store'
+import type { CommentRecord, CommentRow, CommentStatus } from './store-types'
 import {
   ensureStoreReady,
   getDb,
   getSql,
   isRemoteDatabaseEnabled,
   normalizeCommentStatus,
-  rowToComment,
-} from './store'
+} from './store-core'
+import { rowToComment } from './store-types'
 
-export type { CommentRecord, CommentStatus } from './store'
+export type { CommentRecord, CommentStatus } from './store-types'
 
 export async function listCommentsByPost(
   postId: string,
