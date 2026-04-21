@@ -177,6 +177,44 @@ function syncSqliteSeedContent(db: Database.Database) {
   syncSeeds()
 }
 
+const legacyInlineImageSeedCleanup = {
+  id: 'hhh',
+  title: '关于图片种子清理的一次记录',
+  excerpt: '这是一篇保留下来的旧种子文章说明，用来替代早期那条带超大 base64 图片的测试内容。',
+  content:
+    '<p>这篇文章原本只是一次图片导入测试，正文里直接塞进了一整张 base64 图片，不适合作为长期保留的种子内容。</p>\n' +
+    '<p>现在我把它整理成一篇简短说明，保留这条记录本身，但去掉对仓库体积和初始化速度影响很大的内嵌图片数据。</p>\n' +
+    '<p>如果后面还想继续保留配图，更合适的做法是先上传到站内媒体库，再在正文里引用媒体库 URL。</p>',
+}
+
+function applyLegacyInlineImageSeedCleanupSqlite(db: Database.Database) {
+  db.prepare(`
+    UPDATE posts
+    SET title = @title,
+        excerpt = @excerpt,
+        content = @content,
+        updated_at = @updated_at
+    WHERE id = @id
+      AND content LIKE '%data:image/%'
+  `).run({
+    ...legacyInlineImageSeedCleanup,
+    updated_at: new Date().toISOString(),
+  })
+}
+
+async function applyLegacyInlineImageSeedCleanupRemote() {
+  const sql = getSql()
+  await sql`
+    UPDATE posts
+    SET title = ${legacyInlineImageSeedCleanup.title},
+        excerpt = ${legacyInlineImageSeedCleanup.excerpt},
+        content = ${legacyInlineImageSeedCleanup.content},
+        updated_at = ${new Date().toISOString()}
+    WHERE id = ${legacyInlineImageSeedCleanup.id}
+      AND content LIKE ${'%data:image/%'}
+  `
+}
+
 export function getDb() {
   if (!global.__championBlogDb) {
     ensureDataDir()
@@ -414,6 +452,10 @@ export function getDb() {
       `)
     })
 
+    runSqliteMigration(db, '013-clean-inline-image-seed', () => {
+      applyLegacyInlineImageSeedCleanupSqlite(db)
+    })
+
     global.__championBlogDb = db
   }
 
@@ -617,6 +659,10 @@ async function ensureRemoteSchema() {
         updated_at TEXT NOT NULL
       )
     `
+  })
+
+  await runRemoteMigration('013-clean-inline-image-seed', async () => {
+    await applyLegacyInlineImageSeedCleanupRemote()
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
