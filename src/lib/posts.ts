@@ -21,6 +21,18 @@ export interface Post {
   updatedAt?: string
 }
 
+export interface SeriesSummary {
+  series: string
+  posts: Post[]
+  count: number
+  featuredCount: number
+  totalViews: number
+  totalReadingTime: number
+  firstPost?: Post
+  latestPost?: Post
+  updatedAt?: string
+}
+
 function sortPosts(posts: Post[]) {
   return [...posts].sort((a: Post, b: Post) => {
     if (a.pinned && !b.pinned) return -1
@@ -33,6 +45,20 @@ function sortPosts(posts: Post[]) {
       if (left !== right) return left - right
     }
     return new Date(b.date).getTime() - new Date(a.date).getTime()
+  })
+}
+
+export function sortSeriesPosts(posts: Post[]) {
+  return [...posts].sort((a, b) => {
+    const leftOrder = typeof a.seriesOrder === "number" ? a.seriesOrder : Number.MAX_SAFE_INTEGER
+    const rightOrder = typeof b.seriesOrder === "number" ? b.seriesOrder : Number.MAX_SAFE_INTEGER
+
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder
+
+    const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime()
+    if (dateDiff !== 0) return dateDiff
+
+    return a.title.localeCompare(b.title, "zh-CN")
   })
 }
 
@@ -57,6 +83,40 @@ export async function getAllTags(): Promise<string[]> {
 export async function getAllSeries(): Promise<string[]> {
   const posts: Post[] = await getCachedPublicPosts()
   return Array.from(new Set(posts.map((post) => post.series?.trim()).filter(Boolean) as string[])).sort()
+}
+
+export async function getSeriesSummaries(): Promise<SeriesSummary[]> {
+  const posts = await getAllPosts({ includeDrafts: false, cached: true })
+  const seriesMap = new Map<string, Post[]>()
+
+  posts.forEach((post) => {
+    const key = post.series?.trim()
+    if (!key) return
+    const current = seriesMap.get(key) || []
+    current.push(post)
+    seriesMap.set(key, current)
+  })
+
+  return [...seriesMap.entries()]
+    .map(([series, seriesPosts]) => {
+      const orderedPosts = sortSeriesPosts(seriesPosts)
+      const latestPost = [...orderedPosts].sort(
+        (a, b) => new Date(b.updatedAt || b.date).getTime() - new Date(a.updatedAt || a.date).getTime()
+      )[0]
+
+      return {
+        series,
+        posts: orderedPosts,
+        count: orderedPosts.length,
+        featuredCount: orderedPosts.filter((post) => post.featured).length,
+        totalViews: orderedPosts.reduce((sum, post) => sum + (post.views || 0), 0),
+        totalReadingTime: orderedPosts.reduce((sum, post) => sum + calculateReadingTime(post.content), 0),
+        firstPost: orderedPosts[0],
+        latestPost,
+        updatedAt: latestPost ? latestPost.updatedAt || latestPost.date : undefined,
+      }
+    })
+    .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
 }
 
 export async function getPostContent(id: string): Promise<string> {
@@ -105,7 +165,7 @@ export async function getAdjacentPosts(post: Post) {
   const allPosts = (await getAllPosts({ includeDrafts: false, cached: true })).filter((item) => !item.draft)
 
   if (post.series) {
-    const seriesPosts = allPosts.filter((item) => item.series === post.series)
+    const seriesPosts = sortSeriesPosts(allPosts.filter((item) => item.series === post.series))
     const currentSeriesIndex = seriesPosts.findIndex((item) => item.id === post.id)
     if (currentSeriesIndex >= 0) {
       return {
@@ -139,5 +199,5 @@ export async function getPostsBySeries(series: string) {
   if (!normalizedSeries) return []
 
   const posts = await getAllPosts({ includeDrafts: false, cached: true })
-  return sortPosts(posts.filter((post) => post.series === normalizedSeries))
+  return sortSeriesPosts(posts.filter((post) => post.series === normalizedSeries))
 }
