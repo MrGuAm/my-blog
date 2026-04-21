@@ -541,6 +541,10 @@ export function getDb() {
       syncSqliteSeedContent(db)
     })
 
+    runSqliteMigration(db, '009-longform-seed-sync', () => {
+      syncSqliteSeedContent(db)
+    })
+
     global.__championBlogDb = db
   }
 
@@ -696,6 +700,10 @@ async function ensureRemoteSchema() {
   })
 
   await runRemoteMigration('008-seed-content-sync', async () => {
+    await seedRemoteDatabase()
+  })
+
+  await runRemoteMigration('009-longform-seed-sync', async () => {
     await seedRemoteDatabase()
   })
 
