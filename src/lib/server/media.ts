@@ -23,7 +23,7 @@ export interface MediaAsset {
   deletable: boolean
 }
 
-const mediaDir = path.join(process.cwd(), 'public/uploads')
+const mediaDir = process.env.BLOG_MEDIA_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), 'public/uploads')
 const allowedMimeTypes = new Map([
   ['image/jpeg', '.jpg'],
   ['image/png', '.png'],

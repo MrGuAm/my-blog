@@ -9,10 +9,10 @@ interface CommentFileData {
   comments: Record<string, CommentRecord[]>
 }
 
-const dataDir = path.join(process.cwd(), 'data')
-const dbPath = path.join(dataDir, 'blog.db')
-const postsJsonPath = path.join(dataDir, 'posts/posts.json')
-const commentsJsonPath = path.join(dataDir, 'comments.json')
+const dataDir = process.env.BLOG_DATA_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), 'data')
+const dbPath = process.env.BLOG_DB_PATH || path.join(dataDir, 'blog.db')
+const postsJsonPath = process.env.BLOG_POSTS_JSON_PATH || path.join(dataDir, 'posts/posts.json')
+const commentsJsonPath = process.env.BLOG_COMMENTS_JSON_PATH || path.join(dataDir, 'comments.json')
 const databaseUrl = process.env.DATABASE_URL
 
 declare global {
