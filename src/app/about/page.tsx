@@ -1,15 +1,18 @@
 import type { Metadata } from "next"
-import { siteConfig } from "@/lib/site-config"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 import AboutClient from "./AboutClient"
 
-export const metadata: Metadata = {
-  title: "关于",
-  description: `关于 ${siteConfig.name} - 这是一个分享生活和技术的个人博客`,
-  openGraph: {
-    title: `关于 | ${siteConfig.name}`,
-    description: `关于 ${siteConfig.name} - 这是一个分享生活和技术的个人博客`,
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getResolvedSeoSettings()
+  return {
+    title: "关于",
+    description: settings.aboutMetaDescription,
+    openGraph: {
+      title: `关于 | ${settings.brandName}`,
+      description: settings.aboutMetaDescription,
+    },
+  }
 }
 
 export default async function AboutPage() {

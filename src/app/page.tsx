@@ -1,18 +1,21 @@
 import type { Metadata } from "next"
 import { getAllPosts, getAllTags } from "@/lib/posts"
-import { siteConfig } from "@/lib/site-config"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 import HomeClient from "./home/HomeClient"
 
 export const revalidate = 300
 
-export const metadata: Metadata = {
-  title: siteConfig.name,
-  description: siteConfig.description,
-  openGraph: {
-    title: siteConfig.name,
-    description: siteConfig.description,
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getResolvedSeoSettings()
+  return {
+    title: settings.brandName,
+    description: settings.siteDescription,
+    openGraph: {
+      title: settings.brandName,
+      description: settings.siteDescription,
+    },
+  }
 }
 
 export default async function HomePage() {

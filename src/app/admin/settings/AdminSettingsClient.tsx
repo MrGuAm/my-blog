@@ -107,6 +107,14 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             />
           </FieldBlock>
 
+          <FieldBlock label="站点 SEO 描述" hint="会用于首页、默认分享卡片和 RSS 描述。">
+            <textarea
+              value={settings.siteDescription}
+              onChange={(event) => updateField("siteDescription", event.target.value)}
+              className={getInputClassName({ multiline: true })}
+            />
+          </FieldBlock>
+
           <div>
             <p className="section-kicker">Home</p>
             <h2 className="mt-2 text-xl font-bold">首页主视觉</h2>
@@ -165,6 +173,14 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             />
           </FieldBlock>
 
+          <FieldBlock label="关于页 SEO 描述">
+            <textarea
+              value={settings.aboutMetaDescription}
+              onChange={(event) => updateField("aboutMetaDescription", event.target.value)}
+              className={getInputClassName({ multiline: true })}
+            />
+          </FieldBlock>
+
           <div className="grid gap-4 md:grid-cols-3">
             <FieldBlock label="高频关键词">
               <input
@@ -188,6 +204,19 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
               />
             </FieldBlock>
           </div>
+
+          <div>
+            <p className="section-kicker">Music</p>
+            <h2 className="mt-2 text-xl font-bold">音乐页 SEO</h2>
+          </div>
+
+          <FieldBlock label="音乐页 SEO 描述">
+            <textarea
+              value={settings.musicMetaDescription}
+              onChange={(event) => updateField("musicMetaDescription", event.target.value)}
+              className={getInputClassName({ multiline: true })}
+            />
+          </FieldBlock>
         </section>
 
         <aside className="space-y-6">
@@ -195,6 +224,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             <p className="section-kicker">Preview</p>
             <h2 className="mt-2 text-xl font-bold">{settings.brandName}</h2>
             <p className="mt-3 text-sm text-muted-foreground">{settings.footerText}</p>
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">SEO：{settings.siteDescription}</p>
           </section>
 
           <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
@@ -207,6 +237,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             <p className="section-kicker">{settings.aboutKicker}</p>
             <h3 className="mt-3 text-2xl font-semibold tracking-[-0.06em]">{settings.aboutTitle}</h3>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{settings.aboutDescription}</p>
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">About SEO：{settings.aboutMetaDescription}</p>
             <div className="mt-4 grid gap-3">
               {[
                 ["关键词", settings.aboutHighlightKeywords],
@@ -219,6 +250,11 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
+            <p className="section-kicker">Music SEO</p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">{settings.musicMetaDescription}</p>
           </section>
         </aside>
       </div>

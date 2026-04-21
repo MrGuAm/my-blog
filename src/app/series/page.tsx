@@ -2,12 +2,15 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import { getSeriesSummaries } from "@/lib/posts"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
-import { siteConfig } from "@/lib/site-config"
 
-export const metadata: Metadata = {
-  title: "全部系列",
-  description: `浏览 ${siteConfig.name} 的全部文章系列`,
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getResolvedSeoSettings()
+  return {
+    title: "全部系列",
+    description: `浏览 ${settings.brandName} 的全部文章系列`,
+  }
 }
 
 export default async function SeriesPage() {

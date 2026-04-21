@@ -1,8 +1,10 @@
 import { getAllPosts } from "@/lib/posts"
 import { absoluteUrl, siteConfig } from "@/lib/site-config"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 
 export async function GET() {
   const posts = (await getAllPosts()).filter((post) => !post.draft)
+  const settings = await getResolvedSeoSettings()
 
   const items = posts.map(post => `
     <item>
@@ -19,9 +21,9 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${siteConfig.name}</title>
+    <title>${settings.brandName}</title>
     <link>${siteConfig.url}</link>
-    <description>${siteConfig.description}</description>
+    <description>${settings.siteDescription}</description>
     <language>${siteConfig.language}</language>
     <atom:link href="${absoluteUrl(siteConfig.rssPath)}" rel="self" type="application/rss+xml"/>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>

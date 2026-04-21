@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { notFound } from "next/navigation"
 import { getAdjacentPosts, getAllPosts, getPost, getPostContent, calculateReadingTime, extractHeadings, getRelatedPosts } from "@/lib/posts"
 import { isAuthenticatedServer } from "@/lib/server/auth"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 import { siteConfig } from "@/lib/site-config"
 import PostClient from "./PostClient"
@@ -13,11 +14,11 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  const post = await getPost(id)
+  const [post, settings] = await Promise.all([getPost(id), getResolvedSeoSettings()])
   
   if (!post) {
     return {
-      title: `文章未找到 | ${siteConfig.name}`,
+      title: `文章未找到 | ${settings.brandName}`,
     }
   }
 
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: post.excerpt,
     keywords: post.tags,
     openGraph: {
-      title: `${post.title} | ${siteConfig.name}`,
+      title: `${post.title} | ${settings.brandName}`,
       description: post.excerpt,
       type: "article",
       publishedTime: post.date,

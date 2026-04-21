@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import { calculateReadingTime, getAllSeries, getPostsBySeries } from "@/lib/posts"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
-import { siteConfig } from "@/lib/site-config"
 
 interface SeriesPageProps {
   params: Promise<{ series: string }>
@@ -12,11 +12,12 @@ interface SeriesPageProps {
 export async function generateMetadata({ params }: SeriesPageProps): Promise<Metadata> {
   const { series } = await params
   const decodedSeries = decodeURIComponent(series)
+  const settings = await getResolvedSeoSettings()
   return {
     title: `${decodedSeries}`,
     description: `查看系列 ${decodedSeries} 下的所有文章`,
     openGraph: {
-      title: `${decodedSeries} | ${siteConfig.name}`,
+      title: `${decodedSeries} | ${settings.brandName}`,
       description: `查看系列 ${decodedSeries} 下的所有文章`,
     },
   }

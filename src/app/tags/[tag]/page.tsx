@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import { getAllTags, getPostsByTag } from "@/lib/posts"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
-import { siteConfig } from "@/lib/site-config"
 
 interface TagPageProps {
   params: Promise<{ tag: string }>
@@ -12,11 +12,12 @@ interface TagPageProps {
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
   const { tag } = await params
   const decodedTag = decodeURIComponent(tag)
+  const settings = await getResolvedSeoSettings()
   return {
     title: `#${decodedTag}`,
     description: `查看标签 ${decodedTag} 下的所有文章`,
     openGraph: {
-      title: `#${decodedTag} | ${siteConfig.name}`,
+      title: `#${decodedTag} | ${settings.brandName}`,
       description: `查看标签 ${decodedTag} 下的所有文章`,
     },
   }

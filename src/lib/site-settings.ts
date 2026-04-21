@@ -3,6 +3,9 @@ import { siteConfig } from "@/lib/site-config"
 export interface SiteSettings {
   brandName: string
   footerText: string
+  siteDescription: string
+  aboutMetaDescription: string
+  musicMetaDescription: string
   homeKicker: string
   homeTitle: string
   homeDescription: string
@@ -17,6 +20,9 @@ export interface SiteSettings {
 export const defaultSiteSettings: SiteSettings = {
   brandName: siteConfig.name,
   footerText: `© 2026 ${siteConfig.name}`,
+  siteDescription: siteConfig.description,
+  aboutMetaDescription: `关于 ${siteConfig.name} - 这是一个分享生活和技术的个人博客`,
+  musicMetaDescription: `${siteConfig.name} 的音乐角落`,
   homeKicker: siteConfig.name,
   homeTitle: "干净一点，轻松一点，也更有自己的样子。",
   homeDescription: "保持白色基底，用少量柔和彩色元素提气，不会太冷，也不会太花，整体更像一个干净但有个性的个人博客。",
@@ -37,6 +43,9 @@ export function normalizeSiteSettings(input?: Partial<SiteSettings> | null): Sit
   return {
     brandName: normalizeText(source.brandName, defaultSiteSettings.brandName),
     footerText: normalizeText(source.footerText, defaultSiteSettings.footerText),
+    siteDescription: normalizeText(source.siteDescription, defaultSiteSettings.siteDescription),
+    aboutMetaDescription: normalizeText(source.aboutMetaDescription, defaultSiteSettings.aboutMetaDescription),
+    musicMetaDescription: normalizeText(source.musicMetaDescription, defaultSiteSettings.musicMetaDescription),
     homeKicker: normalizeText(source.homeKicker, defaultSiteSettings.homeKicker),
     homeTitle: normalizeText(source.homeTitle, defaultSiteSettings.homeTitle),
     homeDescription: normalizeText(source.homeDescription, defaultSiteSettings.homeDescription),
