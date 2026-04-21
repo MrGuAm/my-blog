@@ -80,6 +80,31 @@ test("admin settings route rejects unauthenticated access and validates payload"
   assert.equal(invalidPatchPayload.error, "提交的设置内容无效")
 })
 
+test("admin settings route saves normalized settings for authenticated requests", async () => {
+  const cookie = buildSessionCookie(createSessionToken())
+  const request = new NextRequest("https://champion.cc.cd/api/admin/settings", {
+    method: "PATCH",
+    headers: {
+      cookie,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      brandName: "  My New Blog  ",
+      aboutTitle: "",
+      homeTitle: "新的首页标题",
+    }),
+  })
+
+  const response = await adminSettingsPatch(request)
+  const payload = await response.json()
+
+  assert.equal(response.status, 200)
+  assert.equal(payload.settings.brandName, "My New Blog")
+  assert.equal(payload.settings.homeTitle, "新的首页标题")
+  assert.equal(typeof payload.settings.aboutTitle, "string")
+  assert.notEqual(payload.settings.aboutTitle, "")
+})
+
 test("admin media route validates authenticated upload and delete input", async () => {
   const cookie = buildSessionCookie(createSessionToken())
 
