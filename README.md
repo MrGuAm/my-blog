@@ -144,6 +144,22 @@ npm run lint
 npm test
 ```
 
+浏览器端 E2E：
+
+```bash
+npm run test:e2e
+```
+
+说明：
+
+- Playwright 会启动一套带临时数据目录的本地服务器，不会污染你当前的 `data/blog.db`
+
+完整本地校验：
+
+```bash
+npm run test:all
+```
+
 生产构建：
 
 ```bash
