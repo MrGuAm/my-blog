@@ -3,6 +3,10 @@ import { expect, test, type Page } from "@playwright/test"
 
 test.describe.configure({ mode: "serial" })
 
+const tinySvgBuffer = Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#ff9b6b"/></svg>`
+)
+
 async function loginAsAdmin(page: Page) {
   await page.goto("/home")
   await page.getByRole("button", { name: "管理" }).click()
@@ -46,9 +50,9 @@ test("admin can upload and delete an image in the media library UI", async ({ pa
   const fileBase = `e2e-proof-${Date.now()}`
   const fileInput = page.locator('input[type="file"]')
   await fileInput.setInputFiles({
-    name: `${fileBase}.png`,
-    mimeType: "image/png",
-    buffer: Buffer.from("playwright-proof"),
+    name: `${fileBase}.svg`,
+    mimeType: "image/svg+xml",
+    buffer: tinySvgBuffer,
   })
 
   await expect(page.getByText("素材上传成功")).toBeVisible()

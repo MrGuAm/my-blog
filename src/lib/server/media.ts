@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { del, list as listBlobs, put } from '@vercel/blob'
 import fs from 'fs'
 import path from 'path'
+import sharp from 'sharp'
 import {
   deleteMediaAssetRecord,
   getMediaAssetRecordById,
@@ -31,6 +32,7 @@ const allowedMimeTypes = new Map([
   ['image/gif', '.gif'],
   ['image/svg+xml', '.svg'],
 ])
+const optimizableMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 function canWriteLocalMediaLibrary() {
   return !process.env.VERCEL
@@ -86,6 +88,34 @@ function sanitizeBaseName(value: string) {
 
 function createAssetName(fileName: string) {
   return path.basename(fileName)
+}
+
+async function prepareImageUpload(file: File) {
+  const sourceBuffer = Buffer.from(await file.arrayBuffer())
+
+  if (!optimizableMimeTypes.has(file.type)) {
+    const extension = allowedMimeTypes.get(file.type)
+    if (!extension) {
+      throw new Error('当前只支持上传常见图片格式')
+    }
+    return {
+      buffer: sourceBuffer,
+      contentType: file.type,
+      extension,
+    }
+  }
+
+  const optimizedBuffer = await sharp(sourceBuffer)
+    .rotate()
+    .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer()
+
+  return {
+    buffer: optimizedBuffer,
+    contentType: 'image/webp',
+    extension: '.webp',
+  }
 }
 
 function toLocalAsset(fileName: string, stats: fs.Stats, contentType = 'image/*'): MediaAsset {
@@ -175,20 +205,20 @@ export async function listMediaAssets(): Promise<MediaAsset[]> {
 }
 
 export async function saveMediaFile(file: File) {
-  const extension = allowedMimeTypes.get(file.type)
-  if (!extension) {
+  if (!allowedMimeTypes.has(file.type)) {
     throw new Error('当前只支持上传常见图片格式')
   }
 
+  const prepared = await prepareImageUpload(file)
   const baseName = sanitizeBaseName(file.name) || 'image'
 
   if (isBlobMediaLibraryEnabled()) {
     const uploadedAt = new Date().toISOString()
-    const pathname = `media-library/${baseName}${extension}`
-    const blob = await put(pathname, file, {
+    const pathname = `media-library/${baseName}${prepared.extension}`
+    const blob = await put(pathname, prepared.buffer, {
       access: 'public',
       addRandomSuffix: true,
-      contentType: file.type,
+      contentType: prepared.contentType,
     })
 
     const nextAsset = {
@@ -197,8 +227,8 @@ export async function saveMediaFile(file: File) {
       pathname: blob.pathname,
       url: blob.url,
       storage: 'blob' as const,
-      contentType: blob.contentType || file.type,
-      size: file.size,
+      contentType: blob.contentType || prepared.contentType,
+      size: prepared.buffer.byteLength,
       uploadedAt,
       updatedAt: uploadedAt,
     }
@@ -216,11 +246,10 @@ export async function saveMediaFile(file: File) {
 
   ensureMediaDirForWrite()
 
-  const fileName = `${baseName}-${randomUUID().slice(0, 8)}${extension}`
+  const fileName = `${baseName}-${randomUUID().slice(0, 8)}${prepared.extension}`
   const absolutePath = getLocalMediaPath(fileName)
-  const buffer = Buffer.from(await file.arrayBuffer())
 
-  fs.writeFileSync(absolutePath, buffer)
+  fs.writeFileSync(absolutePath, prepared.buffer)
 
   const stats = fs.statSync(absolutePath)
   return {
@@ -229,7 +258,7 @@ export async function saveMediaFile(file: File) {
     pathname: fileName,
     url: `/uploads/${encodeURIComponent(fileName)}`,
     size: stats.size,
-    contentType: file.type,
+    contentType: prepared.contentType,
     updatedAt: stats.mtime.toISOString(),
     storage: 'local',
     deletable: true,

@@ -1,5 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import sharp from "sharp"
 import { importFresh, withTempWorkspace } from "./helpers/temp-workspace"
 
 test("store integration supports create, update, versioning, and delete in an isolated sqlite workspace", async () => {
@@ -65,13 +66,25 @@ test("store integration supports create, update, versioning, and delete in an is
 test("media integration supports local save, list, and delete in an isolated workspace", async () => {
   await withTempWorkspace(async () => {
     const media = await importFresh<typeof import("../src/lib/server/media")>("src/lib/server/media.ts")
+    const tinyPngBuffer = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: { r: 255, g: 128, b: 64 },
+      },
+    })
+      .png()
+      .toBuffer()
 
-    const file = new File(["media-proof"], "proof.png", { type: "image/png" })
+    const file = new File([tinyPngBuffer], "proof.png", { type: "image/png" })
     const saved = await media.saveMediaFile(file)
 
     assert.equal(saved.storage, "local")
     assert.equal(saved.deletable, true)
     assert.match(saved.url, /\/uploads\//)
+    assert.equal(saved.contentType, "image/webp")
+    assert.match(saved.pathname, /\.webp$/)
 
     const listed = await media.listMediaAssets()
     assert.ok(listed.some((asset) => asset.id === saved.id))

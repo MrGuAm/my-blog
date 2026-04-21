@@ -1,16 +1,27 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { NextRequest } from "next/server"
+import sharp from "sharp"
 import { buildSessionCookie, createSessionToken } from "../src/lib/server/auth"
 import { importFresh, withTempWorkspace } from "./helpers/temp-workspace"
 
 test("admin media routes can upload, list, and delete a file in an isolated workspace", async () => {
   await withTempWorkspace(async () => {
     const mediaRoute = await importFresh<typeof import("../src/app/api/admin/media/route")>("src/app/api/admin/media/route.ts")
+    const tinyPngBuffer = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: { r: 255, g: 128, b: 64 },
+      },
+    })
+      .png()
+      .toBuffer()
 
     const cookie = buildSessionCookie(createSessionToken())
     const formData = new FormData()
-    formData.append("file", new File(["proof"], "proof.png", { type: "image/png" }))
+    formData.append("file", new File([tinyPngBuffer], "proof.png", { type: "image/png" }))
 
     const createRequest = new NextRequest("https://champion.cc.cd/api/admin/media", {
       method: "POST",
