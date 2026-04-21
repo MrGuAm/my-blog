@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
+import StructuredDataScript from "@/components/StructuredDataScript"
 import { redirect } from "next/navigation"
 import { notFound } from "next/navigation"
 import { getAdjacentPosts, getAllPosts, getPost, getPostContent, calculateReadingTime, extractHeadings, getRelatedPosts } from "@/lib/posts"
 import { isAuthenticatedServer } from "@/lib/server/auth"
-import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
+import { buildBlogPostingStructuredData, getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 import PostClient from "./PostClient"
 
@@ -79,23 +80,27 @@ export default async function PostPage({ params }: Props) {
 
   const readingTime = calculateReadingTime(content)
   const headings = extractHeadings(contentWithIds)
-  const [relatedPosts, adjacentPosts, siteSettings] = await Promise.all([
+  const [relatedPosts, adjacentPosts, siteSettings, blogPostingStructuredData] = await Promise.all([
     getRelatedPosts(post),
     getAdjacentPosts(post),
     getSiteSettings(),
+    buildBlogPostingStructuredData(post),
   ])
 
   return (
-    <PostClient
-      post={post}
-      content={contentWithIds}
-      readingTime={readingTime}
-      headings={headings}
-      relatedPosts={relatedPosts}
-      previousPost={adjacentPosts.previousPost}
-      nextPost={adjacentPosts.nextPost}
-      brandName={siteSettings.brandName}
-      footerText={siteSettings.footerText}
-    />
+    <>
+      <StructuredDataScript id="post-structured-data" data={blogPostingStructuredData} />
+      <PostClient
+        post={post}
+        content={contentWithIds}
+        readingTime={readingTime}
+        headings={headings}
+        relatedPosts={relatedPosts}
+        previousPost={adjacentPosts.previousPost}
+        nextPost={adjacentPosts.nextPost}
+        brandName={siteSettings.brandName}
+        footerText={siteSettings.footerText}
+      />
+    </>
   )
 }

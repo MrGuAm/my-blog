@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
-import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
+import StructuredDataScript from "@/components/StructuredDataScript"
+import { buildAboutStructuredData, getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 import AboutClient from "./AboutClient"
 
@@ -16,6 +17,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const siteSettings = await getSiteSettings()
-  return <AboutClient siteSettings={siteSettings} />
+  const [siteSettings, aboutStructuredData] = await Promise.all([
+    getSiteSettings(),
+    buildAboutStructuredData(),
+  ])
+
+  return (
+    <>
+      <StructuredDataScript id="about-structured-data" data={aboutStructuredData} />
+      <AboutClient siteSettings={siteSettings} />
+    </>
+  )
 }
