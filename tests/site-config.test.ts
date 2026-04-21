@@ -40,13 +40,29 @@ test("normalizeSiteSettings falls back to defaults for empty values", () => {
 
   assert.equal(normalized.brandName, defaultSiteSettings.brandName)
   assert.equal(normalized.authorName, defaultSiteSettings.authorName)
-  assert.equal(normalized.twitterHandle, defaultSiteSettings.twitterHandle)
+  assert.equal(normalized.twitterHandle, "")
   assert.equal(normalized.seoKeywords, defaultSiteSettings.seoKeywords)
-  assert.equal(normalized.contactEmail, defaultSiteSettings.contactEmail)
-  assert.equal(normalized.githubUrl, defaultSiteSettings.githubUrl)
-  assert.equal(normalized.xProfileUrl, defaultSiteSettings.xProfileUrl)
+  assert.equal(normalized.contactEmail, "")
+  assert.equal(normalized.githubUrl, "")
+  assert.equal(normalized.xProfileUrl, "")
   assert.equal(normalized.primaryLinkLabel, defaultSiteSettings.primaryLinkLabel)
-  assert.equal(normalized.primaryLinkUrl, defaultSiteSettings.primaryLinkUrl)
+  assert.equal(normalized.primaryLinkUrl, "")
   assert.equal(normalized.homeTitle, "新的首页标题")
   assert.equal(normalized.footerText, defaultSiteSettings.footerText)
+})
+
+test("normalizeSiteSettings sanitizes contact links and social handles", () => {
+  const normalized = normalizeSiteSettings({
+    twitterHandle: "champion_dev",
+    contactEmail: " hello@example.com ",
+    githubUrl: "javascript:alert(1)",
+    xProfileUrl: "https://x.com/champion_dev",
+    primaryLinkUrl: "https://example.com/profile",
+  })
+
+  assert.equal(normalized.twitterHandle, "@champion_dev")
+  assert.equal(normalized.contactEmail, "hello@example.com")
+  assert.equal(normalized.githubUrl, "")
+  assert.equal(normalized.xProfileUrl, "https://x.com/champion_dev")
+  assert.equal(normalized.primaryLinkUrl, "https://example.com/profile")
 })

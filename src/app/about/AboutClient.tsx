@@ -129,7 +129,7 @@ export default function AboutClient({ siteSettings }: { siteSettings: SiteSettin
                     key={item.label}
                     href={item.href}
                     target={item.href.startsWith("http") ? "_blank" : undefined}
-                    rel={item.href.startsWith("http") ? "noreferrer" : undefined}
+                    rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
                     className="rounded-[1.5rem] border border-border/50 bg-background/60 px-4 py-4 transition-colors hover:border-primary/50 hover:bg-accent/20"
                   >
                     <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>

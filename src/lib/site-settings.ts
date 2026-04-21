@@ -70,8 +70,31 @@ function normalizeText(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback
 }
 
-function normalizeOptionalText(value: unknown, fallback = "") {
-  return typeof value === "string" ? value.trim() || fallback : fallback
+function normalizeEmail(value: unknown, fallback = "") {
+  if (typeof value !== "string") return fallback
+  const next = value.trim()
+  if (!next) return ""
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next) ? next : fallback
+}
+
+function normalizeExternalUrl(value: unknown, fallback = "") {
+  if (typeof value !== "string") return fallback
+  const next = value.trim()
+  if (!next) return ""
+
+  try {
+    const url = new URL(next)
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : ""
+  } catch {
+    return ""
+  }
+}
+
+function normalizeTwitterHandle(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback
+  const next = value.trim().replace(/\s+/g, "")
+  if (!next) return ""
+  return next.startsWith("@") ? next : `@${next}`
 }
 
 export function normalizeSiteSettings(input?: Partial<SiteSettings> | null): SiteSettings {
@@ -79,13 +102,13 @@ export function normalizeSiteSettings(input?: Partial<SiteSettings> | null): Sit
   return {
     brandName: normalizeText(source.brandName, defaultSiteSettings.brandName),
     authorName: normalizeText(source.authorName, defaultSiteSettings.authorName),
-    twitterHandle: normalizeText(source.twitterHandle, defaultSiteSettings.twitterHandle),
+    twitterHandle: normalizeTwitterHandle(source.twitterHandle, defaultSiteSettings.twitterHandle),
     seoKeywords: normalizeText(source.seoKeywords, defaultSiteSettings.seoKeywords),
-    contactEmail: normalizeOptionalText(source.contactEmail, defaultSiteSettings.contactEmail),
-    githubUrl: normalizeOptionalText(source.githubUrl, defaultSiteSettings.githubUrl),
-    xProfileUrl: normalizeOptionalText(source.xProfileUrl, defaultSiteSettings.xProfileUrl),
+    contactEmail: normalizeEmail(source.contactEmail, defaultSiteSettings.contactEmail),
+    githubUrl: normalizeExternalUrl(source.githubUrl, defaultSiteSettings.githubUrl),
+    xProfileUrl: normalizeExternalUrl(source.xProfileUrl, defaultSiteSettings.xProfileUrl),
     primaryLinkLabel: normalizeText(source.primaryLinkLabel, defaultSiteSettings.primaryLinkLabel),
-    primaryLinkUrl: normalizeOptionalText(source.primaryLinkUrl, defaultSiteSettings.primaryLinkUrl),
+    primaryLinkUrl: normalizeExternalUrl(source.primaryLinkUrl, defaultSiteSettings.primaryLinkUrl),
     footerText: normalizeText(source.footerText, defaultSiteSettings.footerText),
     siteDescription: normalizeText(source.siteDescription, defaultSiteSettings.siteDescription),
     aboutMetaDescription: normalizeText(source.aboutMetaDescription, defaultSiteSettings.aboutMetaDescription),
