@@ -2,8 +2,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
 import MediaLibraryDialog from "@/components/MediaLibraryDialog"
@@ -39,6 +39,24 @@ function readReturnPath() {
   const from = params.get("from")
   if (from && from.startsWith("/") && !from.startsWith("//")) return from
   return "/home"
+}
+
+function navigateBack(router: ReturnType<typeof useRouter>, fallbackPath: string) {
+  if (typeof window === "undefined") {
+    router.push(fallbackPath)
+    return
+  }
+
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  router.push(fallbackPath)
+}
+
+function buildSlug(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, "")
 }
 
 export default function EditPostPage() {
@@ -154,11 +172,6 @@ export default function EditPostPage() {
 
     return () => window.clearTimeout(timeoutId)
   }, [bgmSrc, category, content, coverImage, draft, draftStorageKey, excerpt, isAuthenticated, isAuthLoading, loading, pinned, slug, tags, title])
-
-  useEffect(() => {
-    if (!title.trim()) return
-    setSlug((current) => current || title.toLowerCase().trim().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, ""))
-  }, [title])
 
   useEffect(() => {
     fetch("/api/music", { cache: "no-store" })
@@ -282,7 +295,7 @@ export default function EditPostPage() {
         if (!publishDraft) {
           setDraft(false)
         }
-        setTimeout(() => router.push(returnPath), 1000)
+        setTimeout(() => navigateBack(router, returnPath), 1000)
       } else {
         const data = await res.json()
         setMessage(data.error || "保存失败")
@@ -303,7 +316,7 @@ export default function EditPostPage() {
         headers: { 'Content-Type': 'application/json' },
       })
       if (res.ok) {
-        router.push(returnPath)
+        navigateBack(router, returnPath)
       }
     } catch {}
   }
@@ -361,10 +374,15 @@ export default function EditPostPage() {
               </div>
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
-            <div className="flex items-center gap-6">
-              <Link href={returnPath} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+              <button
+                type="button"
+                onClick={() => navigateBack(router, returnPath)}
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
                 ← 返回
-              </Link>
+              </button>
+              <PrimaryNavLinks active="write" />
             </div>
           </div>
         </div>
@@ -399,7 +417,11 @@ export default function EditPostPage() {
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                const nextTitle = e.target.value
+                setTitle(nextTitle)
+                setSlug((current) => current || buildSlug(nextTitle))
+              }}
               placeholder="文章标题"
               className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-lg font-bold"
             />

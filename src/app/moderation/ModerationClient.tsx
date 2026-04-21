@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAuthStatus } from "@/hooks/useAuthStatus"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 
 interface ModerationComment {
   id: string
@@ -23,7 +23,6 @@ interface ModerationComment {
 
 export default function ModerationClient({ comments: initialComments }: { comments: ModerationComment[] }) {
   const router = useRouter()
-  const { logout } = useAuthStatus()
   const [comments, setComments] = useState(initialComments)
   const [filter, setFilter] = useState<"pending" | "rejected" | "all">("pending")
   const [threadFilter, setThreadFilter] = useState<"all" | "top-level" | "replies">("all")
@@ -103,19 +102,8 @@ export default function ModerationClient({ comments: initialComments }: { commen
             </div>
             <span className="text-lg font-black">评论审核</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/admin" className="text-sm text-muted-foreground transition-colors hover:text-primary">
-              返回后台
-            </Link>
-            <Link href="/write" className="text-sm text-muted-foreground transition-colors hover:text-primary">
-              写文章
-            </Link>
-            <Link href="/home" className="text-sm text-muted-foreground transition-colors hover:text-primary">
-              返回首页
-            </Link>
-            <button onClick={logout} className="text-sm text-red-500 transition-colors hover:text-red-600">
-              退出
-            </button>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <PrimaryNavLinks active="moderation" />
           </div>
         </div>
       </nav>

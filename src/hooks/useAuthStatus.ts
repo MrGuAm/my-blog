@@ -21,7 +21,10 @@ export function useAuthStatus() {
   }, [])
 
   useEffect(() => {
-    refreshAuth()
+    const timeoutId = window.setTimeout(() => {
+      void refreshAuth()
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [refreshAuth])
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import { getAllTags, getPostsByTag } from "@/lib/posts"
 
 export const metadata: Metadata = {
@@ -26,7 +27,9 @@ export default async function TagsPage() {
             </div>
             <span className="text-lg font-black">全部标签</span>
           </div>
-          <Link href="/home" className="text-sm text-muted-foreground transition-colors hover:text-primary">Home</Link>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <PrimaryNavLinks active="tags" />
+          </div>
         </div>
       </nav>
 

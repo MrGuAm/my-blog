@@ -31,6 +31,7 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
   const [message, setMessage] = useState("")
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
+  const [referenceNow, setReferenceNow] = useState(() => Date.now())
 
   const loadAssets = async () => {
     setIsLoading(true)
@@ -38,6 +39,7 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
       const response = await fetch("/api/admin/media", { cache: "no-store" })
       const data = await response.json()
       setAssets(Array.isArray(data.assets) ? data.assets : [])
+      setReferenceNow(Date.now())
     } catch {
       setAssets([])
       setMessage("素材库加载失败")
@@ -48,12 +50,14 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
 
   useEffect(() => {
     if (!isOpen) return
-    loadAssets()
+    const timeoutId = window.setTimeout(() => {
+      void loadAssets()
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [isOpen])
 
   const filteredAssets = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase()
-    const now = Date.now()
     return assets.filter((asset) => {
       if (normalizedKeyword && !asset.name.toLowerCase().includes(normalizedKeyword)) {
         return false
@@ -61,9 +65,9 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
 
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
-      return now - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
+      return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
-  }, [assets, keyword, timeFilter])
+  }, [assets, keyword, referenceNow, timeFilter])
 
   if (!isOpen) return null
 
@@ -94,6 +98,7 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
       }
       setAssets((current) => [data.asset, ...current.filter((item) => item.id !== data.asset.id)])
       setMessage("图片已上传到媒体库")
+      setReferenceNow(Date.now())
     } catch {
       setMessage("上传失败，请重试")
     } finally {
@@ -113,6 +118,7 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
       }
       setAssets((current) => current.filter((item) => item.id !== asset.id))
       setMessage("素材已删除")
+      setReferenceNow(Date.now())
     } catch {
       setMessage("删除失败，请重试")
     }

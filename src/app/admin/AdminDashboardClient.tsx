@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuthStatus } from "@/hooks/useAuthStatus"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import type { CommentRecord } from "@/lib/server/comments"
 import type { UserRecord } from "@/lib/server/store"
 import type { Post } from "@/lib/posts"
@@ -91,7 +91,6 @@ export default function AdminDashboardClient({
   topTagItems: Array<{ label: string; value: number; tone?: string }>
 }) {
   const router = useRouter()
-  const { logout } = useAuthStatus()
   const [postsState, setPostsState] = useState(topPosts)
   const [draftsState, setDraftsState] = useState(recentDrafts)
   const [commentsState] = useState(latestComments)
@@ -210,13 +209,8 @@ export default function AdminDashboardClient({
             </div>
             <span className="text-lg font-black">后台总览</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/home" className="text-sm text-muted-foreground transition-colors hover:text-primary">首页</Link>
-            <Link href="/write" className="text-sm text-muted-foreground transition-colors hover:text-primary">写文章</Link>
-            <Link href="/moderation" className="text-sm text-muted-foreground transition-colors hover:text-primary">评论审核</Link>
-            <Link href="/admin/media" className="text-sm text-muted-foreground transition-colors hover:text-primary">媒体库</Link>
-            <Link href="/music" className="text-sm text-muted-foreground transition-colors hover:text-primary">音乐页</Link>
-            <button onClick={logout} className="text-sm text-red-500 transition-colors hover:text-red-600">退出</button>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <PrimaryNavLinks active="admin" />
           </div>
         </div>
       </nav>

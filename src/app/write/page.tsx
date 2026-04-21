@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
 import type { Post } from "@/lib/posts"
@@ -43,9 +44,27 @@ function readReturnPath() {
   return "/home"
 }
 
+function navigateBack(router: ReturnType<typeof useRouter>, fallbackPath: string) {
+  if (typeof window === "undefined") {
+    router.push(fallbackPath)
+    return
+  }
+
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  router.push(fallbackPath)
+}
+
+function buildSlug(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, "")
+}
+
 export default function WritePage() {
   const router = useRouter()
-  const { isAuthenticated, isLoading: isAuthLoading, logout } = useAuthStatus()
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuthStatus()
   const [returnPath] = useState(() => readReturnPath())
   const initialDraft = readLocalDraft()
   const [title, setTitle] = useState(initialDraft?.title ?? "")
@@ -75,11 +94,6 @@ export default function WritePage() {
       router.replace(`/home?login=1&next=${encodeURIComponent(`/write?from=${returnPath}`)}`)
     }
   }, [isAuthenticated, isAuthLoading, returnPath, router])
-
-  const handleLogout = () => {
-   logout()
-   router.push('/home');
- };
 
   const clearSavedDraft = useCallback(() => {
     if (typeof window === "undefined") return
@@ -113,11 +127,6 @@ export default function WritePage() {
 
     return () => window.clearTimeout(timeoutId)
   }, [bgmSrc, category, content, coverImage, excerpt, isAuthenticated, isAuthLoading, pinned, slug, tags, title])
-
-  useEffect(() => {
-    if (!title.trim()) return
-    setSlug((current) => current || title.toLowerCase().trim().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, ""))
-  }, [title])
 
   useEffect(() => {
     fetch("/api/music", { cache: "no-store" })
@@ -240,7 +249,7 @@ export default function WritePage() {
       if (res.ok) {
         clearSavedDraft()
         setMessage("发布成功！")
-        setTimeout(() => router.push(returnPath), 1000)
+        setTimeout(() => navigateBack(router, returnPath), 1000)
       } else {
         const data = await res.json()
         setMessage(data.error || "发布失败")
@@ -269,16 +278,15 @@ export default function WritePage() {
               </div>
               <span className="font-black text-lg">Champion&apos;s Blog</span>
             </div>
-            <div className="flex items-center gap-4 sm:gap-6">
-              <Link href={returnPath} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                ← 返回
-              </Link>
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
               <button
-                onClick={handleLogout}
-                className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
+                type="button"
+                onClick={() => navigateBack(router, returnPath)}
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
               >
-                退出
+                ← 返回
               </button>
+              <PrimaryNavLinks active="write" />
             </div>
           </div>
         </div>
@@ -348,7 +356,11 @@ export default function WritePage() {
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                const nextTitle = e.target.value
+                setTitle(nextTitle)
+                setSlug((current) => current || buildSlug(nextTitle))
+              }}
               placeholder="文章标题"
               className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-lg font-bold"
             />

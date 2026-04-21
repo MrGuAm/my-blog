@@ -1,9 +1,8 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import Link from "next/link"
 import { useMemo, useRef, useState } from "react"
-import { useAuthStatus } from "@/hooks/useAuthStatus"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import type { MediaAsset } from "@/lib/server/media"
 
 function formatSize(size: number) {
@@ -14,19 +13,20 @@ function formatSize(size: number) {
 
 export default function AdminMediaClient({ initialAssets, initialWarning = null }: { initialAssets: MediaAsset[]; initialWarning?: string | null }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { logout } = useAuthStatus()
   const [assets, setAssets] = useState(initialAssets)
   const [isUploading, setIsUploading] = useState(false)
   const [message, setMessage] = useState("")
   const [warning, setWarning] = useState(initialWarning)
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
+  const [referenceNow, setReferenceNow] = useState(() => Date.now())
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
     const data = await response.json()
     setAssets(Array.isArray(data.assets) ? data.assets : [])
     setWarning(typeof data.warning === "string" ? data.warning : null)
+    setReferenceNow(Date.now())
   }
 
   const handleUpload = async (file?: File | null) => {
@@ -44,6 +44,7 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
       }
       setAssets((current) => [data.asset, ...current.filter((item) => item.id !== data.asset.id)])
       setMessage("素材上传成功")
+      setReferenceNow(Date.now())
     } catch {
       setMessage("上传失败，请重试")
     } finally {
@@ -63,6 +64,7 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
       }
       setAssets((current) => current.filter((item) => item.id !== asset.id))
       setMessage("素材已删除")
+      setReferenceNow(Date.now())
     } catch {
       setMessage("删除失败，请重试")
     }
@@ -70,7 +72,6 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
 
   const filteredAssets = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase()
-    const now = Date.now()
     return assets.filter((asset) => {
       if (normalizedKeyword && !asset.name.toLowerCase().includes(normalizedKeyword)) {
         return false
@@ -78,9 +79,9 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
 
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
-      return now - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
+      return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
-  }, [assets, keyword, timeFilter])
+  }, [assets, keyword, referenceNow, timeFilter])
 
   const copyValue = async (value: string, label: string) => {
     try {
@@ -101,10 +102,8 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
             </div>
             <span className="text-lg font-black">媒体库</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/admin" className="text-sm text-muted-foreground transition-colors hover:text-primary">返回后台</Link>
-            <Link href="/write?from=/admin/media" className="text-sm text-muted-foreground transition-colors hover:text-primary">写文章</Link>
-            <button onClick={logout} className="text-sm text-red-500 transition-colors hover:text-red-600">退出</button>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <PrimaryNavLinks active="media" />
           </div>
         </div>
       </nav>

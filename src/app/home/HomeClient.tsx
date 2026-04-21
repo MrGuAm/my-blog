@@ -5,7 +5,8 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
-import LoginModal from "@/components/LoginModal"
+import { PaletteHeroTrio } from "@/components/PaletteCharacters"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import MarqueeText from "@/components/music/MarqueeText"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
@@ -28,9 +29,9 @@ interface RecentComment {
 function CardAccent() {
   return (
     <div className="flex items-center gap-1.5 opacity-80">
-      <span className="h-2.5 w-2.5 rounded-full bg-[#5a4030]/85 dark:bg-[#f5e9dc]/90" />
-      <span className="h-2 w-2 rounded-full bg-[#b79378]/85 dark:bg-[#e4c7ab]/65" />
-      <span className="h-1.5 w-8 rounded-full bg-[#d8c1ab] dark:bg-[#e8d7c4]/30" />
+      <span className="h-2.5 w-2.5 rounded-full bg-[#4d5772]/88 dark:bg-white/88" />
+      <span className="h-2 w-2 rounded-full bg-[#7b9bff]/78 dark:bg-[#7b9bff]/72" />
+      <span className="h-1.5 w-8 rounded-full bg-[#ffb98f]/85 dark:bg-[#ffb98f]/45" />
     </div>
   )
 }
@@ -51,7 +52,7 @@ function PostCard({
 }) {
   const postHref = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.slug || post.id}`
   return (
-    <article className="apple-panel group overflow-hidden rounded-[2rem] p-5 transition-all duration-300 hover:-translate-y-0.5 sm:p-6">
+    <article className="editorial-card group overflow-hidden transition-all duration-300 hover:-translate-y-0.5 sm:p-6">
       {post.coverImage && (
         <div className="mb-5 overflow-hidden rounded-[1.75rem] border border-white/70 dark:border-white/10">
           <img src={post.coverImage} alt={post.title} className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
@@ -64,7 +65,7 @@ function PostCard({
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{post.date}</span>
           {post.pinned && (
-            <span className="rounded-full bg-[#5a4030] px-2.5 py-1 text-xs font-medium text-white dark:bg-[#f5e9dc] dark:text-[#35261d]">
+            <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
               置顶
             </span>
           )}
@@ -82,7 +83,7 @@ function PostCard({
               }}
               className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                 isCurrentBgm
-                  ? "bg-[#5a4030] text-white dark:bg-[#f5e9dc] dark:text-[#35261d]"
+                  ? "bg-primary text-primary-foreground"
                   : "border border-white/70 bg-white/72 text-foreground/80 backdrop-blur-xl hover:bg-white dark:border-white/10 dark:bg-white/8 dark:text-white/80"
               }`}
             >
@@ -103,10 +104,10 @@ function PostCard({
         </div>
       </div>
       <Link href={postHref} className="block">
-        <h2 className="text-2xl font-semibold tracking-[-0.04em] text-foreground transition-colors group-hover:text-foreground/80">
+        <h2 className="text-[1.9rem] font-semibold tracking-[-0.05em] text-foreground transition-colors group-hover:text-foreground/80">
           {post.title}
         </h2>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-[15px]">{post.excerpt}</p>
+        <p className="mt-3 text-[15px] leading-7 text-muted-foreground">{post.excerpt}</p>
         <div className="mt-6 flex items-center justify-between">
           <span className="text-sm font-medium text-foreground/80">
             {post.draft ? "继续编辑" : "继续阅读"}
@@ -145,10 +146,9 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
     handleProgressClick,
     formatTime,
   } = useMusic()
-  const { isAuthenticated, logout } = useAuthStatus()
+  const { isAuthenticated } = useAuthStatus()
   const [showDrafts, setShowDrafts] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [recentComments, setRecentComments] = useState<RecentComment[]>([])
   const [adminPosts, setAdminPosts] = useState<Post[] | null>(null)
   const [showList, setShowList] = useState(false)
@@ -158,19 +158,6 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const postsPerPage = 6
-
-  const getSafeNextPath = (value: string | null) => {
-    if (!value) return null
-    return value.startsWith("/") && !value.startsWith("//") ? value : null
-  }
-
-  const closeLoginModal = () => {
-    setIsLoginModalOpen(false)
-    if (!loginRequested) return
-    router.replace("/home")
-  }
-
-  const loginModalOpen = isLoginModalOpen || (loginRequested && !isAuthenticated)
 
   const visiblePosts = isAuthenticated ? (adminPosts ?? posts) : posts
 
@@ -200,11 +187,6 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
       .catch(() => setAdminPosts(null))
   }, [isAuthenticated])
 
-  const handleLogout = () => {
-    logout()
-    router.push('/home');
-  };
-
   const filteredPosts = visiblePosts.filter(post =>
     (showDrafts || !post.draft) &&
     (searchQuery === "" ||
@@ -231,7 +213,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#5a4030] text-sm font-semibold text-white shadow-lg shadow-amber-900/10 dark:bg-[#f5e9dc] dark:text-[#35261d]">
+              <div className="brand-mark">
                 <span className="text-sm font-bold text-current">C</span>
               </div>
               <span className="text-lg font-semibold tracking-[-0.03em] text-foreground">Champion&apos;s Blog</span>
@@ -266,60 +248,23 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
               <span className="text-xs text-muted-foreground hidden lg:inline">
                 共 {filteredPosts.length} 篇
               </span>
-              <Link href="/home" className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70">
-                Home
-              </Link>
-              <Link href="/about" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70">
-                About
-              </Link>
-              <Link href="/music" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70">
-                Music
-              </Link>
+              <PrimaryNavLinks
+                active="home"
+                loginRequested={loginRequested}
+                nextPath={nextPath}
+                onDismissLoginRequest={() => router.replace("/home")}
+              />
               {isAuthenticated ? (
-                <>
-                  <Link
-                    href="/write"
-                    className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
-                  >
-                    写文章
-                  </Link>
-                  <Link
-                    href="/moderation"
-                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70"
-                  >
-                    审核评论
-                  </Link>
-                  <Link
-                    href="/admin"
-                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70"
-                  >
-                    后台
-                  </Link>
-                  <button
-                    onClick={() => {
-                      setShowDrafts(!showDrafts)
-                      setCurrentPage(1)
-                    }}
-                    className={`text-sm font-medium transition-colors ${showDrafts ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'}`}
-                  >
-                    {showDrafts ? '隐藏草稿' : '显示草稿'}
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="text-sm font-medium text-red-500 transition-colors hover:text-red-600"
-                  >
-                    退出
-                  </button>
-                </>
-              ) : (
                 <button
-                  onClick={() => setIsLoginModalOpen(true)}
-                  className="apple-button-secondary"
-                  title="仅站点管理员使用"
+                  onClick={() => {
+                    setShowDrafts(!showDrafts)
+                    setCurrentPage(1)
+                  }}
+                  className={`text-sm font-medium transition-colors ${showDrafts ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'}`}
                 >
-                  管理
+                  {showDrafts ? '隐藏草稿' : '显示草稿'}
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -327,19 +272,35 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Hero Section */}
-        <section className="pb-10 pt-8 sm:pb-16 sm:pt-12">
-          <div className="apple-panel rounded-[2.5rem] px-6 py-8 sm:px-10 sm:py-12">
-            <span className="apple-pill inline-flex">Notes · Stories · Sound</span>
-            <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-[-0.07em] text-foreground sm:text-6xl">
-              一个更安静、更克制的个人博客。
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-              用来记录生活、技术和那些值得留下来的想法，也把音乐和写作放在同一个流畅的阅读空间里。
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <span className="apple-pill">{filteredPosts.length} 篇文章</span>
-              <span className="apple-pill">{allTags.length} 个标签</span>
-              <span className="apple-pill">{playlist.length} 首音乐</span>
+        <section className="pb-3 pt-3 sm:pb-4 sm:pt-4">
+          <div className="apple-panel flex flex-col gap-4 rounded-[2rem] px-5 py-5 sm:px-6 sm:py-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 flex-1 lg:max-w-none">
+              <span className="section-kicker">Champion&apos;s Blog</span>
+              <h1 className="mt-3 max-w-[16.5ch] text-balance text-[2.1rem] leading-[0.96] font-semibold tracking-[-0.07em] text-foreground sm:max-w-[15.5ch] sm:text-[2.7rem] lg:max-w-[18ch] lg:text-[3rem]">
+                干净一点，轻松一点，
+                <br className="hidden sm:block" />
+                也更有<span className="palette-gradient-text">自己的</span>样子。
+              </h1>
+              <p className="section-copy mt-3 max-w-2xl">
+                保持白色基底，用少量柔和彩色元素提气，不会太冷，也不会太花，整体更像一个干净但有个性的个人博客。
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 sm:gap-x-8">
+                  <div className="flex items-baseline gap-1.5 whitespace-nowrap text-foreground/82">
+                    <span className="text-[2rem] font-semibold tracking-[-0.06em] tabular-nums leading-none">{filteredPosts.length}</span>
+                    <span className="text-sm font-medium text-muted-foreground">篇文章</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 whitespace-nowrap text-foreground/82">
+                    <span className="text-[2rem] font-semibold tracking-[-0.06em] tabular-nums leading-none">{allTags.length}</span>
+                    <span className="text-sm font-medium text-muted-foreground">个标签</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 whitespace-nowrap text-foreground/82">
+                    <span className="text-[2rem] font-semibold tracking-[-0.06em] tabular-nums leading-none">{playlist.length}</span>
+                    <span className="text-sm font-medium text-muted-foreground">首音乐</span>
+                  </div>
+              </div>
+            </div>
+            <div className="self-center lg:max-w-[220px] lg:-translate-x-6 lg:-translate-y-2">
+              <PaletteHeroTrio />
             </div>
           </div>
         </section>
@@ -350,8 +311,8 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
           <main className="flex-1 space-y-5">
             <div className="mb-2 flex items-end justify-between">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">Latest Writing</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-foreground">最近更新</h2>
+                <p className="section-kicker">Latest Writing</p>
+                <h2 className="section-title mt-2">最近更新</h2>
               </div>
               <p className="hidden text-sm text-muted-foreground sm:block">向下翻，慢慢读。</p>
             </div>
@@ -636,23 +597,6 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
           </aside>
         </div>
       </div>
-
-      {/* Login Modal */}
-      <LoginModal
-        isOpen={loginModalOpen}
-        onClose={closeLoginModal}
-        onSuccess={() => {
-          const safeNextPath = getSafeNextPath(nextPath)
-          if (safeNextPath) {
-            router.push(safeNextPath)
-            return
-          }
-          if (loginRequested) {
-            router.replace("/home")
-          }
-        }}
-      />
-
       {/* Footer */}
       <footer className="border-t border-white/60 py-10 dark:border-white/10">
         <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
@@ -674,9 +618,9 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
       {/* Back to Top Button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`apple-panel fixed bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full text-lg text-foreground transition-all duration-300 hover:bg-white dark:hover:bg-white/12 ${
+        className={`brand-solid-button fixed bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full text-lg transition-all duration-300 ${
           showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        } ${floatingHovering ? "right-[17rem]" : "right-[80px]"}`}
+        } ${floatingHovering ? "right-[20rem]" : "right-[80px]"}`}
         aria-label="回到顶部"
       >
         ↑

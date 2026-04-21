@@ -6,7 +6,7 @@ import { useMusic } from "@/context/MusicContext"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
 import { Post, TocItem } from "@/lib/posts"
-import LoginModal from "@/components/LoginModal"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import Comments from "@/components/Comments"
 import hljs from "highlight.js"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
@@ -25,14 +25,13 @@ interface PostClientProps {
 
 export default function PostClient({ post, content, readingTime, headings, relatedPosts, previousPost, nextPost }: PostClientProps) {
   const router = useRouter()
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [views, setViews] = useState(post.views || 0)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [readingProgress, setReadingProgress] = useState(0)
   const articleRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const { isHovering, playTrackBySrc, track } = useMusic()
-  const { isAuthenticated, logout } = useAuthStatus()
+  const { isAuthenticated } = useAuthStatus()
 
   // Back to top & code highlight
   useEffect(() => {
@@ -76,11 +75,6 @@ export default function PostClient({ post, content, readingTime, headings, relat
       .catch(() => {})
   }, [post.id])
 
-  const handleLogout = () => {
-    logout()
-    router.push('/home');
-  };
-
   const handleTogglePin = async () => {
     try {
       await fetch(`/api/posts/${post.id}`, {
@@ -98,29 +92,15 @@ export default function PostClient({ post, content, readingTime, headings, relat
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#5a4030] text-sm font-semibold text-white shadow-lg shadow-amber-900/10 dark:bg-[#f5e9dc] dark:text-[#35261d]">
+              <div className="brand-mark">
                 <span className="text-sm font-bold text-current">C</span>
               </div>
               <span className="text-lg font-semibold tracking-[-0.03em]">Champion&apos;s Blog</span>
             </div>
             <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-              <Link href="/home" className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70">
-                Home
-              </Link>
-              <Link href="/about" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70">
-                About
-              </Link>
-              <Link href="/music" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70">
-                Music
-              </Link>
+              <PrimaryNavLinks />
               {isAuthenticated ? (
                 <>
-                  <Link
-                    href="/write"
-                    className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
-                  >
-                    写文章
-                  </Link>
                   <button
                     onClick={() => router.push(`/write/${post.id}`)}
                     className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70"
@@ -133,33 +113,8 @@ export default function PostClient({ post, content, readingTime, headings, relat
                   >
                     {post.pinned ? '取消置顶' : '置顶'}
                   </button>
-                  <Link
-                    href="/moderation"
-                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70"
-                  >
-                    审核评论
-                  </Link>
-                  <Link
-                    href="/admin"
-                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground/70"
-                  >
-                    后台
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
-                  >
-                    退出
-                  </button>
                 </>
-              ) : (
-                <button
-                  onClick={() => setIsLoginModalOpen(true)}
-                  className="apple-button-secondary"
-                >
-                  管理
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -170,7 +125,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
 
       <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
         {/* Back link */}
-        <Link href="/home" className="apple-pill mb-8 inline-flex items-center gap-2 hover:bg-white dark:hover:bg-white/12">
+        <Link href="/home" className="brand-solid-button mb-8 inline-flex items-center gap-2">
           ← 返回首页
         </Link>
 
@@ -178,7 +133,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             {/* Article */}
-            <article ref={articleRef} className="apple-panel rounded-[2.25rem] p-6 sm:p-10">
+            <article ref={articleRef} className="editorial-card rounded-[2.25rem] sm:p-10">
               <header className="mb-8">
                 {post.coverImage && (
                   <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/70 dark:border-white/10">
@@ -206,13 +161,13 @@ export default function PostClient({ post, content, readingTime, headings, relat
                     ))}
                   </div>
                 </div>
-                <h1 className="max-w-4xl text-3xl font-semibold tracking-[-0.06em] sm:text-5xl">{post.title}</h1>
+                <h1 className="max-w-4xl text-[2.35rem] font-semibold tracking-[-0.065em] sm:text-[3.55rem]">{post.title}</h1>
                 {post.bgmSrc && (
                   <div className="mt-4 flex items-center gap-3 flex-wrap">
                     <button
                       type="button"
                       onClick={() => playTrackBySrc(post.bgmSrc)}
-                      className="rounded-full bg-[#5a4030] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#6a4c39] dark:bg-[#f5e9dc] dark:text-[#35261d] dark:hover:bg-[#fff6ee]"
+                      className="brand-solid-button"
                     >
                       {track.src === post.bgmSrc ? "播放本文 BGM 中" : "播放本文 BGM"}
                     </button>
@@ -231,10 +186,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
             {(previousPost || nextPost) && (
               <section className="mt-8 grid gap-4 md:grid-cols-2">
                 {previousPost ? (
-                  <Link
-                    href={`/posts/${previousPost.slug || previousPost.id}`}
-                    className="apple-panel-soft rounded-[1.75rem] p-5 transition-all hover:-translate-y-0.5"
-                  >
+                  <Link href={`/posts/${previousPost.slug || previousPost.id}`} className="editorial-card-soft transition-all hover:-translate-y-0.5">
                     <p className="text-xs text-muted-foreground">上一篇</p>
                     <h3 className="mt-2 text-base font-semibold">{previousPost.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{previousPost.excerpt}</p>
@@ -244,10 +196,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
                 )}
 
                 {nextPost ? (
-                  <Link
-                    href={`/posts/${nextPost.slug || nextPost.id}`}
-                    className="apple-panel-soft rounded-[1.75rem] p-5 text-left transition-all hover:-translate-y-0.5"
-                  >
+                  <Link href={`/posts/${nextPost.slug || nextPost.id}`} className="editorial-card-soft text-left transition-all hover:-translate-y-0.5">
                     <p className="text-xs text-muted-foreground">下一篇</p>
                     <h3 className="mt-2 text-base font-semibold">{nextPost.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{nextPost.excerpt}</p>
@@ -266,7 +215,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
           {(headings.length > 0 || relatedPosts.length > 0) && (
             <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-72">
               <div className="space-y-6">
-                <div className="apple-panel-soft rounded-[1.75rem] p-5">
+                <div className="editorial-card-soft">
                   <h3 className="mb-3 text-sm font-semibold text-foreground">文章信息</h3>
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <p>发布时间：{post.date}</p>
@@ -290,7 +239,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
                 </div>
 
                 {headings.length > 0 && (
-                  <div className="apple-panel-soft rounded-[1.75rem] p-5">
+                  <div className="editorial-card-soft">
                     <h3 className="mb-3 text-sm font-semibold text-foreground">目录</h3>
                     <nav className="space-y-1.5">
                       {headings.map((heading) => (
@@ -316,7 +265,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
                         <Link
                           key={rp.id}
                           href={`/posts/${rp.slug || rp.id}`}
-                          className="apple-panel-soft block rounded-[1.5rem] p-4 transition-all hover:-translate-y-0.5"
+                          className="editorial-card-soft block rounded-[1.5rem] p-4 transition-all hover:-translate-y-0.5"
                         >
                           <span className="apple-pill mb-2 inline-flex">
                             {rp.category}
@@ -339,20 +288,13 @@ export default function PostClient({ post, content, readingTime, headings, relat
       {/* Back to Top Button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`apple-panel fixed bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full text-lg text-foreground transition-all duration-300 hover:bg-white dark:hover:bg-white/12 ${
+        className={`brand-solid-button fixed bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full text-lg transition-all duration-300 ${
           showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        } ${isHovering ? "right-[17rem]" : "right-[80px]"}`}
+        } ${isHovering ? "right-[20rem]" : "right-[80px]"}`}
         aria-label="回到顶部"
       >
         ↑
       </button>
-
-      {/* Login Modal */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        onSuccess={() => {}}
-      />
 
       {/* Footer */}
       <footer className="mt-16 border-t border-white/60 py-10 dark:border-white/10">

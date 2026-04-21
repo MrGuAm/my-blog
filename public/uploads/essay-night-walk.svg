@@ -1,0 +1,36 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f2a44"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#night)"/>
+  <circle cx="926" cy="122" r="74" fill="#fff2b0" opacity="0.96"/>
+  <circle cx="926" cy="122" r="106" fill="#fff2b0" opacity="0.18"/>
+  <rect y="520" width="1200" height="200" fill="#1b2334"/>
+  <path d="M0 560 C180 500 300 600 470 550 C650 494 778 594 930 552 C1040 522 1120 520 1200 552 V720 H0 Z" fill="#2b3850"/>
+  <rect x="156" y="194" width="16" height="280" rx="8" fill="#d8d2cb"/>
+  <circle cx="164" cy="188" r="30" fill="#ffcb7d"/>
+  <circle cx="164" cy="188" r="52" fill="#ffcb7d" opacity="0.2"/>
+  <rect x="840" y="220" width="16" height="254" rx="8" fill="#d8d2cb"/>
+  <circle cx="848" cy="214" r="30" fill="#ffcb7d"/>
+  <circle cx="848" cy="214" r="52" fill="#ffcb7d" opacity="0.2"/>
+  <path d="M500 552 C520 488 564 466 612 466 C662 466 708 492 726 552 Z" fill="#f6b7ce"/>
+  <path d="M546 460 C564 438 588 426 614 426 C642 426 666 438 684 460 Z" fill="#7b9bff"/>
+  <circle cx="608" cy="406" r="26" fill="#ffe6cb"/>
+  <circle cx="598" cy="404" r="4" fill="#303744"/>
+  <circle cx="620" cy="404" r="4" fill="#303744"/>
+  <path d="M596 418 C603 426 613 426 620 418" stroke="#c78a6b" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <g fill="#ffffff" opacity="0.8">
+    <circle cx="200" cy="102" r="3"/>
+    <circle cx="258" cy="84" r="2"/>
+    <circle cx="336" cy="132" r="2.5"/>
+    <circle cx="420" cy="90" r="2"/>
+    <circle cx="540" cy="126" r="2.5"/>
+    <circle cx="1080" cy="82" r="2.5"/>
+    <circle cx="1024" cy="140" r="2"/>
+  </g>
+  <text x="124" y="108" fill="#f4f6fb" font-size="58" font-family="Helvetica Neue, Arial, sans-serif" font-weight="700">把夜晚留给自己</text>
+  <text x="126" y="168" fill="#c6d2e6" font-size="28" font-family="Helvetica Neue, Arial, sans-serif">有时候，最好的整理不是动手，而是出去走一圈。</text>
+</svg>

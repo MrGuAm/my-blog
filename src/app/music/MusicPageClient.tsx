@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import Link from "next/link"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import SyncedLyricsPanel from "@/components/music/SyncedLyricsPanel"
 import { useMusic } from "@/context/MusicContext"
 
@@ -28,27 +28,26 @@ export default function MusicPageClient() {
   } = useMusic()
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
+    <div className="min-h-screen text-foreground">
+      <nav className="apple-nav sticky top-0 z-50">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#6C3FF5] to-[#6C3FF5]/60">
+            <div className="brand-mark">
               <span className="text-sm font-bold text-white">C</span>
             </div>
-            <span className="text-lg font-black">音乐角落</span>
+            <span className="text-lg font-semibold tracking-[-0.03em]">音乐角落</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/home" className="text-sm text-muted-foreground transition-colors hover:text-primary">Home</Link>
-            <Link href="/about" className="text-sm text-muted-foreground transition-colors hover:text-primary">About</Link>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <PrimaryNavLinks active="music" />
           </div>
         </div>
       </nav>
 
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
         <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-3xl border border-border/50 bg-card p-6">
+          <div className="editorial-card">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-              <div className="h-40 w-40 overflow-hidden rounded-3xl bg-gradient-to-br from-[#6C3FF5] to-[#FF9B6B]">
+              <div className="h-40 w-40 overflow-hidden rounded-3xl bg-gradient-to-br from-[#7b9bff] to-[#f697c2]">
                 {track.coverUrl ? (
                   <img src={track.coverUrl} alt={track.title} className={`h-full w-full object-cover ${isPlaying ? "animate-pulse" : ""}`} />
                 ) : (
@@ -56,20 +55,20 @@ export default function MusicPageClient() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Now Playing</p>
-                <h1 className="mt-2 text-3xl font-black tracking-tight">{track.title}</h1>
+                <p className="section-kicker">Now Playing</p>
+                <h1 className="mt-2 text-[2.2rem] font-semibold tracking-[-0.06em]">{track.title}</h1>
                 <p className="mt-2 text-lg text-muted-foreground">{track.artist}</p>
                 {track.album && <p className="mt-1 text-sm text-muted-foreground">专辑：{track.album}</p>}
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <button type="button" onClick={playPrevious} className="rounded-full border border-border/50 px-4 py-2 text-sm hover:bg-accent">上一首</button>
-                  <button type="button" onClick={togglePlay} className="rounded-full bg-primary px-5 py-2 text-sm text-primary-foreground hover:bg-primary/90">
+                  <button type="button" onClick={playPrevious} className="apple-button-secondary">上一首</button>
+                  <button type="button" onClick={togglePlay} className="brand-solid-button px-5 py-2">
                     {isPlaying ? "暂停" : "播放"}
                   </button>
-                  <button type="button" onClick={() => playNext()} className="rounded-full border border-border/50 px-4 py-2 text-sm hover:bg-accent">下一首</button>
+                  <button type="button" onClick={() => playNext()} className="apple-button-secondary">下一首</button>
                   <button
                     type="button"
                     onClick={() => toggleFavorite(track.src)}
-                    className="rounded-full border border-border/50 px-4 py-2 text-sm hover:bg-accent"
+                    className="apple-button-secondary"
                   >
                     {isFavorite(track.src) ? "已收藏" : "收藏这首"}
                   </button>
@@ -79,7 +78,7 @@ export default function MusicPageClient() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-border/50 bg-card p-6">
+          <div className="editorial-card-soft !p-6">
             <h2 className="mb-4 text-lg font-bold">同步歌词</h2>
             <SyncedLyricsPanel
               lyrics={parsedLyrics}
@@ -94,7 +93,7 @@ export default function MusicPageClient() {
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-6">
-            <div className="rounded-3xl border border-border/50 bg-card p-5">
+            <div className="editorial-card-soft">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-lg font-bold">收藏歌曲</h2>
                 <span className="text-xs text-muted-foreground">{favoriteTracks.length} 首</span>
@@ -119,7 +118,7 @@ export default function MusicPageClient() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-border/50 bg-card p-5">
+            <div className="editorial-card-soft">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-lg font-bold">最近播放</h2>
                 <span className="text-xs text-muted-foreground">{recentTracks.length} 首</span>
@@ -145,7 +144,7 @@ export default function MusicPageClient() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-border/50 bg-card p-5">
+          <div className="editorial-card-soft">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-bold">完整歌单</h2>
               <span className="text-xs text-muted-foreground">{playlist.length} 首</span>

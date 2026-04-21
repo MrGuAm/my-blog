@@ -44,7 +44,10 @@ export function useUserSession() {
   }, [])
 
   useEffect(() => {
-    refreshSession()
+    const timeoutId = window.setTimeout(() => {
+      void refreshSession()
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [refreshSession])
 
   useEffect(() => {

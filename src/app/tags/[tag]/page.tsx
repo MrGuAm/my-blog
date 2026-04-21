@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import { getAllTags, getPostsByTag } from "@/lib/posts"
 
 interface TagPageProps {
@@ -35,8 +36,8 @@ export default async function TagPage({ params }: TagPageProps) {
             </div>
             <span className="text-lg font-black">标签聚合</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/home" className="text-sm text-muted-foreground transition-colors hover:text-primary">Home</Link>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <PrimaryNavLinks active="tags" />
             <Link href="/tags" className="text-sm text-muted-foreground transition-colors hover:text-primary">全部标签</Link>
           </div>
         </div>
