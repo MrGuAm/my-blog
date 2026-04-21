@@ -94,6 +94,48 @@ function TrackSection({
   )
 }
 
+function TrackProgressBar({
+  progress,
+  dragProgress,
+  duration,
+  formatTime,
+  onMouseDown,
+  onClick,
+}: {
+  progress: number
+  dragProgress: number | null
+  duration: number
+  formatTime: (seconds: number) => string
+  onMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void
+  onClick: (event: React.MouseEvent<HTMLDivElement>) => void
+}) {
+  const activeProgress = dragProgress ?? progress
+  const activeSeconds = ((dragProgress ?? progress) / 100) * duration
+
+  return (
+    <div className="mt-5">
+      <div
+        className="h-1.5 cursor-grab rounded-full bg-secondary/80 relative active:cursor-grabbing"
+        onMouseDown={onMouseDown}
+        onClick={onClick}
+      >
+        <div
+          className="absolute left-0 top-0 h-full rounded-full bg-primary"
+          style={{ width: `${activeProgress}%` }}
+        />
+        <div
+          className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-primary shadow-md"
+          style={{ left: `calc(${activeProgress}% - 7px)` }}
+        />
+      </div>
+      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+        <span>{formatTime(activeSeconds)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+    </div>
+  )
+}
+
 export default function MusicPageClient() {
   const {
     playlist,
@@ -101,6 +143,9 @@ export default function MusicPageClient() {
     currentTrack,
     isPlaying,
     currentTime,
+    progress,
+    duration,
+    dragProgress,
     parsedLyrics,
     activeLyricIndex,
     favoriteTracks,
@@ -113,6 +158,8 @@ export default function MusicPageClient() {
     toggleFavorite,
     isFavorite,
     seekToTime,
+    handleMouseDown,
+    handleProgressClick,
     formatTime,
   } = useMusic()
 
@@ -163,7 +210,15 @@ export default function MusicPageClient() {
                     {isFavorite(track.src) ? "已收藏" : "收藏这首"}
                   </button>
                 </div>
-                <p className="mt-4 text-sm text-muted-foreground">当前时间：{formatTime(currentTime)}</p>
+                <TrackProgressBar
+                  progress={progress}
+                  dragProgress={dragProgress}
+                  duration={duration}
+                  formatTime={formatTime}
+                  onMouseDown={handleMouseDown}
+                  onClick={handleProgressClick}
+                />
+                <p className="mt-3 text-sm text-muted-foreground">当前时间：{formatTime(currentTime)}</p>
               </div>
             </div>
           </div>
