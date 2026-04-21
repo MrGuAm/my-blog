@@ -2,11 +2,12 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { canWriteMediaLibrary, getMediaLibraryWarning, listMediaAssets } from "@/lib/server/media"
+import { siteConfig } from "@/lib/site-config"
 import AdminMediaClient from "./AdminMediaClient"
 
 export const metadata: Metadata = {
   title: "媒体库",
-  description: "Champion's Blog 媒体素材管理",
+  description: `${siteConfig.name} 媒体素材管理`,
 }
 
 export default async function AdminMediaPage() {

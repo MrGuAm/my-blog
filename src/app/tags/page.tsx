@@ -2,10 +2,11 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import { getAllTags, getPostsByTag } from "@/lib/posts"
+import { siteConfig } from "@/lib/site-config"
 
 export const metadata: Metadata = {
   title: "全部标签",
-  description: "浏览 Champion's Blog 的全部内容标签",
+  description: `浏览 ${siteConfig.name} 的全部内容标签`,
 }
 
 export default async function TagsPage() {

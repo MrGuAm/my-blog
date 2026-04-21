@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import { getAllTags, getPostsByTag } from "@/lib/posts"
+import { siteConfig } from "@/lib/site-config"
 
 interface TagPageProps {
   params: Promise<{ tag: string }>
@@ -13,6 +14,10 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
   return {
     title: `#${decodedTag}`,
     description: `查看标签 ${decodedTag} 下的所有文章`,
+    openGraph: {
+      title: `#${decodedTag} | ${siteConfig.name}`,
+      description: `查看标签 ${decodedTag} 下的所有文章`,
+    },
   }
 }
 

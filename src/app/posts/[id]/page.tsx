@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { notFound } from "next/navigation"
 import { getAdjacentPosts, getAllPosts, getPost, getPostContent, calculateReadingTime, extractHeadings, getRelatedPosts } from "@/lib/posts"
 import { isAuthenticatedServer } from "@/lib/server/auth"
+import { siteConfig } from "@/lib/site-config"
 import PostClient from "./PostClient"
 
 interface Props {
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   
   if (!post) {
     return {
-      title: "文章未找到 | Champion's Blog",
+      title: `文章未找到 | ${siteConfig.name}`,
     }
   }
 
@@ -24,12 +25,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: post.excerpt,
     keywords: post.tags,
     openGraph: {
-      title: `${post.title} | Champion's Blog`,
+      title: `${post.title} | ${siteConfig.name}`,
       description: post.excerpt,
       type: "article",
       publishedTime: post.date,
       tags: post.tags,
-      authors: ["Champion"],
+      authors: [siteConfig.author],
     },
     twitter: {
       card: "summary_large_image",

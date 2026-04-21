@@ -1,15 +1,16 @@
 import type { Metadata } from "next"
 import { getAllPosts, getAllTags } from "@/lib/posts"
+import { siteConfig } from "@/lib/site-config"
 import HomeClient from "./home/HomeClient"
 
 export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: "Champion's Blog",
-  description: "记录生活，分享想法 - Champion 的个人博客",
+  title: siteConfig.name,
+  description: siteConfig.description,
   openGraph: {
-    title: "Champion's Blog",
-    description: "记录生活，分享想法 - Champion 的个人博客",
+    title: siteConfig.name,
+    description: siteConfig.description,
   },
 }
 

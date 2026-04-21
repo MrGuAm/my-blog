@@ -3,12 +3,13 @@ import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { listComments } from "@/lib/server/comments"
 import { getMediaLibraryWarning, listMediaAssets } from "@/lib/server/media"
+import { siteConfig } from "@/lib/site-config"
 import { listPosts, listUsers } from "@/lib/server/store"
 import AdminDashboardClient from "./AdminDashboardClient"
 
 export const metadata: Metadata = {
   title: "后台总览",
-  description: "Champion's Blog 管理后台",
+  description: `${siteConfig.name} 管理后台`,
 }
 
 export default async function AdminPage() {

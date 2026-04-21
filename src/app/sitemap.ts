@@ -1,12 +1,12 @@
 import { getAllPosts } from "@/lib/posts"
+import { absoluteUrl, siteConfig } from "@/lib/site-config"
 import type { MetadataRoute } from "next"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = (await getAllPosts()).filter((post) => !post.draft)
-  const baseUrl = "https://my-blog-amber-chi.vercel.app"
 
   const postEntries = posts.map(post => ({
-    url: `${baseUrl}/posts/${post.slug || post.id}`,
+    url: absoluteUrl(`/posts/${post.slug || post.id}`),
     lastModified: new Date(post.date),
     changeFrequency: "monthly" as const,
     priority: post.pinned ? 0.8 : 0.6
@@ -14,19 +14,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     {
-      url: baseUrl,
+      url: siteConfig.url,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1.0
     },
     {
-      url: `${baseUrl}/home`,
+      url: absoluteUrl("/home"),
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9
     },
     {
-      url: `${baseUrl}/about`,
+      url: absoluteUrl("/about"),
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.5
