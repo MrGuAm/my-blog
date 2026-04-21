@@ -1,10 +1,14 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { NextRequest } from "next/server"
+import { POST as postsPost } from "../src/app/api/posts/route"
+import { DELETE as adminMediaDelete, POST as adminMediaPost } from "../src/app/api/admin/media/route"
 import { GET as authStatusGet } from "../src/app/api/auth/status/route"
 import { GET as feedGet } from "../src/app/api/feed/route"
 import { GET as adminMediaGet } from "../src/app/api/admin/media/route"
 import { POST as postViewsPost } from "../src/app/api/posts/[id]/views/route"
+import { GET as postDetailGet, PATCH as postPatch } from "../src/app/api/posts/[id]/route"
+import { GET as versionsGet, POST as versionsPost } from "../src/app/api/posts/[id]/versions/route"
 import { buildSessionCookie, createSessionToken } from "../src/lib/server/auth"
 
 test("feed route uses the production domain and rss metadata", async () => {
@@ -41,6 +45,103 @@ test("admin media route rejects unauthenticated access", async () => {
 
   assert.equal(response.status, 401)
   assert.equal(payload.error, "请先登录管理员账号")
+})
+
+test("admin media route validates authenticated upload and delete input", async () => {
+  const cookie = buildSessionCookie(createSessionToken())
+
+  const uploadRequest = new NextRequest("https://champion.cc.cd/api/admin/media", {
+    method: "POST",
+    headers: { cookie },
+    body: new FormData(),
+  })
+  const uploadResponse = await adminMediaPost(uploadRequest)
+  const uploadPayload = await uploadResponse.json()
+  assert.equal(uploadResponse.status, 400)
+  assert.equal(uploadPayload.error, "请选择要上传的图片")
+
+  const deleteRequest = new NextRequest("https://champion.cc.cd/api/admin/media", {
+    method: "DELETE",
+    headers: { cookie },
+  })
+  const deleteResponse = await adminMediaDelete(deleteRequest)
+  const deletePayload = await deleteResponse.json()
+  assert.equal(deleteResponse.status, 400)
+  assert.equal(deletePayload.error, "缺少素材标识")
+})
+
+test("posts route rejects unauthenticated creation requests", async () => {
+  const request = new NextRequest("https://champion.cc.cd/api/posts", {
+    method: "POST",
+    body: JSON.stringify({ title: "Test", content: "Hello" }),
+    headers: { "content-type": "application/json" },
+  })
+  const response = await postsPost(request)
+  const payload = await response.json()
+
+  assert.equal(response.status, 401)
+  assert.equal(payload.error, "请先登录")
+})
+
+test("post detail route hides content for public requests and reveals it for authenticated ones", async () => {
+  const guestRequest = new NextRequest("https://champion.cc.cd/api/posts/welcome")
+  const guestResponse = await postDetailGet(guestRequest, {
+    params: Promise.resolve({ id: "welcome" }),
+  })
+  const guestPayload = await guestResponse.json()
+  assert.equal(guestResponse.status, 200)
+  assert.equal("content" in guestPayload, false)
+  assert.equal(guestPayload.title, "欢迎来到 Champion 的博客")
+
+  const authRequest = new NextRequest("https://champion.cc.cd/api/posts/welcome", {
+    headers: { cookie: buildSessionCookie(createSessionToken()) },
+  })
+  const authResponse = await postDetailGet(authRequest, {
+    params: Promise.resolve({ id: "welcome" }),
+  })
+  const authPayload = await authResponse.json()
+  assert.equal(authResponse.status, 200)
+  assert.equal(typeof authPayload.content, "string")
+})
+
+test("post patch and versions endpoints reject unauthenticated access", async () => {
+  const patchRequest = new NextRequest("https://champion.cc.cd/api/posts/welcome", {
+    method: "PATCH",
+    body: JSON.stringify({ title: "New title" }),
+    headers: { "content-type": "application/json" },
+  })
+  const patchResponse = await postPatch(patchRequest, {
+    params: Promise.resolve({ id: "welcome" }),
+  })
+  const patchPayload = await patchResponse.json()
+  assert.equal(patchResponse.status, 401)
+  assert.equal(patchPayload.error, "请先登录")
+
+  const versionsRequest = new NextRequest("https://champion.cc.cd/api/posts/welcome/versions")
+  const versionsResponse = await versionsGet(versionsRequest, {
+    params: Promise.resolve({ id: "welcome" }),
+  })
+  const versionsPayload = await versionsResponse.json()
+  assert.equal(versionsResponse.status, 401)
+  assert.equal(versionsPayload.error, "请先登录")
+})
+
+test("versions restore route validates versionId after authentication", async () => {
+  const request = new NextRequest("https://champion.cc.cd/api/posts/welcome/versions", {
+    method: "POST",
+    headers: {
+      cookie: buildSessionCookie(createSessionToken()),
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({}),
+  })
+  const response = await versionsPost(request, {
+    params: Promise.resolve({ id: "welcome" }),
+  })
+  const payload = await response.json()
+
+  assert.equal(response.status, 400)
+  assert.equal(payload.error, "缺少版本 ID")
 })
 
 test("post views route returns 404 for a missing post", async () => {
