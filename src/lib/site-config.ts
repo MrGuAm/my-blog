@@ -9,7 +9,7 @@ export const siteConfig = {
   twitterHandle: "@champion",
   keywords: ["博客", "随笔", "技术", "生活", "React", "前端"],
   rssPath: "/api/feed",
-  ogImage: "/og-image.svg",
+  ogImage: "/opengraph-image",
 } as const
 
 export function absoluteUrl(path = "/") {

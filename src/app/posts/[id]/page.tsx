@@ -22,6 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
+  const postOgImage = `/posts/${post.slug || post.id}/opengraph-image`
+
   return {
     title: post.title,
     description: post.excerpt,
@@ -33,11 +35,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       publishedTime: post.date,
       tags: post.tags,
       authors: [settings.authorName],
+      images: [{ url: postOgImage, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.excerpt,
+      images: [postOgImage],
     },
   }
 }
