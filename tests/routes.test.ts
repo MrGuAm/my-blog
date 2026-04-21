@@ -12,6 +12,8 @@ import { POST as postViewsPost } from "../src/app/api/posts/[id]/views/route"
 import { GET as postDetailGet, PATCH as postPatch } from "../src/app/api/posts/[id]/route"
 import { GET as versionsGet, POST as versionsPost } from "../src/app/api/posts/[id]/versions/route"
 import { buildSessionCookie, createSessionToken } from "../src/lib/server/auth"
+import robots from "../src/app/robots"
+import manifest from "../src/app/manifest"
 
 test("feed route uses the production domain and rss metadata", async () => {
   const response = await feedGet()
@@ -21,6 +23,18 @@ test("feed route uses the production domain and rss metadata", async () => {
   assert.match(xml, /https:\/\/champion\.cc\.cd\/api\/feed/)
   assert.match(xml, /https:\/\/champion\.cc\.cd\/posts\//)
   assert.doesNotMatch(xml, /my-blog-amber-chi\.vercel\.app/)
+})
+
+test("metadata routes expose robots and manifest with the production site identity", async () => {
+  const robotsData = robots()
+  const manifestData = await manifest()
+
+  assert.equal(robotsData.host, "https://champion.cc.cd")
+  assert.equal(robotsData.sitemap, "https://champion.cc.cd/sitemap.xml")
+  assert.equal(manifestData.start_url, "/")
+  assert.equal(manifestData.display, "standalone")
+  assert.equal(typeof manifestData.name, "string")
+  assert.equal(manifestData.icons?.[0]?.src, "/favicon.ico")
 })
 
 test("auth status route reflects whether a valid session cookie exists", async () => {
