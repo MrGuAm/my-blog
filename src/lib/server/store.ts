@@ -106,6 +106,30 @@ export interface UserMusicLibrary {
   updatedAt: string
 }
 
+interface MediaAssetRow {
+  id: string
+  name: string
+  pathname: string
+  url: string
+  storage: string
+  content_type: string
+  size: number
+  uploaded_at: string
+  updated_at: string
+}
+
+export interface MediaAssetRecord {
+  id: string
+  name: string
+  pathname: string
+  url: string
+  storage: 'blob' | 'local'
+  contentType: string
+  size: number
+  uploadedAt: string
+  updatedAt: string
+}
+
 export interface CommentRow {
   id: string
   post_id: string
@@ -223,6 +247,20 @@ function rowToUserMusic(row: UserMusicRow): UserMusicLibrary {
     recentSrcs: JSON.parse(row.recent_srcs_json || '[]') as string[],
     lastTrackSrc: row.last_track_src || null,
     lastTrackTime: typeof row.last_track_time === 'number' ? row.last_track_time : 0,
+    updatedAt: row.updated_at,
+  }
+}
+
+function rowToMediaAsset(row: MediaAssetRow): MediaAssetRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    pathname: row.pathname,
+    url: row.url,
+    storage: row.storage === 'local' ? 'local' : 'blob',
+    contentType: row.content_type,
+    size: row.size,
+    uploadedAt: row.uploaded_at,
     updatedAt: row.updated_at,
   }
 }
@@ -545,6 +583,24 @@ export function getDb() {
       syncSqliteSeedContent(db)
     })
 
+    runSqliteMigration(db, '010-media-assets', () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS media_assets (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          pathname TEXT NOT NULL UNIQUE,
+          url TEXT NOT NULL,
+          storage TEXT NOT NULL,
+          content_type TEXT NOT NULL,
+          size INTEGER NOT NULL DEFAULT 0,
+          uploaded_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_media_assets_updated_at ON media_assets(updated_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_media_assets_name ON media_assets(name);
+      `)
+    })
+
     global.__championBlogDb = db
   }
 
@@ -705,6 +761,24 @@ async function ensureRemoteSchema() {
 
   await runRemoteMigration('009-longform-seed-sync', async () => {
     await seedRemoteDatabase()
+  })
+
+  await runRemoteMigration('010-media-assets', async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS media_assets (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        pathname TEXT NOT NULL UNIQUE,
+        url TEXT NOT NULL,
+        storage TEXT NOT NULL,
+        content_type TEXT NOT NULL,
+        size INTEGER NOT NULL DEFAULT 0,
+        uploaded_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `
+    await sql`CREATE INDEX IF NOT EXISTS idx_media_assets_updated_at ON media_assets(updated_at DESC)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_media_assets_name ON media_assets(name)`
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>
@@ -1311,4 +1385,136 @@ export async function upsertUserMusicLibrary(input: {
     lastTrackTime,
     updatedAt,
   } satisfies UserMusicLibrary
+}
+
+export async function listMediaAssetRecords() {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+      FROM media_assets
+      ORDER BY updated_at DESC
+    `) as MediaAssetRow[]
+    return rows.map(rowToMediaAsset)
+  }
+
+  const rows = getDb().prepare(`
+    SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+    FROM media_assets
+    ORDER BY updated_at DESC
+  `).all() as MediaAssetRow[]
+  return rows.map(rowToMediaAsset)
+}
+
+export async function getMediaAssetRecordById(id: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+      FROM media_assets
+      WHERE id = ${id}
+      LIMIT 1
+    `) as MediaAssetRow[]
+    return rows[0] ? rowToMediaAsset(rows[0]) : undefined
+  }
+
+  const row = getDb().prepare(`
+    SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+    FROM media_assets
+    WHERE id = ?
+    LIMIT 1
+  `).get(id) as MediaAssetRow | undefined
+  return row ? rowToMediaAsset(row) : undefined
+}
+
+export async function getMediaAssetRecordByName(name: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+      FROM media_assets
+      WHERE name = ${name}
+      LIMIT 1
+    `) as MediaAssetRow[]
+    return rows[0] ? rowToMediaAsset(rows[0]) : undefined
+  }
+
+  const row = getDb().prepare(`
+    SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+    FROM media_assets
+    WHERE name = ?
+    LIMIT 1
+  `).get(name) as MediaAssetRow | undefined
+  return row ? rowToMediaAsset(row) : undefined
+}
+
+export async function upsertMediaAssetRecord(input: MediaAssetRecord) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      INSERT INTO media_assets (id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at)
+      VALUES (${input.id}, ${input.name}, ${input.pathname}, ${input.url}, ${input.storage}, ${input.contentType}, ${input.size}, ${input.uploadedAt}, ${input.updatedAt})
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        pathname = EXCLUDED.pathname,
+        url = EXCLUDED.url,
+        storage = EXCLUDED.storage,
+        content_type = EXCLUDED.content_type,
+        size = EXCLUDED.size,
+        uploaded_at = EXCLUDED.uploaded_at,
+        updated_at = EXCLUDED.updated_at
+      RETURNING id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+    `) as MediaAssetRow[]
+    return rowToMediaAsset(rows[0])
+  }
+
+  getDb().prepare(`
+    INSERT INTO media_assets (id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at)
+    VALUES (@id, @name, @pathname, @url, @storage, @content_type, @size, @uploaded_at, @updated_at)
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      pathname = excluded.pathname,
+      url = excluded.url,
+      storage = excluded.storage,
+      content_type = excluded.content_type,
+      size = excluded.size,
+      uploaded_at = excluded.uploaded_at,
+      updated_at = excluded.updated_at
+  `).run({
+    id: input.id,
+    name: input.name,
+    pathname: input.pathname,
+    url: input.url,
+    storage: input.storage,
+    content_type: input.contentType,
+    size: input.size,
+    uploaded_at: input.uploadedAt,
+    updated_at: input.updatedAt,
+  })
+
+  return input
+}
+
+export async function deleteMediaAssetRecord(id: string) {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    const rows = (await sql`
+      DELETE FROM media_assets
+      WHERE id = ${id}
+      RETURNING id
+    `) as Array<{ id: string }>
+    return rows.length > 0
+  }
+
+  return getDb().prepare('DELETE FROM media_assets WHERE id = ?').run(id).changes > 0
 }

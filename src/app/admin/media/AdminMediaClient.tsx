@@ -11,12 +11,21 @@ function formatSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export default function AdminMediaClient({ initialAssets, initialWarning = null }: { initialAssets: MediaAsset[]; initialWarning?: string | null }) {
+export default function AdminMediaClient({
+  initialAssets,
+  initialWarning = null,
+  initialCanUpload = true,
+}: {
+  initialAssets: MediaAsset[]
+  initialWarning?: string | null
+  initialCanUpload?: boolean
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [assets, setAssets] = useState(initialAssets)
   const [isUploading, setIsUploading] = useState(false)
   const [message, setMessage] = useState("")
   const [warning, setWarning] = useState(initialWarning)
+  const [canUpload, setCanUpload] = useState(initialCanUpload)
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
@@ -26,11 +35,12 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
     const data = await response.json()
     setAssets(Array.isArray(data.assets) ? data.assets : [])
     setWarning(typeof data.warning === "string" ? data.warning : null)
+    setCanUpload(Boolean(data.canUpload))
     setReferenceNow(Date.now())
   }
 
   const handleUpload = async (file?: File | null) => {
-    if (!file) return
+    if (!file || !canUpload) return
     setIsUploading(true)
     setMessage("")
     try {
@@ -53,10 +63,14 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
   }
 
   const handleDelete = async (asset: MediaAsset) => {
+    if (!asset.deletable) {
+      setMessage("当前素材来自随代码部署的本地目录，线上环境不能直接删除。")
+      return
+    }
     if (!confirm(`确定删除素材 ${asset.name} 吗？`)) return
     setMessage("")
     try {
-      const response = await fetch(`/api/admin/media?name=${encodeURIComponent(asset.name)}`, { method: "DELETE" })
+      const response = await fetch(`/api/admin/media?id=${encodeURIComponent(asset.id)}`, { method: "DELETE" })
       const data = await response.json()
       if (!response.ok) {
         setMessage(data.error || "删除失败")
@@ -161,9 +175,10 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              disabled={!canUpload}
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isUploading ? "上传中..." : "上传图片"}
+              {!canUpload ? "请先配置 Blob" : isUploading ? "上传中..." : "上传图片"}
             </button>
             <button
               type="button"
@@ -186,7 +201,7 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
                 <div className="mt-3 space-y-1">
                   <p className="truncate text-sm font-medium">{asset.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatSize(asset.size)} · {new Date(asset.updatedAt).toLocaleString("zh-CN")}
+                    {formatSize(asset.size)} · {new Date(asset.updatedAt).toLocaleString("zh-CN")} · {asset.storage === "blob" ? "Blob" : "本地"}
                   </p>
                 </div>
                 <div className="mt-3 flex items-center gap-2">
@@ -214,7 +229,8 @@ export default function AdminMediaClient({ initialAssets, initialWarning = null 
                   <button
                     type="button"
                     onClick={() => handleDelete(asset)}
-                    className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10"
+                    disabled={!asset.deletable}
+                    className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     删除
                   </button>

@@ -58,6 +58,7 @@
 - Tailwind CSS 4
 - shadcn/ui
 - highlight.js
+- @vercel/blob
 - Neon / Postgres + SQLite 双存储支持
 - music-metadata
 
@@ -151,6 +152,7 @@ src/
 - 初始评论数据：`data/comments.json`
 - 音乐文件目录：`public/music/`
 - 文章插画与媒体素材目录：`public/uploads/`
+- Vercel Blob 媒体素材目录前缀：`media-library/`
 - 音乐列表接口：`src/app/api/music/route.ts`
 
 ### 数据说明
@@ -167,6 +169,7 @@ src/
 - 每次编辑文章时都会自动保存一个历史版本，便于回退内容
 - 存储层使用版本化 `schema_migrations` 记录数据库迁移，Neon 和本地 SQLite 会按同样顺序补结构
 - 用户音乐库除了收藏和最近播放，也会记录最近一次播放的歌曲与进度
+- 媒体库在本地开发会直接读写 `public/uploads`；线上若配置 `BLOB_READ_WRITE_TOKEN`，则会改为使用 Vercel Blob，并把元数据写入数据库
 
 ### 音乐文件规则
 
@@ -234,19 +237,22 @@ npm run build
 - 当前代码已经支持自动切换：
   - 没有 `DATABASE_URL`：使用本地 SQLite
   - 有 `DATABASE_URL`：使用远程 Postgres（推荐 Neon）
-- 当前站内媒体库默认仍是本地文件系统方案：
-  - 本地开发可直接上传到 `public/uploads`
-  - Vercel 运行时是只读文件系统，线上后台可查看已随代码部署的素材，但不适合继续在线上传或删除
-  - 如果你要把媒体库完全放到线上可写，下一步建议接入对象存储
+- 当前站内媒体库已经支持双模式：
+  - 本地开发：直接上传到 `public/uploads`
+  - 线上部署：如果配置了 `BLOB_READ_WRITE_TOKEN`，上传和删除会自动切到 Vercel Blob
+  - 线上未配置 Blob 时，后台仍可查看随代码部署的静态素材，但不能在线上传或删除
 - 在 Vercel 中至少配置这三个环境变量：
   - `AUTH_PASSWORD`
   - `AUTH_SECRET`
   - `DATABASE_URL`
+- 如果你要启用线上媒体库，再额外配置：
+  - `BLOB_READ_WRITE_TOKEN`
 - 推荐接法：
   1. 在 Vercel 项目的 Marketplace 安装 Neon
-  2. 创建数据库后，把 Neon 提供的连接串写入 `DATABASE_URL`
-  3. 重新部署项目
-  4. 首次访问时项目会自动建表，并从本地 JSON 导入初始文章和评论
+  2. 在项目里启用 Vercel Blob，拿到 `BLOB_READ_WRITE_TOKEN`
+  3. 把 Neon 提供的连接串写入 `DATABASE_URL`
+  4. 重新部署项目
+  5. 首次访问时项目会自动建表，并从本地 JSON 导入初始文章和评论；媒体库上传会落到 Blob，元数据会记录到数据库
 
 ## 最近整理
 
