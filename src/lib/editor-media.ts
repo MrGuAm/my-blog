@@ -46,3 +46,24 @@ export async function uploadEditorImageToMediaLibrary(file: File) {
     fileName: normalizedFile.name,
   }
 }
+
+export async function createEditorImageInsertion(file: File, alt = file.name || "图片") {
+  try {
+    const uploaded = await uploadEditorImageToMediaLibrary(file)
+    return {
+      tag: buildEditorImageTag(uploaded.url, uploaded.fileName),
+      message: "图片已上传到媒体库并插入正文",
+    }
+  } catch (error) {
+    try {
+      const normalizedFile = await normalizeEditorImageFile(file)
+      const base64 = await readFileAsDataUrl(normalizedFile)
+      return {
+        tag: buildEditorImageTag(base64, alt),
+        message: error instanceof Error ? `${error.message}，已改为直接嵌入图片` : "媒体库上传失败，已改为直接嵌入图片",
+      }
+    } catch {
+      throw new Error("图片处理失败，请重试")
+    }
+  }
+}

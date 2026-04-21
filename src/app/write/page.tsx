@@ -9,7 +9,7 @@ import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
 import type { Post } from "@/lib/posts"
 import MediaLibraryDialog from "@/components/MediaLibraryDialog"
-import { buildEditorImageTag, normalizeEditorImageFile, readFileAsDataUrl, uploadEditorImageToMediaLibrary } from "@/lib/editor-media"
+import { buildEditorImageTag, createEditorImageInsertion } from "@/lib/editor-media"
 
 interface LocalDraft {
   slug: string
@@ -161,7 +161,17 @@ export default function WritePage() {
     })
   }, [content])
 
-  // Handle paste - image as base64
+  const handleInsertImageFile = useCallback(async (file: File, alt = file.name || "图片") => {
+    try {
+      const result = await createEditorImageInsertion(file, alt)
+      insertTextAtCursor(result.tag)
+      setMessage(result.message)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "图片处理失败，请重试")
+    }
+  }, [insertTextAtCursor])
+
+  // Handle paste - upload to media library first, then fallback to inline base64
   useEffect(() => {
     const textarea = textareaRef.current
     if (!textarea) return
@@ -175,23 +185,7 @@ export default function WritePage() {
           e.preventDefault()
           const file = item.getAsFile()
           if (!file) return
-
-          const processFile = async (f: File) => {
-            let blob: Blob = f
-            if (f.type === "image/heic" || f.type === "image/heif") {
-              const heic = (await import("heic2any")).default
-              blob = (await heic({ blob: f, toType: "image/jpeg", quality: 0.85 })) as Blob
-            }
-            const reader = new FileReader()
-            reader.onload = (ev) => {
-              const base64 = ev.target?.result as string
-              const imgTag = `\n<img src="${base64}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
-              insertTextAtCursor(imgTag)
-            }
-            reader.readAsDataURL(blob)
-          }
-
-          processFile(file)
+          void handleInsertImageFile(file, "图片")
           return
         }
       }
@@ -199,7 +193,7 @@ export default function WritePage() {
 
     textarea.addEventListener('paste', handlePaste)
     return () => textarea.removeEventListener('paste', handlePaste)
-  }, [insertTextAtCursor])
+  }, [handleInsertImageFile])
 
   const handleInsertImage = () => {
     if (!imageUrl.trim()) return
@@ -209,22 +203,8 @@ export default function WritePage() {
   }
 
   const handleUploadAndInsertImage = useCallback(async (file: File) => {
-    try {
-      const uploaded = await uploadEditorImageToMediaLibrary(file)
-      insertTextAtCursor(buildEditorImageTag(uploaded.url, uploaded.fileName))
-      setMessage("图片已上传到媒体库并插入正文")
-      return
-    } catch (error) {
-      try {
-        const normalizedFile = await normalizeEditorImageFile(file)
-        const base64 = await readFileAsDataUrl(normalizedFile)
-        insertTextAtCursor(buildEditorImageTag(base64, file.name))
-        setMessage(error instanceof Error ? `${error.message}，已改为直接嵌入图片` : "媒体库上传失败，已改为直接嵌入图片")
-      } catch {
-        setMessage("图片处理失败，请重试")
-      }
-    }
-  }, [insertTextAtCursor])
+    await handleInsertImageFile(file)
+  }, [handleInsertImageFile])
 
   // Toolbar insert helpers
   const insertFormat = (before: string, after: string = before) => {
