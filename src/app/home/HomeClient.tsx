@@ -118,9 +118,13 @@ function PostCard({
           )}
         </div>
         {post.series ? (
-          <span className="apple-pill">
+          <Link
+            href={`/series/${encodeURIComponent(post.series)}`}
+            onClick={(event) => event.stopPropagation()}
+            className="apple-pill hover:bg-white dark:hover:bg-white/12"
+          >
             系列：{post.series}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
-          </span>
+          </Link>
         ) : null}
         <div className="ml-auto flex flex-wrap gap-2">
           {post.tags.map(tag => (

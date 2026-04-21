@@ -147,9 +147,12 @@ export default function PostClient({ post, content, readingTime, headings, relat
                     </span>
                   ) : null}
                   {post.series ? (
-                    <span className="apple-pill">
+                    <Link
+                      href={`/series/${encodeURIComponent(post.series)}`}
+                      className="apple-pill hover:bg-white dark:hover:bg-white/12"
+                    >
                       系列：{post.series}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
-                    </span>
+                    </Link>
                   ) : null}
                   <span className="text-sm text-muted-foreground">{post.date}</span>
                   <span className="text-sm text-muted-foreground">·</span>

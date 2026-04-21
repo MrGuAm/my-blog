@@ -54,6 +54,11 @@ export async function getAllTags(): Promise<string[]> {
   return Array.from(new Set(posts.flatMap((post) => post.tags))).sort()
 }
 
+export async function getAllSeries(): Promise<string[]> {
+  const posts: Post[] = await getCachedPublicPosts()
+  return Array.from(new Set(posts.map((post) => post.series?.trim()).filter(Boolean) as string[])).sort()
+}
+
 export async function getPostContent(id: string): Promise<string> {
   const post = await getPost(id)
   return post?.content || ''
@@ -127,4 +132,12 @@ export async function getPostsByTag(tag: string) {
 
   const posts = await getAllPosts({ includeDrafts: false, cached: true })
   return sortPosts(posts.filter((post) => post.tags.includes(normalizedTag)))
+}
+
+export async function getPostsBySeries(series: string) {
+  const normalizedSeries = series.trim()
+  if (!normalizedSeries) return []
+
+  const posts = await getAllPosts({ includeDrafts: false, cached: true })
+  return sortPosts(posts.filter((post) => post.series === normalizedSeries))
 }

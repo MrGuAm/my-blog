@@ -52,6 +52,8 @@ test("store integration supports create, update, versioning, and delete in an is
     const nextVersions = await store.listPostVersions(created.id)
     assert.equal(nextVersions.length, 2)
     assert.equal(nextVersions[0]?.note, "保存草稿")
+    assert.equal(nextVersions[0]?.seriesOrder, 2)
+    assert.equal(nextVersions[0]?.featured, true)
 
     const deleted = await store.deletePost(created.id)
     assert.equal(deleted, true)

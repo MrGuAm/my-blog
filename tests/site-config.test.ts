@@ -14,3 +14,10 @@ test("siteConfig keeps the expected public metadata defaults", () => {
   assert.equal(siteConfig.rssPath, "/api/feed")
   assert.ok(siteConfig.keywords.includes("博客"))
 })
+
+test("absoluteUrl preserves encoded nested paths for series pages", () => {
+  assert.equal(
+    absoluteUrl(`/series/${encodeURIComponent("工程化改造")}`),
+    "https://champion.cc.cd/series/%E5%B7%A5%E7%A8%8B%E5%8C%96%E6%94%B9%E9%80%A0",
+  )
+})
