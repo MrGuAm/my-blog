@@ -1,12 +1,12 @@
 "use client"
-/* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { useRouter, useParams } from "next/navigation"
-import PrimaryNavLinks from "@/components/PrimaryNavLinks"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import PostEditorContentEditor from "@/components/PostEditorContentEditor"
+import PostEditorMetaFields from "@/components/PostEditorMetaFields"
+import PostEditorPageShell from "@/components/PostEditorPageShell"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
-import MediaLibraryDialog from "@/components/MediaLibraryDialog"
 import { buildEditorImageTag, createEditorImageInsertion } from "@/lib/editor-media"
 
 interface LocalDraft {
@@ -104,8 +104,8 @@ export default function EditPostPage() {
     }
 
     fetch(`/api/posts/${id}`)
-      .then(r => r.json())
-      .then(post => {
+      .then((response) => response.json())
+      .then((post) => {
         setTitle(post.title || "")
         setSlug(post.slug || "")
         setExcerpt(post.excerpt || "")
@@ -215,18 +215,17 @@ export default function EditPostPage() {
     }
   }, [insertTextAtCursor])
 
-  // Handle paste - upload to media library first, then fallback to inline base64
   useEffect(() => {
     const textarea = textareaRef.current
     if (!textarea) return
 
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items
+    const handlePaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items
       if (!items) return
 
       for (const item of items) {
         if (item.type === "image/heic" || item.type === "image/heif" || item.type.startsWith("image/")) {
-          e.preventDefault()
+          event.preventDefault()
           const file = item.getAsFile()
           if (!file) return
           void handleInsertImageFile(file, "图片")
@@ -235,8 +234,8 @@ export default function EditPostPage() {
       }
     }
 
-    textarea.addEventListener('paste', handlePaste)
-    return () => textarea.removeEventListener('paste', handlePaste)
+    textarea.addEventListener("paste", handlePaste)
+    return () => textarea.removeEventListener("paste", handlePaste)
   }, [handleInsertImageFile])
 
   const handleInsertImage = () => {
@@ -256,7 +255,7 @@ export default function EditPostPage() {
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const selected = content.substring(start, end)
-    const newText = `${before}${selected || '文字'}${after}`
+    const newText = `${before}${selected || "文字"}${after}`
     insertTextAtCursor(newText)
   }
 
@@ -271,15 +270,15 @@ export default function EditPostPage() {
 
     try {
       const res = await fetch(`/api/posts/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
           slug,
           excerpt,
           content,
           category,
-          tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+          tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
           coverImage,
           bgmSrc,
           pinned,
@@ -310,8 +309,8 @@ export default function EditPostPage() {
 
     try {
       const res = await fetch(`/api/posts/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       })
       if (res.ok) {
         navigateBack(router, returnPath)
@@ -354,418 +353,164 @@ export default function EditPostPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-muted-foreground">加载中...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="apple-nav sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <div className="brand-mark">
-                <span className="text-sm font-bold text-current">C</span>
-              </div>
-              <span className="text-lg font-semibold tracking-[-0.03em]">Champion&apos;s Blog</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-              <button
-                type="button"
-                onClick={() => navigateBack(router, returnPath)}
-                className="apple-button-secondary px-3 py-1.5"
-              >
-                ← 返回
-              </button>
-              <PrimaryNavLinks active="write" />
-            </div>
-          </div>
+    <PostEditorPageShell
+      pageTitle="编辑文章"
+      description="修改你的内容 · 支持上传/粘贴图片"
+      savedAtText={savedAt ? `本地草稿最近保存于 ${new Date(savedAt).toLocaleString("zh-CN")}` : null}
+      onBack={() => navigateBack(router, returnPath)}
+      headerNotice={localDraft ? (
+        <div className="flex items-center gap-3 text-sm">
+          <span className="text-muted-foreground">检测到未提交的本地草稿。</span>
+          <button type="button" onClick={restoreLocalDraft} className="text-primary hover:underline">
+            恢复草稿
+          </button>
+          <button type="button" onClick={clearSavedDraft} className="text-muted-foreground transition-colors hover:text-foreground">
+            清除
+          </button>
         </div>
-      </nav>
+      ) : null}
+    >
+      <div className="space-y-6">
+        <PostEditorMetaFields
+          title={title}
+          slug={slug}
+          excerpt={excerpt}
+          category={category}
+          tags={tags}
+          coverImage={coverImage}
+          bgmSrc={bgmSrc}
+          availableTracks={availableTracks}
+          onTitleChange={(nextTitle) => {
+            setTitle(nextTitle)
+            setSlug((current) => current || buildSlug(nextTitle))
+          }}
+          onSlugChange={setSlug}
+          onExcerptChange={setExcerpt}
+          onCategoryChange={setCategory}
+          onTagsChange={setTags}
+          onCoverImageChange={setCoverImage}
+          onBgmSrcChange={setBgmSrc}
+          onOpenCoverMediaDialog={() => {
+            setMediaDialogMode("cover")
+            setMediaDialogOpen(true)
+          }}
+        />
 
-      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-black tracking-tight mb-2">编辑文章</h1>
-          <p className="text-muted-foreground">修改你的内容 · 支持上传/粘贴图片</p>
-          {savedAt && (
-            <p className="text-xs text-muted-foreground mt-2">
-              本地草稿最近保存于 {new Date(savedAt).toLocaleString("zh-CN")}
-            </p>
-          )}
-          {localDraft && (
-            <div className="mt-3 flex items-center gap-3 text-sm">
-              <span className="text-muted-foreground">检测到未提交的本地草稿。</span>
-              <button type="button" onClick={restoreLocalDraft} className="text-primary hover:underline">
-                恢复草稿
-              </button>
-              <button type="button" onClick={clearSavedDraft} className="text-muted-foreground hover:text-foreground transition-colors">
-                清除
-              </button>
-            </div>
-          )}
-        </div>
+        <PostEditorContentEditor
+          title={title}
+          excerpt={excerpt}
+          content={content}
+          coverImage={coverImage}
+          bgmSrc={bgmSrc}
+          previewMode={previewMode}
+          textareaRef={textareaRef}
+          fileInputRef={fileInputRef}
+          imageDialogOpen={imageDialogOpen}
+          mediaDialogOpen={mediaDialogOpen}
+          mediaDialogMode={mediaDialogMode}
+          imageUrl={imageUrl}
+          onPreviewModeChange={setPreviewMode}
+          onContentChange={setContent}
+          onLocalImagePick={handleUploadAndInsertImage}
+          onImageDialogToggle={setImageDialogOpen}
+          onMediaDialogToggle={setMediaDialogOpen}
+          onMediaDialogModeChange={setMediaDialogMode}
+          onImageUrlChange={setImageUrl}
+          onInsertImageUrl={handleInsertImage}
+          onInsertFormat={insertFormat}
+          onMediaSelect={(url) => {
+            if (mediaDialogMode === "cover") {
+              setCoverImage(url)
+              setMessage("已设为文章封面")
+              return
+            }
+            insertTextAtCursor(buildEditorImageTag(url))
+            setMessage("图片已插入正文")
+          }}
+        />
 
-        <div className="space-y-6">
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium mb-2">标题</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => {
-                const nextTitle = e.target.value
-                setTitle(nextTitle)
-                setSlug((current) => current || buildSlug(nextTitle))
-              }}
-              placeholder="文章标题"
-              className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-lg font-bold"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">文章短链接 slug</label>
-            <input
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="my-first-post"
-              className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-            />
-          </div>
-
-          {/* Excerpt */}
-          <div>
-            <label className="block text-sm font-medium mb-2">摘要（可选）</label>
-            <input
-              type="text"
-              value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
-              placeholder="简单描述一下文章内容..."
-              className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-            />
-          </div>
-
-          {/* Category & Tags */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-2">分类</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-              >
-                <option value="随笔">随笔</option>
-                <option value="技术">技术</option>
-                <option value="生活">生活</option>
-                <option value="其他">其他</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">标签（可选，用逗号分隔）</label>
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="React, 前端, 笔记"
-                className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <label className="block text-sm font-medium">封面图（可选）</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMediaDialogMode("cover")
-                    setMediaDialogOpen(true)
-                  }}
-                  className="text-xs text-primary hover:text-primary/80 transition-colors"
-                >
-                  从媒体库选择
-                </button>
-              </div>
-              <input
-                type="url"
-                value={coverImage}
-                onChange={(e) => setCoverImage(e.target.value)}
-                placeholder="https://example.com/cover.jpg"
-                className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-              />
-              {coverImage && (
-                <div className="mt-3 overflow-hidden rounded-xl border border-border/40">
-                  <img src={coverImage} alt="封面预览" className="h-36 w-full object-cover" />
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">文章 BGM（可选）</label>
-              <select
-                value={bgmSrc}
-                onChange={(e) => setBgmSrc(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-border/60 bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-              >
-                <option value="">不绑定</option>
-                {availableTracks.map((song) => (
-                  <option key={song.src} value={song.src}>
-                    {song.artist} - {song.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <label className="block text-sm font-medium">内容</label>
-              <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setPreviewMode("edit")}
-                  className={`rounded-full px-3 py-1 transition-colors ${previewMode === "edit" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-                >
-                  编辑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewMode("preview")}
-                  className={`rounded-full px-3 py-1 transition-colors ${previewMode === "preview" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-                >
-                  预览
-                </button>
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
-              {/* Toolbar */}
-              <div className="flex items-center gap-1 px-3 py-2 border-b border-border/40 bg-secondary/20 flex-wrap">
-                <button type="button" onClick={() => insertFormat('<strong>', '</strong>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-bold" title="加粗">B</button>
-                <button type="button" onClick={() => insertFormat('<em>', '</em>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors italic" title="斜体">I</button>
-                <button type="button" onClick={() => insertFormat('<h2>', '</h2>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-bold" title="二级标题">H2</button>
-                <button type="button" onClick={() => insertFormat('<h3>', '</h3>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-bold" title="三级标题">H3</button>
-                <div className="w-px h-5 bg-border/40 mx-1" />
-                <button type="button" onClick={() => insertFormat('<pre><code>', '</code></pre>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-mono" title="代码块">{"</>"}</button>
-                <button type="button" onClick={() => insertFormat('<code>', '</code>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors font-mono" title="行内代码">`</button>
-                <div className="w-px h-5 bg-border/40 mx-1" />
-                <button type="button" onClick={() => insertFormat('<a href="">', '</a>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors" title="链接">🔗</button>
-                <button type="button" onClick={() => insertFormat('<blockquote>', '</blockquote>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors" title="引用">❝</button>
-                <button type="button" onClick={() => insertFormat('<ul><li>', '</li></ul>')} className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors" title="无序列表">•</button>
-                <div className="w-px h-5 bg-border/40 mx-1" />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors flex items-center gap-1"
-                  title="上传本地图片"
-                >
-                  📁 上传
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImageDialogOpen(true)}
-                  className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors flex items-center gap-1"
-                  title="输入图片链接"
-                >
-                  🖼️ 链接
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMediaDialogMode("content")
-                    setMediaDialogOpen(true)
-                  }}
-                  className="px-2 py-1 text-sm rounded hover:bg-secondary transition-colors flex items-center gap-1"
-                  title="打开媒体库"
-                >
-                  🗂️ 媒体库
-                </button>
-                <span className="text-xs text-muted-foreground ml-2">· 支持拖拽 / Ctrl+V 粘贴 / 📁上传</span>
-              </div>
-
-              {/* Textarea */}
-              {previewMode === "edit" ? (
-                <textarea
-                  ref={textareaRef}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder={"写下你的内容...\n\n💡 提示：\n- 选中文字后点击工具栏按钮可快速格式化\n- 直接 Ctrl/Cmd+V 粘贴图片\n- 点击 📁上传 或 🖼️链接 按钮插入图片"}
-                  rows={15}
-                  className="w-full px-4 py-3 bg-transparent focus:outline-none transition-all resize-none text-sm leading-relaxed"
-                />
-              ) : (
-                <div className="min-h-[24rem] space-y-5 px-4 py-4">
-                  {coverImage && (
-                    <div className="overflow-hidden rounded-xl border border-border/40">
-                      <img src={coverImage} alt={title || "文章封面"} className="h-56 w-full object-cover" />
-                    </div>
-                  )}
+        {versions.length > 0 ? (
+          <div className="rounded-xl border border-border/50 bg-card p-4">
+            <h3 className="mb-3 text-sm font-semibold">历史版本</h3>
+            <div className="space-y-2">
+              {versions.slice(0, 6).map((version) => (
+                <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/40 px-3 py-2">
                   <div>
-                    <h2 className="text-2xl font-black">{title || "未命名文章"}</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">{excerpt || "这里会显示文章摘要。"}</p>
-                    {bgmSrc && (
-                      <p className="mt-3 inline-flex rounded-full bg-[#FF9B6B]/15 px-3 py-1 text-xs text-[#FF9B6B]">
-                        这篇文章已绑定 BGM
-                      </p>
-                    )}
+                    <p className="text-sm font-medium">{version.note || "编辑记录"}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(version.createdAt).toLocaleString("zh-CN")}</p>
                   </div>
-                  <div className="prose prose-lg max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: content || "<p>预览内容会显示在这里。</p>" }} />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              await handleUploadAndInsertImage(file)
-              e.target.value = ''
-            }}
-          />
-
-          {/* Image URL Dialog */}
-          {imageDialogOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setImageDialogOpen(false)}>
-              <div className="bg-card rounded-xl border border-border/60 p-6 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold mb-4">插入图片链接</h3>
-                <p className="text-sm text-muted-foreground mb-2">输入图片网络链接</p>
-                <p className="text-xs text-muted-foreground mb-4">也可以直接点击工具栏 📁上传 按钮选择本地文件</p>
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background mb-4 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && handleInsertImage()}
-                />
-                <div className="flex gap-3">
                   <button
-                    onClick={handleInsertImage}
-                    className="flex-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                    type="button"
+                    onClick={() => handleRestoreVersion(version.id)}
+                    className="text-sm text-primary transition-colors hover:text-primary/80"
                   >
-                    插入
-                  </button>
-                  <button
-                    onClick={() => setImageDialogOpen(false)}
-                    className="px-4 py-2 rounded-lg border border-border/60 hover:bg-accent transition-colors"
-                  >
-                    取消
+                    恢复
                   </button>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
-
-          <MediaLibraryDialog
-            isOpen={mediaDialogOpen}
-            onClose={() => setMediaDialogOpen(false)}
-            autoSelectUpload
-            uploadHint={mediaDialogMode === "cover" ? "上传后会自动设为封面图" : "上传后会自动插入正文"}
-            onSelect={(url) => {
-              if (mediaDialogMode === "cover") {
-                setCoverImage(url)
-                setMessage("已设为文章封面")
-                return
-              }
-              insertTextAtCursor(buildEditorImageTag(url))
-              setMessage("图片已插入正文")
-            }}
-          />
-
-          {versions.length > 0 && (
-            <div className="rounded-xl border border-border/50 bg-card p-4">
-              <h3 className="text-sm font-semibold mb-3">历史版本</h3>
-              <div className="space-y-2">
-                {versions.slice(0, 6).map((version) => (
-                  <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/40 px-3 py-2">
-                    <div>
-                      <p className="text-sm font-medium">{version.note || "编辑记录"}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(version.createdAt).toLocaleString("zh-CN")}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRestoreVersion(version.id)}
-                      className="text-sm text-primary hover:text-primary/80 transition-colors"
-                    >
-                      恢复
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Pin & Draft toggles */}
-          <div className="flex flex-wrap items-center gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={pinned}
-                onChange={(e) => setPinned(e.target.checked)}
-                className="w-4 h-4 rounded border-border"
-              />
-              <span className="text-sm">置顶文章</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={draft}
-                onChange={(e) => setDraft(e.target.checked)}
-                className="w-4 h-4 rounded border-border"
-              />
-              <span className="text-sm">存为草稿</span>
-            </label>
           </div>
+        ) : null}
 
-          {/* Actions */}
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              onClick={() => handleSave(false)}
-              disabled={isSubmitting}
-              className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-            >
-              {isSubmitting ? "保存中..." : "保存"}
-            </button>
-            <button
-              onClick={() => handleSave(true)}
-              disabled={isSubmitting}
-              className="px-6 py-3 rounded-xl border border-border/60 bg-card text-foreground font-medium hover:bg-accent transition-colors disabled:opacity-50"
-            >
-              保存草稿
-            </button>
-            <button
-              onClick={handleDelete}
-              className="px-6 py-3 rounded-xl border border-red-500/50 text-red-500 font-medium hover:bg-red-500/10 transition-colors"
-            >
-              删除文章
-            </button>
-            {message && (
-              <span className={message.includes("成功") || message.includes("已更新") ? "text-green-500" : "text-red-500"}>
-                {message}
-              </span>
-            )}
-            {savedAt && (
-              <button
-                type="button"
-                onClick={clearSavedDraft}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                清除本地草稿
-              </button>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-6">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={pinned}
+              onChange={(event) => setPinned(event.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            <span className="text-sm">置顶文章</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={draft}
+              onChange={(event) => setDraft(event.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            <span className="text-sm">存为草稿</span>
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={() => handleSave(false)}
+            disabled={isSubmitting}
+            className="rounded-xl bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            {isSubmitting ? "保存中..." : "保存"}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSave(true)}
+            disabled={isSubmitting}
+            className="rounded-xl border border-border/60 bg-card px-6 py-3 font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+          >
+            保存草稿
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="rounded-xl border border-red-500/50 px-6 py-3 font-medium text-red-500 transition-colors hover:bg-red-500/10"
+          >
+            删除文章
+          </button>
+          {message ? (
+            <span className={message.includes("成功") || message.includes("已更新") ? "text-green-500" : "text-red-500"}>
+              {message}
+            </span>
+          ) : null}
         </div>
       </div>
-    </div>
+    </PostEditorPageShell>
   )
 }
