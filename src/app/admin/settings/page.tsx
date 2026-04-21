@@ -1,13 +1,16 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
-import { siteConfig } from "@/lib/site-config"
 import AdminSettingsClient from "./AdminSettingsClient"
 
-export const metadata: Metadata = {
-  title: "站点设置",
-  description: `${siteConfig.name} 站点文案与品牌设置`,
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getResolvedSeoSettings()
+  return {
+    title: "站点设置",
+    description: `${settings.brandName} 站点文案与品牌设置`,
+  }
 }
 
 export default async function AdminSettingsPage() {

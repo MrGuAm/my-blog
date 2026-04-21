@@ -2,13 +2,17 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { listComments } from "@/lib/server/comments"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 import { listPosts } from "@/lib/server/store"
 import ModerationClient from "./ModerationClient"
 
-export const metadata: Metadata = {
-  title: "评论审核",
-  description: "管理员评论审核后台",
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getResolvedSeoSettings()
+  return {
+    title: "评论审核",
+    description: `${settings.brandName} 评论审核后台`,
+  }
 }
 
 export default async function ModerationPage() {

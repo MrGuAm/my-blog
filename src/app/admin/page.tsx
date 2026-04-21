@@ -3,14 +3,17 @@ import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { listComments } from "@/lib/server/comments"
 import { getMediaLibraryWarning, listMediaAssets } from "@/lib/server/media"
+import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
-import { siteConfig } from "@/lib/site-config"
 import { listPosts, listUsers } from "@/lib/server/store"
 import AdminDashboardClient from "./AdminDashboardClient"
 
-export const metadata: Metadata = {
-  title: "后台总览",
-  description: `${siteConfig.name} 管理后台`,
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getResolvedSeoSettings()
+  return {
+    title: "后台总览",
+    description: `${settings.brandName} 管理后台`,
+  }
 }
 
 export default async function AdminPage() {
