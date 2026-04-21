@@ -11,6 +11,9 @@ interface PostEditorMetaFieldsProps {
   tags: string
   coverImage: string
   bgmSrc: string
+  featured: boolean
+  series: string
+  seriesOrder: string
   availableTracks: MusicTrack[]
   onTitleChange: (value: string) => void
   onSlugChange: (value: string) => void
@@ -19,6 +22,9 @@ interface PostEditorMetaFieldsProps {
   onTagsChange: (value: string) => void
   onCoverImageChange: (value: string) => void
   onBgmSrcChange: (value: string) => void
+  onFeaturedChange: (value: boolean) => void
+  onSeriesChange: (value: string) => void
+  onSeriesOrderChange: (value: string) => void
   onOpenCoverMediaDialog: () => void
 }
 
@@ -30,6 +36,9 @@ export default function PostEditorMetaFields({
   tags,
   coverImage,
   bgmSrc,
+  featured,
+  series,
+  seriesOrder,
   availableTracks,
   onTitleChange,
   onSlugChange,
@@ -38,6 +47,9 @@ export default function PostEditorMetaFields({
   onTagsChange,
   onCoverImageChange,
   onBgmSrcChange,
+  onFeaturedChange,
+  onSeriesChange,
+  onSeriesOrderChange,
   onOpenCoverMediaDialog,
 }: PostEditorMetaFieldsProps) {
   return (
@@ -98,6 +110,40 @@ export default function PostEditorMetaFields({
             onChange={(event) => onTagsChange(event.target.value)}
             placeholder="React, 前端, 笔记"
             className="w-full rounded-xl border border-border/60 bg-card px-4 py-3 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-[auto_1fr_180px]">
+        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border/60 bg-card px-4 py-3">
+          <input
+            type="checkbox"
+            checked={featured}
+            onChange={(event) => onFeaturedChange(event.target.checked)}
+            className="h-4 w-4 rounded border-border"
+          />
+          <span className="text-sm font-medium">精选文章</span>
+        </label>
+        <div>
+          <label className="block mb-2 text-sm font-medium">系列名称（可选）</label>
+          <input
+            type="text"
+            value={series}
+            onChange={(event) => onSeriesChange(event.target.value)}
+            placeholder="比如：做博客这件小事"
+            className="w-full rounded-xl border border-border/60 bg-card px-4 py-3 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+        </div>
+        <div>
+          <label className="block mb-2 text-sm font-medium">系列顺序</label>
+          <input
+            type="number"
+            min={1}
+            value={seriesOrder}
+            onChange={(event) => onSeriesOrderChange(event.target.value)}
+            placeholder="1"
+            disabled={!series.trim()}
+            className="w-full rounded-xl border border-border/60 bg-card px-4 py-3 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
       </div>

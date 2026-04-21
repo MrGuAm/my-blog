@@ -46,6 +46,16 @@ export function normalizeTags(tags?: string[]) {
   return (tags || []).map((tag) => tag.trim()).filter(Boolean)
 }
 
+export function normalizeSeries(series?: string | null) {
+  return series?.trim() || ''
+}
+
+export function normalizeSeriesOrder(value?: number | string | null) {
+  const next = Number(value)
+  if (!Number.isFinite(next) || next < 1) return null
+  return Math.floor(next)
+}
+
 export function normalizeCommentStatus(status?: string | null): CommentStatus {
   return status === 'pending' || status === 'rejected' ? status : 'approved'
 }
@@ -116,8 +126,8 @@ function syncSqliteSeedContent(db: Database.Database) {
   const postsData = readJsonFile<{ posts: Post[] }>(postsJsonPath, { posts: [] })
   const commentsData = readJsonFile<CommentFileData>(commentsJsonPath, { comments: {} })
   const insertPost = db.prepare(`
-    INSERT OR IGNORE INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at)
-    VALUES (@id, @slug, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @draft, @views, @updated_at)
+    INSERT OR IGNORE INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at)
+    VALUES (@id, @slug, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @featured, @draft, @series, @series_order, @views, @updated_at)
   `)
   const insertComment = db.prepare(`
     INSERT OR IGNORE INTO comments (id, post_id, author, content, date, user_id, parent_comment_id, is_admin, status, moderation_note, reviewed_at)
@@ -138,7 +148,10 @@ function syncSqliteSeedContent(db: Database.Database) {
         cover_image: post.coverImage || '',
         bgm_src: post.bgmSrc || '',
         pinned: post.pinned ? 1 : 0,
+        featured: post.featured ? 1 : 0,
         draft: post.draft ? 1 : 0,
+        series: post.series || '',
+        series_order: normalizeSeriesOrder(post.seriesOrder),
         views: post.views || 0,
         updated_at: post.updatedAt || post.date,
       })
@@ -181,7 +194,10 @@ export function getDb() {
           tags_json TEXT NOT NULL DEFAULT '[]',
           content TEXT NOT NULL,
           pinned INTEGER NOT NULL DEFAULT 0,
+          featured INTEGER NOT NULL DEFAULT 0,
           draft INTEGER NOT NULL DEFAULT 0,
+          series TEXT NOT NULL DEFAULT '',
+          series_order INTEGER,
           views INTEGER NOT NULL DEFAULT 0
         );
 
@@ -222,7 +238,10 @@ export function getDb() {
           cover_image TEXT NOT NULL DEFAULT '',
           bgm_src TEXT NOT NULL DEFAULT '',
           pinned INTEGER NOT NULL DEFAULT 0,
+          featured INTEGER NOT NULL DEFAULT 0,
           draft INTEGER NOT NULL DEFAULT 0,
+          series TEXT NOT NULL DEFAULT '',
+          series_order INTEGER,
           created_at TEXT NOT NULL,
           note TEXT NOT NULL DEFAULT ''
         );
@@ -293,8 +312,8 @@ export function getDb() {
     if (postCount.count === 0) {
       const postsData = readJsonFile<{ posts: Post[] }>(postsJsonPath, { posts: [] })
       const insertPost = db.prepare(`
-        INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at)
-        VALUES (@id, @slug, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @draft, @views, @updated_at)
+        INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at)
+        VALUES (@id, @slug, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @featured, @draft, @series, @series_order, @views, @updated_at)
       `)
 
       const insertMany = db.transaction((posts: Post[]) => {
@@ -311,7 +330,10 @@ export function getDb() {
             cover_image: post.coverImage || '',
             bgm_src: post.bgmSrc || '',
             pinned: post.pinned ? 1 : 0,
+            featured: post.featured ? 1 : 0,
             draft: post.draft ? 1 : 0,
+            series: post.series || '',
+            series_order: normalizeSeriesOrder(post.seriesOrder),
             views: post.views || 0,
             updated_at: post.updatedAt || post.date,
           })
@@ -373,6 +395,15 @@ export function getDb() {
       `)
     })
 
+    runSqliteMigration(db, '011-post-content-structure', () => {
+      ensureSqliteColumn(db, 'posts', 'featured', 'INTEGER NOT NULL DEFAULT 0')
+      ensureSqliteColumn(db, 'posts', 'series', "TEXT NOT NULL DEFAULT ''")
+      ensureSqliteColumn(db, 'posts', 'series_order', 'INTEGER')
+      ensureSqliteColumn(db, 'post_versions', 'featured', 'INTEGER NOT NULL DEFAULT 0')
+      ensureSqliteColumn(db, 'post_versions', 'series', "TEXT NOT NULL DEFAULT ''")
+      ensureSqliteColumn(db, 'post_versions', 'series_order', 'INTEGER')
+    })
+
     global.__championBlogDb = db
   }
 
@@ -398,8 +429,8 @@ async function seedRemoteDatabase() {
 
   for (const post of postsData.posts) {
     await sql`
-      INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at)
-      VALUES (${post.id}, ${post.slug || slugify(post.title) || post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0}, ${post.updatedAt || post.date})
+      INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at)
+      VALUES (${post.id}, ${post.slug || slugify(post.title) || post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.featured ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.series || ''}, ${normalizeSeriesOrder(post.seriesOrder)}, ${post.views || 0}, ${post.updatedAt || post.date})
       ON CONFLICT (id) DO NOTHING
     `
   }
@@ -427,7 +458,10 @@ async function ensureRemoteSchema() {
         tags_json TEXT NOT NULL DEFAULT '[]',
         content TEXT NOT NULL,
         pinned INTEGER NOT NULL DEFAULT 0,
+        featured INTEGER NOT NULL DEFAULT 0,
         draft INTEGER NOT NULL DEFAULT 0,
+        series TEXT NOT NULL DEFAULT '',
+        series_order INTEGER,
         views INTEGER NOT NULL DEFAULT 0
       )
     `
@@ -470,7 +504,10 @@ async function ensureRemoteSchema() {
         cover_image TEXT NOT NULL DEFAULT '',
         bgm_src TEXT NOT NULL DEFAULT '',
         pinned INTEGER NOT NULL DEFAULT 0,
+        featured INTEGER NOT NULL DEFAULT 0,
         draft INTEGER NOT NULL DEFAULT 0,
+        series TEXT NOT NULL DEFAULT '',
+        series_order INTEGER,
         created_at TEXT NOT NULL,
         note TEXT NOT NULL DEFAULT ''
       )
@@ -551,6 +588,15 @@ async function ensureRemoteSchema() {
     `
     await sql`CREATE INDEX IF NOT EXISTS idx_media_assets_updated_at ON media_assets(updated_at DESC)`
     await sql`CREATE INDEX IF NOT EXISTS idx_media_assets_name ON media_assets(name)`
+  })
+
+  await runRemoteMigration('011-post-content-structure', async () => {
+    await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS featured INTEGER NOT NULL DEFAULT 0`
+    await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS series TEXT NOT NULL DEFAULT ''`
+    await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS series_order INTEGER`
+    await sql`ALTER TABLE post_versions ADD COLUMN IF NOT EXISTS featured INTEGER NOT NULL DEFAULT 0`
+    await sql`ALTER TABLE post_versions ADD COLUMN IF NOT EXISTS series TEXT NOT NULL DEFAULT ''`
+    await sql`ALTER TABLE post_versions ADD COLUMN IF NOT EXISTS series_order INTEGER`
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>

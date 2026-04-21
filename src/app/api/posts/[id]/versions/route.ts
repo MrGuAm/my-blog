@@ -45,7 +45,10 @@ export async function POST(
     coverImage: version.coverImage,
     bgmSrc: version.bgmSrc,
     pinned: version.pinned,
+    featured: version.featured,
     draft: version.draft,
+    series: version.series,
+    seriesOrder: version.seriesOrder,
   })
 
   invalidatePostsCache()

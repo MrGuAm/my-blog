@@ -10,6 +10,9 @@ interface PostEditorContentEditorProps {
   content: string
   coverImage: string
   bgmSrc: string
+  featured?: boolean
+  series?: string
+  seriesOrder?: string
   previewMode: "edit" | "preview"
   textareaRef: RefObject<HTMLTextAreaElement | null>
   fileInputRef: RefObject<HTMLInputElement | null>
@@ -35,6 +38,9 @@ export default function PostEditorContentEditor({
   content,
   coverImage,
   bgmSrc,
+  featured = false,
+  series = "",
+  seriesOrder = "",
   previewMode,
   textareaRef,
   fileInputRef,
@@ -138,6 +144,18 @@ export default function PostEditorContentEditor({
               <div>
                 <h2 className="text-2xl font-black">{title || "未命名文章"}</h2>
                 <p className="mt-2 text-sm text-muted-foreground">{excerpt || "这里会显示文章摘要。"}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {featured ? (
+                    <span className="inline-flex rounded-full bg-[#ffb98f]/20 px-3 py-1 text-xs text-[#c46d35]">
+                      精选文章
+                    </span>
+                  ) : null}
+                  {series ? (
+                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                      系列：{series}{seriesOrder ? ` · 第 ${seriesOrder} 篇` : ""}
+                    </span>
+                  ) : null}
+                </div>
                 {bgmSrc ? (
                   <p className="mt-3 inline-flex rounded-full bg-[#FF9B6B]/15 px-3 py-1 text-xs text-[#FF9B6B]">
                     这篇文章已绑定 BGM

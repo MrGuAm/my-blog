@@ -26,7 +26,10 @@ export interface PostVersionRecord {
   coverImage?: string
   bgmSrc?: string
   pinned?: boolean
+  featured?: boolean
   draft?: boolean
+  series?: string
+  seriesOrder?: number | null
   createdAt: string
   note?: string
 }
@@ -43,7 +46,10 @@ export interface PostRow {
   cover_image?: string | null
   bgm_src?: string | null
   pinned: number | boolean
+  featured?: number | boolean | null
   draft: number | boolean
+  series?: string | null
+  series_order?: number | null
   views: number
   updated_at?: string | null
 }
@@ -59,7 +65,10 @@ export interface PostVersionRow {
   cover_image?: string | null
   bgm_src?: string | null
   pinned: number | boolean
+  featured?: number | boolean | null
   draft: number | boolean
+  series?: string | null
+  series_order?: number | null
   created_at: string
   note?: string | null
 }
@@ -153,7 +162,10 @@ export function rowToPost(row: PostRow): Post {
     coverImage: row.cover_image || '',
     bgmSrc: row.bgm_src || '',
     pinned: Boolean(row.pinned),
+    featured: Boolean(row.featured),
     draft: Boolean(row.draft),
+    series: row.series || '',
+    seriesOrder: typeof row.series_order === 'number' ? row.series_order : null,
     views: row.views || 0,
     updatedAt: row.updated_at || row.date,
   }
@@ -171,7 +183,10 @@ export function rowToPostVersion(row: PostVersionRow): PostVersionRecord {
     coverImage: row.cover_image || '',
     bgmSrc: row.bgm_src || '',
     pinned: Boolean(row.pinned),
+    featured: Boolean(row.featured),
     draft: Boolean(row.draft),
+    series: row.series || '',
+    seriesOrder: typeof row.series_order === 'number' ? row.series_order : null,
     createdAt: row.created_at,
     note: row.note || '',
   }

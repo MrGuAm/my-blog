@@ -19,7 +19,10 @@ interface LocalDraft {
   coverImage: string
   bgmSrc: string
   pinned: boolean
+  featured: boolean
   draft: boolean
+  series: string
+  seriesOrder: string
   savedAt: string
 }
 
@@ -78,7 +81,10 @@ export default function EditPostPage() {
   const [coverImage, setCoverImage] = useState("")
   const [bgmSrc, setBgmSrc] = useState("")
   const [pinned, setPinned] = useState(false)
+  const [featured, setFeatured] = useState(false)
   const [draft, setDraft] = useState(false)
+  const [series, setSeries] = useState("")
+  const [seriesOrder, setSeriesOrder] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(true)
@@ -115,7 +121,10 @@ export default function EditPostPage() {
         setCoverImage(post.coverImage || "")
         setBgmSrc(post.bgmSrc || "")
         setPinned(post.pinned || false)
+        setFeatured(post.featured || false)
         setDraft(post.draft || false)
+        setSeries(post.series || "")
+        setSeriesOrder(post.seriesOrder ? String(post.seriesOrder) : "")
         setLoading(false)
       })
       .catch(() => {
@@ -142,7 +151,10 @@ export default function EditPostPage() {
     setCoverImage(localDraft.coverImage)
     setBgmSrc(localDraft.bgmSrc)
     setPinned(localDraft.pinned)
+    setFeatured(localDraft.featured)
     setDraft(localDraft.draft)
+    setSeries(localDraft.series)
+    setSeriesOrder(localDraft.seriesOrder)
     setSavedAt(localDraft.savedAt)
   }, [localDraft])
 
@@ -161,7 +173,10 @@ export default function EditPostPage() {
         coverImage,
         bgmSrc,
         pinned,
+        featured,
         draft,
+        series,
+        seriesOrder,
         savedAt: nextSavedAt,
       }
 
@@ -172,7 +187,7 @@ export default function EditPostPage() {
     }, 600)
 
     return () => window.clearTimeout(timeoutId)
-  }, [bgmSrc, category, content, coverImage, draft, draftStorageKey, excerpt, isAuthenticated, isAuthLoading, loading, pinned, slug, tags, title])
+  }, [bgmSrc, category, content, coverImage, draft, draftStorageKey, excerpt, featured, isAuthenticated, isAuthLoading, loading, pinned, series, seriesOrder, slug, tags, title])
 
   useEffect(() => {
     fetch("/api/music", { cache: "no-store" })
@@ -282,7 +297,10 @@ export default function EditPostPage() {
           coverImage,
           bgmSrc,
           pinned,
+          featured,
           draft: publishDraft,
+          series,
+          seriesOrder: seriesOrder ? Number(seriesOrder) : null,
         }),
       })
 
@@ -342,7 +360,10 @@ export default function EditPostPage() {
       setCoverImage(data.post.coverImage || "")
       setBgmSrc(data.post.bgmSrc || "")
       setPinned(Boolean(data.post.pinned))
+      setFeatured(Boolean(data.post.featured))
       setDraft(Boolean(data.post.draft))
+      setSeries(data.post.series || "")
+      setSeriesOrder(data.post.seriesOrder ? String(data.post.seriesOrder) : "")
       setMessage("已恢复到历史版本")
     } catch {
       setMessage("恢复失败")
@@ -386,6 +407,9 @@ export default function EditPostPage() {
           tags={tags}
           coverImage={coverImage}
           bgmSrc={bgmSrc}
+          featured={featured}
+          series={series}
+          seriesOrder={seriesOrder}
           availableTracks={availableTracks}
           onTitleChange={(nextTitle) => {
             setTitle(nextTitle)
@@ -397,6 +421,9 @@ export default function EditPostPage() {
           onTagsChange={setTags}
           onCoverImageChange={setCoverImage}
           onBgmSrcChange={setBgmSrc}
+          onFeaturedChange={setFeatured}
+          onSeriesChange={setSeries}
+          onSeriesOrderChange={setSeriesOrder}
           onOpenCoverMediaDialog={() => {
             setMediaDialogMode("cover")
             setMediaDialogOpen(true)
@@ -409,6 +436,9 @@ export default function EditPostPage() {
           content={content}
           coverImage={coverImage}
           bgmSrc={bgmSrc}
+          featured={featured}
+          series={series}
+          seriesOrder={seriesOrder}
           previewMode={previewMode}
           textareaRef={textareaRef}
           fileInputRef={fileInputRef}

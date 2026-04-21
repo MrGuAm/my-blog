@@ -14,6 +14,7 @@ interface DashboardStats {
   publishedPosts: number
   draftPosts: number
   pinnedPosts: number
+  featuredPosts: number
   totalViews: number
   approvedComments: number
   pendingComments: number
@@ -211,7 +212,7 @@ export default function AdminDashboardClient({
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label="文章总数" value={stats.totalPosts} hint={`${stats.publishedPosts} 已发布 / ${stats.draftPosts} 草稿`} />
-          <StatCard label="累计阅读" value={stats.totalViews} hint={`${stats.pinnedPosts} 篇置顶文章`} />
+          <StatCard label="累计阅读" value={stats.totalViews} hint={`${stats.pinnedPosts} 篇置顶 / ${stats.featuredPosts} 篇精选`} />
           <StatCard label="评论状态" value={stats.pendingComments} hint={`${stats.approvedComments} 已通过 / ${stats.rejectedComments} 已拒绝`} />
           <StatCard label="评论用户" value={stats.userCount} hint="已注册的评论账号数量" />
           <StatCard label="封禁账号" value={stats.bannedUserCount} hint="当前被管理员限制的评论账号" />

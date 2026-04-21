@@ -13,15 +13,24 @@ test("store integration supports create, update, versioning, and delete in an is
       tags: ["测试", "集成"],
       coverImage: "/uploads/example.svg",
       pinned: true,
+      featured: true,
+      series: "工程化改造",
+      seriesOrder: 2,
     })
 
     assert.ok(created.id)
     assert.equal(created.slug, "测试文章")
     assert.equal(created.pinned, true)
+    assert.equal(created.featured, true)
+    assert.equal(created.series, "工程化改造")
+    assert.equal(created.seriesOrder, 2)
 
     const fetched = await store.getPostById(created.id)
     assert.equal(fetched?.title, "测试文章")
     assert.deepEqual(fetched?.tags, ["测试", "集成"])
+    assert.equal(fetched?.featured, true)
+    assert.equal(fetched?.series, "工程化改造")
+    assert.equal(fetched?.seriesOrder, 2)
 
     const initialVersions = await store.listPostVersions(created.id)
     assert.equal(initialVersions.length, 1)
@@ -31,12 +40,14 @@ test("store integration supports create, update, versioning, and delete in an is
       title: "测试文章-已更新",
       content: "<p>Updated</p>",
       tags: ["测试", "更新"],
+      seriesOrder: 3,
       draft: true,
     })
 
     assert.equal(updated?.title, "测试文章-已更新")
     assert.equal(updated?.draft, true)
     assert.deepEqual(updated?.tags, ["测试", "更新"])
+    assert.equal(updated?.seriesOrder, 3)
 
     const nextVersions = await store.listPostVersions(created.id)
     assert.equal(nextVersions.length, 2)

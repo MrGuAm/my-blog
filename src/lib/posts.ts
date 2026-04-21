@@ -13,7 +13,10 @@ export interface Post {
   coverImage?: string
   bgmSrc?: string
   pinned?: boolean
+  featured?: boolean
   draft?: boolean
+  series?: string
+  seriesOrder?: number | null
   views?: number
   updatedAt?: string
 }
@@ -22,6 +25,13 @@ function sortPosts(posts: Post[]) {
   return [...posts].sort((a: Post, b: Post) => {
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
+    if (a.featured && !b.featured) return -1
+    if (!a.featured && b.featured) return 1
+    if (a.series && b.series && a.series === b.series) {
+      const left = typeof a.seriesOrder === "number" ? a.seriesOrder : Number.MAX_SAFE_INTEGER
+      const right = typeof b.seriesOrder === "number" ? b.seriesOrder : Number.MAX_SAFE_INTEGER
+      if (left !== right) return left - right
+    }
     return new Date(b.date).getTime() - new Date(a.date).getTime()
   })
 }
@@ -78,6 +88,7 @@ export async function getRelatedPosts(post: Post, limit = 3): Promise<Post[]> {
   const allPosts = (await getAllPosts()).filter((item) => item.id !== post.id && !item.draft)
   const scored = allPosts.map(p => {
     let score = 0
+    if (post.series && p.series === post.series) score += 5
     if (p.category === post.category) score += 3
     p.tags.forEach(tag => { if (post.tags.includes(tag)) score += 1 })
     return { post: p, score }
@@ -86,15 +97,27 @@ export async function getRelatedPosts(post: Post, limit = 3): Promise<Post[]> {
 }
 
 export async function getAdjacentPosts(post: Post) {
-  const posts = (await getAllPosts({ includeDrafts: false, cached: true })).filter((item) => !item.draft)
-  const currentIndex = posts.findIndex((item) => item.id === post.id)
+  const allPosts = (await getAllPosts({ includeDrafts: false, cached: true })).filter((item) => !item.draft)
+
+  if (post.series) {
+    const seriesPosts = allPosts.filter((item) => item.series === post.series)
+    const currentSeriesIndex = seriesPosts.findIndex((item) => item.id === post.id)
+    if (currentSeriesIndex >= 0) {
+      return {
+        previousPost: seriesPosts[currentSeriesIndex - 1],
+        nextPost: seriesPosts[currentSeriesIndex + 1],
+      }
+    }
+  }
+
+  const currentIndex = allPosts.findIndex((item) => item.id === post.id)
   if (currentIndex < 0) {
     return { previousPost: undefined, nextPost: undefined }
   }
 
   return {
-    previousPost: posts[currentIndex - 1],
-    nextPost: posts[currentIndex + 1],
+    previousPost: allPosts[currentIndex - 1],
+    nextPost: allPosts[currentIndex + 1],
   }
 }
 

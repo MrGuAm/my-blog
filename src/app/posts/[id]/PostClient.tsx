@@ -141,6 +141,16 @@ export default function PostClient({ post, content, readingTime, headings, relat
                   <span className="apple-pill">
                     {post.category}
                   </span>
+                  {post.featured ? (
+                    <span className="rounded-full bg-[#ffb98f]/20 px-2.5 py-1 text-xs font-medium text-[#c46d35]">
+                      精选文章
+                    </span>
+                  ) : null}
+                  {post.series ? (
+                    <span className="apple-pill">
+                      系列：{post.series}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
+                    </span>
+                  ) : null}
                   <span className="text-sm text-muted-foreground">{post.date}</span>
                   <span className="text-sm text-muted-foreground">·</span>
                   <span className="text-sm text-muted-foreground">{readingTime} 分钟阅读</span>
@@ -219,6 +229,8 @@ export default function PostClient({ post, content, readingTime, headings, relat
                     <p>阅读时长：{readingTime} 分钟</p>
                     <p>浏览次数：{views}</p>
                     <p>分类：{post.category}</p>
+                    {post.featured ? <p>内容标记：精选</p> : null}
+                    {post.series ? <p>系列：{post.series}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}</p> : null}
                   </div>
                   {post.tags.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">

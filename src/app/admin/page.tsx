@@ -31,6 +31,7 @@ export default async function AdminPage() {
     publishedPosts: posts.filter((post) => !post.draft).length,
     draftPosts: posts.filter((post) => post.draft).length,
     pinnedPosts: posts.filter((post) => post.pinned).length,
+    featuredPosts: posts.filter((post) => post.featured).length,
     totalViews: posts.reduce((sum, post) => sum + (post.views || 0), 0),
     approvedComments: comments.filter((comment) => comment.status === "approved").length,
     pendingComments: comments.filter((comment) => comment.status === "pending").length,

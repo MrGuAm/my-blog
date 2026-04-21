@@ -85,6 +85,11 @@ function PostCard({
         </span>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{post.date}</span>
+          {post.featured && (
+            <span className="rounded-full bg-[#ffb98f]/20 px-2.5 py-1 text-xs font-medium text-[#c46d35]">
+              精选
+            </span>
+          )}
           {post.pinned && (
             <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
               置顶
@@ -112,6 +117,11 @@ function PostCard({
             </button>
           )}
         </div>
+        {post.series ? (
+          <span className="apple-pill">
+            系列：{post.series}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
+          </span>
+        ) : null}
         <div className="ml-auto flex flex-wrap gap-2">
           {post.tags.map(tag => (
             <button
@@ -219,6 +229,13 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
   ).sort((a, b) => {
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
+    if (a.featured && !b.featured) return -1
+    if (!a.featured && b.featured) return 1
+    if (a.series && b.series && a.series === b.series) {
+      const left = typeof a.seriesOrder === "number" ? a.seriesOrder : Number.MAX_SAFE_INTEGER
+      const right = typeof b.seriesOrder === "number" ? b.seriesOrder : Number.MAX_SAFE_INTEGER
+      if (left !== right) return left - right
+    }
     return new Date(b.date).getTime() - new Date(a.date).getTime()
   })
 

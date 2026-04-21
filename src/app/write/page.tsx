@@ -21,6 +21,9 @@ interface LocalDraft {
   coverImage: string
   bgmSrc: string
   pinned: boolean
+  featured: boolean
+  series: string
+  seriesOrder: string
   savedAt: string
 }
 
@@ -79,6 +82,9 @@ export default function WritePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState("")
   const [pinned, setPinned] = useState(initialDraft?.pinned ?? false)
+  const [featured, setFeatured] = useState(initialDraft?.featured ?? false)
+  const [series, setSeries] = useState(initialDraft?.series ?? "")
+  const [seriesOrder, setSeriesOrder] = useState(initialDraft?.seriesOrder ?? "")
   const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit")
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
@@ -117,6 +123,9 @@ export default function WritePage() {
         coverImage,
         bgmSrc,
         pinned,
+        featured,
+        series,
+        seriesOrder,
         savedAt: nextSavedAt,
       }
 
@@ -127,7 +136,7 @@ export default function WritePage() {
     }, 600)
 
     return () => window.clearTimeout(timeoutId)
-  }, [bgmSrc, category, content, coverImage, excerpt, isAuthenticated, isAuthLoading, pinned, slug, tags, title])
+  }, [bgmSrc, category, content, coverImage, excerpt, featured, isAuthenticated, isAuthLoading, pinned, series, seriesOrder, slug, tags, title])
 
   useEffect(() => {
     fetch("/api/music", { cache: "no-store" })
@@ -238,6 +247,9 @@ export default function WritePage() {
           coverImage,
           bgmSrc,
           pinned,
+          featured,
+          series,
+          seriesOrder: seriesOrder ? Number(seriesOrder) : null,
         }),
       })
 
@@ -322,6 +334,9 @@ export default function WritePage() {
           tags={tags}
           coverImage={coverImage}
           bgmSrc={bgmSrc}
+          featured={featured}
+          series={series}
+          seriesOrder={seriesOrder}
           availableTracks={availableTracks}
           onTitleChange={(nextTitle) => {
             setTitle(nextTitle)
@@ -333,6 +348,9 @@ export default function WritePage() {
           onTagsChange={setTags}
           onCoverImageChange={setCoverImage}
           onBgmSrcChange={setBgmSrc}
+          onFeaturedChange={setFeatured}
+          onSeriesChange={setSeries}
+          onSeriesOrderChange={setSeriesOrder}
           onOpenCoverMediaDialog={() => {
             setMediaDialogMode("cover")
             setMediaDialogOpen(true)
@@ -345,6 +363,9 @@ export default function WritePage() {
           content={content}
           coverImage={coverImage}
           bgmSrc={bgmSrc}
+          featured={featured}
+          series={series}
+          seriesOrder={seriesOrder}
           previewMode={previewMode}
           textareaRef={textareaRef}
           fileInputRef={fileInputRef}
@@ -413,6 +434,9 @@ export default function WritePage() {
                     bgmSrc,
                     draft: true,
                     pinned,
+                    featured,
+                    series,
+                    seriesOrder: seriesOrder ? Number(seriesOrder) : null,
                   }),
                 })
                 if (res.ok) {

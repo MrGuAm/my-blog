@@ -4,7 +4,7 @@ import { isAuthenticatedRequest } from '@/lib/server/auth'
 import { invalidatePostsCache } from '@/lib/server/site-cache'
 import { deletePost, getPostById, getPostBySlug, updatePost } from '@/lib/server/store'
 
-type PostPatch = Partial<Pick<Post, 'slug' | 'pinned' | 'draft' | 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'coverImage' | 'bgmSrc'>>
+type PostPatch = Partial<Pick<Post, 'slug' | 'pinned' | 'featured' | 'draft' | 'series' | 'seriesOrder' | 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'coverImage' | 'bgmSrc'>>
 
 export async function GET(
   request: NextRequest,
@@ -34,7 +34,10 @@ export async function GET(
       coverImage: post.coverImage,
       bgmSrc: post.bgmSrc,
       pinned: post.pinned,
+      featured: post.featured,
       draft: post.draft,
+      series: post.series,
+      seriesOrder: post.seriesOrder,
       views: post.views,
     }
     return NextResponse.json(publicPost)

@@ -5,6 +5,8 @@ import {
   getSql,
   isRemoteDatabaseEnabled,
   normalizeExcerpt,
+  normalizeSeries,
+  normalizeSeriesOrder,
   normalizeTags,
   slugify,
 } from './store-core'
@@ -16,18 +18,18 @@ export async function listPosts(options?: { includeDrafts?: boolean }) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = ((options?.includeDrafts ?? true)
-      ? await sql`SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at FROM posts ORDER BY pinned DESC, date DESC`
-      : await sql`SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at FROM posts WHERE draft = 0 ORDER BY pinned DESC, date DESC`) as PostRow[]
+      ? await sql`SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at FROM posts ORDER BY pinned DESC, featured DESC, date DESC`
+      : await sql`SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at FROM posts WHERE draft = 0 ORDER BY pinned DESC, featured DESC, date DESC`) as PostRow[]
 
     return rows.map(rowToPost)
   }
 
   const includeDrafts = options?.includeDrafts ?? true
   const rows = getDb().prepare(`
-    SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at
+    SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at
     FROM posts
     ${includeDrafts ? '' : 'WHERE draft = 0'}
-    ORDER BY pinned DESC, date DESC
+    ORDER BY pinned DESC, featured DESC, date DESC
   `).all() as PostRow[]
 
   return rows.map(rowToPost)
@@ -39,7 +41,7 @@ export async function getPostById(id: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at
+      SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at
       FROM posts
       WHERE id = ${id}
       LIMIT 1
@@ -48,7 +50,7 @@ export async function getPostById(id: string) {
   }
 
   const row = getDb().prepare(`
-    SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at
+    SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at
     FROM posts
     WHERE id = ?
     LIMIT 1
@@ -62,7 +64,7 @@ export async function getPostBySlug(slug: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at
+      SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at
       FROM posts
       WHERE slug = ${slug}
       LIMIT 1
@@ -71,7 +73,7 @@ export async function getPostBySlug(slug: string) {
   }
 
   const row = getDb().prepare(`
-    SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at
+    SELECT id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at
     FROM posts
     WHERE slug = ?
     LIMIT 1
@@ -87,15 +89,15 @@ export async function savePostVersion(postId: string, post: Post, note = '') {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     await sql`
-      INSERT INTO post_versions (id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, draft, created_at, note)
-      VALUES (${versionId}, ${postId}, ${post.title}, ${post.excerpt}, ${post.content}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${createdAt}, ${note})
+      INSERT INTO post_versions (id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, featured, draft, series, series_order, created_at, note)
+      VALUES (${versionId}, ${postId}, ${post.title}, ${post.excerpt}, ${post.content}, ${post.category}, ${JSON.stringify(post.tags || [])}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.featured ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.series || ''}, ${normalizeSeriesOrder(post.seriesOrder)}, ${createdAt}, ${note})
     `
     return
   }
 
   getDb().prepare(`
-    INSERT INTO post_versions (id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, draft, created_at, note)
-    VALUES (@id, @post_id, @title, @excerpt, @content, @category, @tags_json, @cover_image, @bgm_src, @pinned, @draft, @created_at, @note)
+    INSERT INTO post_versions (id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, featured, draft, series, series_order, created_at, note)
+    VALUES (@id, @post_id, @title, @excerpt, @content, @category, @tags_json, @cover_image, @bgm_src, @pinned, @featured, @draft, @series, @series_order, @created_at, @note)
   `).run({
     id: versionId,
     post_id: postId,
@@ -107,7 +109,10 @@ export async function savePostVersion(postId: string, post: Post, note = '') {
     cover_image: post.coverImage || '',
     bgm_src: post.bgmSrc || '',
     pinned: post.pinned ? 1 : 0,
+    featured: post.featured ? 1 : 0,
     draft: post.draft ? 1 : 0,
+    series: post.series || '',
+    series_order: normalizeSeriesOrder(post.seriesOrder),
     created_at: createdAt,
     note,
   })
@@ -119,7 +124,7 @@ export async function listPostVersions(postId: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, draft, created_at, note
+      SELECT id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, featured, draft, series, series_order, created_at, note
       FROM post_versions
       WHERE post_id = ${postId}
       ORDER BY created_at DESC
@@ -129,7 +134,7 @@ export async function listPostVersions(postId: string) {
   }
 
   const rows = getDb().prepare(`
-    SELECT id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, draft, created_at, note
+    SELECT id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, featured, draft, series, series_order, created_at, note
     FROM post_versions
     WHERE post_id = ?
     ORDER BY created_at DESC
@@ -144,7 +149,7 @@ export async function getPostVersion(postId: string, versionId: string): Promise
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, draft, created_at, note
+      SELECT id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, featured, draft, series, series_order, created_at, note
       FROM post_versions
       WHERE post_id = ${postId} AND id = ${versionId}
       LIMIT 1
@@ -153,7 +158,7 @@ export async function getPostVersion(postId: string, versionId: string): Promise
   }
 
   const row = getDb().prepare(`
-    SELECT id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, draft, created_at, note
+    SELECT id, post_id, title, excerpt, content, category, tags_json, cover_image, bgm_src, pinned, featured, draft, series, series_order, created_at, note
     FROM post_versions
     WHERE post_id = ? AND id = ?
     LIMIT 1
@@ -170,8 +175,11 @@ export async function createPost(input: {
   tags?: string[]
   coverImage?: string
   bgmSrc?: string
+  featured?: boolean
   draft?: boolean
   pinned?: boolean
+  series?: string
+  seriesOrder?: number | null
 }) {
   await ensureStoreReady()
 
@@ -196,7 +204,10 @@ export async function createPost(input: {
     coverImage: input.coverImage?.trim() || '',
     bgmSrc: input.bgmSrc?.trim() || '',
     pinned: Boolean(input.pinned),
+    featured: Boolean(input.featured),
     draft: Boolean(input.draft),
+    series: normalizeSeries(input.series),
+    seriesOrder: normalizeSeriesOrder(input.seriesOrder),
     views: 0,
     updatedAt: now,
   }
@@ -204,16 +215,16 @@ export async function createPost(input: {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     await sql`
-      INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at)
-      VALUES (${post.id}, ${post.slug || post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags)}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.views || 0}, ${post.updatedAt || now})
+      INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at)
+      VALUES (${post.id}, ${post.slug || post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags)}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.featured ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.series || ''}, ${normalizeSeriesOrder(post.seriesOrder)}, ${post.views || 0}, ${post.updatedAt || now})
     `
     await savePostVersion(post.id, post, '初始版本')
     return post
   }
 
   getDb().prepare(`
-    INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, draft, views, updated_at)
-    VALUES (@id, @slug, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @draft, @views, @updated_at)
+    INSERT INTO posts (id, slug, title, excerpt, date, category, tags_json, content, cover_image, bgm_src, pinned, featured, draft, series, series_order, views, updated_at)
+    VALUES (@id, @slug, @title, @excerpt, @date, @category, @tags_json, @content, @cover_image, @bgm_src, @pinned, @featured, @draft, @series, @series_order, @views, @updated_at)
   `).run({
     ...post,
     slug: post.slug || post.id,
@@ -221,7 +232,10 @@ export async function createPost(input: {
     cover_image: post.coverImage || '',
     bgm_src: post.bgmSrc || '',
     pinned: post.pinned ? 1 : 0,
+    featured: post.featured ? 1 : 0,
     draft: post.draft ? 1 : 0,
+    series: post.series || '',
+    series_order: normalizeSeriesOrder(post.seriesOrder),
     updated_at: post.updatedAt || now,
   })
 
@@ -231,7 +245,7 @@ export async function createPost(input: {
 
 export async function updatePost(
   id: string,
-  patch: Partial<Pick<Post, 'slug' | 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'coverImage' | 'bgmSrc' | 'pinned' | 'draft'>>
+  patch: Partial<Pick<Post, 'slug' | 'title' | 'excerpt' | 'content' | 'category' | 'tags' | 'coverImage' | 'bgmSrc' | 'pinned' | 'featured' | 'draft' | 'series' | 'seriesOrder'>>
 ) {
   const existing = await getPostById(id)
   if (!existing) return undefined
@@ -258,6 +272,9 @@ export async function updatePost(
     tags: patch.tags ? normalizeTags(patch.tags) : existing.tags,
     coverImage: typeof patch.coverImage === 'string' ? patch.coverImage.trim() : existing.coverImage || '',
     bgmSrc: typeof patch.bgmSrc === 'string' ? patch.bgmSrc.trim() : existing.bgmSrc || '',
+    featured: typeof patch.featured === 'boolean' ? patch.featured : existing.featured || false,
+    series: patch.series !== undefined ? normalizeSeries(patch.series) : existing.series || '',
+    seriesOrder: patch.seriesOrder !== undefined ? normalizeSeriesOrder(patch.seriesOrder) : existing.seriesOrder ?? null,
     updatedAt: new Date().toISOString(),
   }
 
@@ -275,7 +292,10 @@ export async function updatePost(
           cover_image = ${next.coverImage || ''},
           bgm_src = ${next.bgmSrc || ''},
           pinned = ${next.pinned ? 1 : 0},
+          featured = ${next.featured ? 1 : 0},
           draft = ${next.draft ? 1 : 0},
+          series = ${next.series || ''},
+          series_order = ${normalizeSeriesOrder(next.seriesOrder)},
           updated_at = ${next.updatedAt || new Date().toISOString()}
       WHERE id = ${id}
     `
@@ -294,7 +314,10 @@ export async function updatePost(
         cover_image = @cover_image,
         bgm_src = @bgm_src,
         pinned = @pinned,
+        featured = @featured,
         draft = @draft,
+        series = @series,
+        series_order = @series_order,
         updated_at = @updated_at
     WHERE id = @id
   `).run({
@@ -308,7 +331,10 @@ export async function updatePost(
     cover_image: next.coverImage || '',
     bgm_src: next.bgmSrc || '',
     pinned: next.pinned ? 1 : 0,
+    featured: next.featured ? 1 : 0,
     draft: next.draft ? 1 : 0,
+    series: next.series || '',
+    series_order: normalizeSeriesOrder(next.seriesOrder),
     updated_at: next.updatedAt || new Date().toISOString(),
   })
 
