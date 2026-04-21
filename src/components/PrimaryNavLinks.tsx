@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import LoginModal from "@/components/LoginModal"
 
-type NavKey = "home" | "about" | "music" | "write" | "moderation" | "admin" | "media" | "tags"
+export type NavKey = "home" | "about" | "music" | "write" | "moderation" | "admin" | "media" | "tags"
 
 interface PrimaryNavLinksProps {
   active?: NavKey

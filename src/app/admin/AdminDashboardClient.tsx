@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import PrimaryNavLinks from "@/components/PrimaryNavLinks"
+import SectionPageShell from "@/components/SectionPageShell"
 import type { CommentRecord } from "@/lib/server/comments"
 import type { UserRecord } from "@/lib/server/store"
 import type { Post } from "@/lib/posts"
@@ -200,30 +200,14 @@ export default function AdminDashboardClient({
   ]
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="apple-nav sticky top-0 z-50">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <div className="brand-mark">
-              <span className="text-sm font-bold text-current">C</span>
-            </div>
-            <span className="text-lg font-semibold tracking-[-0.03em]">后台总览</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-            <PrimaryNavLinks active="admin" />
-          </div>
-        </div>
-        </div>
-      </nav>
-
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-black tracking-tight">站点控制台</h1>
-          <p className="mt-2 text-muted-foreground">把文章、评论、用户和内容运营信息收在一个入口里。</p>
-          {message && <p className="mt-3 text-sm text-primary">{message}</p>}
-          {mediaWarning && <p className="mt-2 text-sm text-amber-600">{mediaWarning}</p>}
-        </div>
+    <SectionPageShell
+      navLabel="后台总览"
+      activeNav="admin"
+      title="站点控制台"
+      description="把文章、评论、用户和内容运营信息收在一个入口里。"
+    >
+        {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
+        {mediaWarning ? <p className="mb-4 text-sm text-amber-600">{mediaWarning}</p> : null}
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label="文章总数" value={stats.totalPosts} hint={`${stats.publishedPosts} 已发布 / ${stats.draftPosts} 草稿`} />
@@ -433,7 +417,6 @@ export default function AdminDashboardClient({
             </div>
           </div>
         </section>
-      </div>
-    </div>
+    </SectionPageShell>
   )
 }

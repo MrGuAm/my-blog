@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import PrimaryNavLinks from "@/components/PrimaryNavLinks"
+import SectionPageShell from "@/components/SectionPageShell"
 import SyncedLyricsPanel from "@/components/music/SyncedLyricsPanel"
 import { useMusic } from "@/context/MusicContext"
 
@@ -164,24 +164,7 @@ export default function MusicPageClient() {
   } = useMusic()
 
   return (
-    <div className="min-h-screen text-foreground">
-      <nav className="apple-nav sticky top-0 z-50">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <div className="brand-mark">
-                <span className="text-sm font-bold text-white">C</span>
-              </div>
-              <span className="text-lg font-semibold tracking-[-0.03em]">音乐角落</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-              <PrimaryNavLinks active="music" />
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+    <SectionPageShell navLabel="音乐角落" activeNav="music">
         <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] sm:gap-6">
           <div className="editorial-card !p-5 sm:!p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -299,7 +282,6 @@ export default function MusicPageClient() {
             </div>
           </div>
         </section>
-      </div>
-    </div>
+    </SectionPageShell>
   )
 }

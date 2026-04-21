@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import PrimaryNavLinks from "@/components/PrimaryNavLinks"
+import SectionPageShell from "@/components/SectionPageShell"
 
 interface ModerationComment {
   id: string
@@ -93,171 +93,153 @@ export default function ModerationClient({ comments: initialComments }: { commen
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="apple-nav sticky top-0 z-50">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <div className="brand-mark">
-              <span className="text-sm font-bold text-current">C</span>
+    <SectionPageShell
+      navLabel="评论审核"
+      activeNav="moderation"
+      title="待审核评论"
+      description="游客评论会先进入这里，确认后再公开显示。"
+      headerActions={
+        <>
+          <input
+            type="text"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder="搜索评论、作者或文章"
+            className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm md:w-64"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
+              {[
+                ["pending", "待审核"],
+                ["rejected", "已拒绝"],
+                ["all", "全部"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setFilter(value as "pending" | "rejected" | "all")}
+                  className={`rounded-full px-3 py-1 transition-colors ${
+                    filter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <span className="text-lg font-semibold tracking-[-0.03em]">评论审核</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-            <PrimaryNavLinks active="moderation" />
-          </div>
-        </div>
-        </div>
-      </nav>
-
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight">待审核评论</h1>
-            <p className="mt-2 text-muted-foreground">游客评论会先进入这里，确认后再公开显示。</p>
-          </div>
-          <div className="flex flex-col gap-3 md:items-end">
-            <input
-              type="text"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              placeholder="搜索评论、作者或文章"
-              className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm md:w-64"
-            />
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
-                {[
-                  ["pending", "待审核"],
-                  ["rejected", "已拒绝"],
-                  ["all", "全部"],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setFilter(value as "pending" | "rejected" | "all")}
-                    className={`rounded-full px-3 py-1 transition-colors ${
-                      filter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
-                {[
-                  ["all", `全部 ${threadStats.all}`],
-                  ["top-level", `主评论 ${threadStats.topLevel}`],
-                  ["replies", `回复 ${threadStats.replies}`],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setThreadFilter(value as "all" | "top-level" | "replies")}
-                    className={`rounded-full px-3 py-1 transition-colors ${
-                      threadFilter === value ? "bg-secondary text-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleBatch("approved")}
-                disabled={selectedIds.length === 0}
-                className="rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
-              >
-                批量通过
-              </button>
-              <button
-                type="button"
-                onClick={() => handleBatch("rejected")}
-                disabled={selectedIds.length === 0}
-                className="rounded-xl border border-red-500/40 px-3 py-2 text-sm text-red-500 disabled:opacity-50"
-              >
-                批量拒绝
-              </button>
+            <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
+              {[
+                ["all", `全部 ${threadStats.all}`],
+                ["top-level", `主评论 ${threadStats.topLevel}`],
+                ["replies", `回复 ${threadStats.replies}`],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setThreadFilter(value as "all" | "top-level" | "replies")}
+                  className={`rounded-full px-3 py-1 transition-colors ${
+                    threadFilter === value ? "bg-secondary text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
+            <button
+              type="button"
+              onClick={() => handleBatch("approved")}
+              disabled={selectedIds.length === 0}
+              className="rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
+            >
+              批量通过
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBatch("rejected")}
+              disabled={selectedIds.length === 0}
+              className="rounded-xl border border-red-500/40 px-3 py-2 text-sm text-red-500 disabled:opacity-50"
+            >
+              批量拒绝
+            </button>
           </div>
-        </div>
+        </>
+      }
+    >
+      {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
 
-        {message && <p className="mb-4 text-sm text-primary">{message}</p>}
-
-        <div className="space-y-4">
-          {filteredComments.length > 0 ? (
-            filteredComments.map((comment) => (
-              <div key={comment.id} className="rounded-2xl border border-border/50 bg-card p-5">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(comment.id)}
-                    onChange={(event) => {
-                      setSelectedIds((current) =>
-                        event.target.checked ? [...current, comment.id] : current.filter((item) => item !== comment.id)
-                      )
-                    }}
-                    className="mr-1"
-                  />
-                  <span className="text-sm font-semibold">{comment.author}</span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">{comment.date}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] ${
-                      comment.status === "pending"
-                        ? "bg-amber-500/15 text-amber-600"
-                        : "bg-red-500/15 text-red-500"
-                    }`}
-                  >
-                    {comment.status === "pending" ? "待审核" : "已拒绝"}
-                  </span>
-                  <span className="rounded-full bg-secondary/80 px-2 py-0.5 text-[11px] text-muted-foreground">
-                    {comment.isReply ? `回复 · 第 ${Math.max(comment.threadDepth || 1, 1)} 层` : "主评论"}
-                  </span>
-                  <Link href={`/posts/${comment.postSlug}`} className="ml-auto text-xs text-primary hover:underline">
-                    查看文章：{comment.postTitle}
-                  </Link>
+      <div className="space-y-4">
+        {filteredComments.length > 0 ? (
+          filteredComments.map((comment) => (
+            <div key={comment.id} className="rounded-2xl border border-border/50 bg-card p-5">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(comment.id)}
+                  onChange={(event) => {
+                    setSelectedIds((current) =>
+                      event.target.checked ? [...current, comment.id] : current.filter((item) => item !== comment.id)
+                    )
+                  }}
+                  className="mr-1"
+                />
+                <span className="text-sm font-semibold">{comment.author}</span>
+                <span className="text-xs text-muted-foreground">·</span>
+                <span className="text-xs text-muted-foreground">{comment.date}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] ${
+                    comment.status === "pending"
+                      ? "bg-amber-500/15 text-amber-600"
+                      : "bg-red-500/15 text-red-500"
+                  }`}
+                >
+                  {comment.status === "pending" ? "待审核" : "已拒绝"}
+                </span>
+                <span className="rounded-full bg-secondary/80 px-2 py-0.5 text-[11px] text-muted-foreground">
+                  {comment.isReply ? `回复 · 第 ${Math.max(comment.threadDepth || 1, 1)} 层` : "主评论"}
+                </span>
+                <Link href={`/posts/${comment.postSlug}`} className="ml-auto text-xs text-primary hover:underline">
+                  查看文章：{comment.postTitle}
+                </Link>
+              </div>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{comment.content}</p>
+              {comment.isReply ? (
+                <div className="mt-3 rounded-2xl border border-border/40 bg-background/70 px-4 py-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    回复给 {comment.parentAuthor || "上一条评论"}
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                    {comment.parentContent || "原评论可能已经被删除"}
+                  </p>
                 </div>
-                <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{comment.content}</p>
-                {comment.isReply && (
-                  <div className="mt-3 rounded-2xl border border-border/40 bg-background/70 px-4 py-3">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      回复给 {comment.parentAuthor || "上一条评论"}
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
-                      {comment.parentContent || "原评论可能已经被删除"}
-                    </p>
-                  </div>
-                )}
-                {comment.moderationNote && (
-                  <p className="mt-3 text-xs text-muted-foreground">备注：{comment.moderationNote}</p>
-                )}
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleModeration(comment, "approved")}
-                    disabled={processingId === comment.id}
-                    className="rounded-xl bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    {processingId === comment.id ? "处理中..." : "通过"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModeration(comment, "rejected")}
-                    disabled={processingId === comment.id}
-                    className="rounded-xl border border-red-500/40 px-4 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10 disabled:opacity-50"
-                  >
-                    拒绝
-                  </button>
-                </div>
+              ) : null}
+              {comment.moderationNote ? (
+                <p className="mt-3 text-xs text-muted-foreground">备注：{comment.moderationNote}</p>
+              ) : null}
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleModeration(comment, "approved")}
+                  disabled={processingId === comment.id}
+                  className="rounded-xl bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {processingId === comment.id ? "处理中..." : "通过"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeration(comment, "rejected")}
+                  disabled={processingId === comment.id}
+                  className="rounded-xl border border-red-500/40 px-4 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                >
+                  拒绝
+                </button>
               </div>
-            ))
-          ) : (
-            <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
-              当前没有需要处理的评论。
             </div>
-          )}
-        </div>
+          ))
+        ) : (
+          <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
+            当前没有需要处理的评论。
+          </div>
+        )}
       </div>
-    </div>
+    </SectionPageShell>
   )
 }

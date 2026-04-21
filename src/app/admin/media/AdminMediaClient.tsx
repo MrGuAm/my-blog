@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useRef, useState } from "react"
-import PrimaryNavLinks from "@/components/PrimaryNavLinks"
+import SectionPageShell from "@/components/SectionPageShell"
 import type { MediaAsset } from "@/lib/server/media"
 
 function formatSize(size: number) {
@@ -107,33 +107,14 @@ export default function AdminMediaClient({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="apple-nav sticky top-0 z-50">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <div className="brand-mark">
-              <span className="text-sm font-bold text-current">C</span>
-            </div>
-            <span className="text-lg font-semibold tracking-[-0.03em]">媒体库</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-            <PrimaryNavLinks active="media" />
-          </div>
-        </div>
-        </div>
-      </nav>
-
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight">站内媒体素材</h1>
-            <p className="mt-2 text-muted-foreground">集中管理文章中要复用的图片素材。</p>
-            {message && <p className="mt-3 text-sm text-primary">{message}</p>}
-            {warning && <p className="mt-2 text-sm text-amber-600">{warning}</p>}
-          </div>
-          <div className="flex flex-col gap-3 md:items-end">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <SectionPageShell
+      navLabel="媒体库"
+      activeNav="media"
+      title="站内媒体素材"
+      description="集中管理文章中要复用的图片素材。"
+      headerActions={
+        <>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <input
                 type="text"
                 value={keyword}
@@ -155,12 +136,12 @@ export default function AdminMediaClient({
                       timeFilter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                     }`}
                   >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                  {label}
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-3">
+          </div>
+          <div className="flex items-center gap-3">
             <input
               ref={fileInputRef}
               type="file"
@@ -187,9 +168,12 @@ export default function AdminMediaClient({
             >
               刷新
             </button>
-            </div>
           </div>
-        </div>
+        </>
+      }
+    >
+        {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
+        {warning ? <p className="mb-4 text-sm text-amber-600">{warning}</p> : null}
 
         {filteredAssets.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -247,7 +231,6 @@ export default function AdminMediaClient({
             还没有任何素材，先上传一张图片试试。
           </div>
         )}
-      </div>
-    </div>
+    </SectionPageShell>
   )
 }
