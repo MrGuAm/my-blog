@@ -23,7 +23,7 @@ export interface MediaAsset {
   deletable: boolean
 }
 
-const mediaDir = process.env.BLOG_MEDIA_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), 'public/uploads')
+const localMediaDirSegments = ['public', 'uploads'] as const
 const allowedMimeTypes = new Map([
   ['image/jpeg', '.jpg'],
   ['image/png', '.png'],
@@ -38,6 +38,21 @@ function canWriteLocalMediaLibrary() {
 
 function isBlobMediaLibraryEnabled() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
+}
+
+function getLocalMediaDir() {
+  if (process.env.BLOG_MEDIA_DIR) {
+    return process.env.BLOG_MEDIA_DIR
+  }
+
+  return path.join(
+    /* turbopackIgnore: true */ process.cwd(),
+    ...localMediaDirSegments,
+  )
+}
+
+function getLocalMediaPath(fileName: string) {
+  return path.join(getLocalMediaDir(), fileName)
 }
 
 export function canWriteMediaLibrary() {
@@ -57,7 +72,7 @@ function ensureMediaDirForWrite() {
     throw new Error('当前环境不支持直接写入本地媒体库，请改用 Vercel Blob。')
   }
 
-  fs.mkdirSync(mediaDir, { recursive: true })
+  fs.mkdirSync(getLocalMediaDir(), { recursive: true })
 }
 
 function sanitizeBaseName(value: string) {
@@ -88,6 +103,8 @@ function toLocalAsset(fileName: string, stats: fs.Stats, contentType = 'image/*'
 }
 
 async function listStaticMediaAssets(): Promise<MediaAsset[]> {
+  const mediaDir = getLocalMediaDir()
+
   if (!fs.existsSync(mediaDir)) {
     return []
   }
@@ -96,7 +113,7 @@ async function listStaticMediaAssets(): Promise<MediaAsset[]> {
     .readdirSync(mediaDir, { withFileTypes: true })
     .filter((entry) => entry.isFile())
     .map((entry) => {
-      const absolutePath = path.join(mediaDir, entry.name)
+      const absolutePath = getLocalMediaPath(entry.name)
       const stats = fs.statSync(absolutePath)
       return toLocalAsset(entry.name, stats)
     })
@@ -200,7 +217,7 @@ export async function saveMediaFile(file: File) {
   ensureMediaDirForWrite()
 
   const fileName = `${baseName}-${randomUUID().slice(0, 8)}${extension}`
-  const absolutePath = path.join(mediaDir, fileName)
+  const absolutePath = getLocalMediaPath(fileName)
   const buffer = Buffer.from(await file.arrayBuffer())
 
   fs.writeFileSync(absolutePath, buffer)
@@ -221,7 +238,7 @@ export async function saveMediaFile(file: File) {
 
 export async function deleteMediaFile(identifier: string) {
   const safeIdentifier = path.basename(identifier)
-  const localPath = path.join(mediaDir, safeIdentifier)
+  const localPath = getLocalMediaPath(safeIdentifier)
 
   if (canWriteLocalMediaLibrary() && fs.existsSync(localPath)) {
     fs.unlinkSync(localPath)
