@@ -1,25 +1,9 @@
 import type { NextRequest } from 'next/server'
+import { consumePersistentRateLimit, getRequesterKey } from './rate-limit'
 
 const blockedWords = ['博彩', '赌博', '返利', '刷单', '加微信', '加v', '兼职日结']
 const RATE_WINDOW_MS = 60_000
 const RATE_LIMIT = 4
-
-declare global {
-  var __commentRateLimitStore: Map<string, number[]> | undefined
-}
-
-function getStore() {
-  if (!global.__commentRateLimitStore) {
-    global.__commentRateLimitStore = new Map()
-  }
-  return global.__commentRateLimitStore
-}
-
-function getRequesterKey(request: NextRequest, fallback = 'guest') {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-  const realIp = request.headers.get('x-real-ip')?.trim()
-  return forwarded || realIp || fallback
-}
 
 export function validateCommentContent(content: string) {
   const normalized = content.trim()
@@ -38,18 +22,12 @@ export function validateCommentContent(content: string) {
   return ''
 }
 
-export function checkCommentRateLimit(request: NextRequest, actorId?: string | null) {
+export async function checkCommentRateLimit(request: NextRequest, actorId?: string | null) {
   const key = `${actorId || 'guest'}:${getRequesterKey(request, actorId || 'guest')}`
-  const now = Date.now()
-  const store = getStore()
-  const recent = (store.get(key) || []).filter((timestamp) => now - timestamp < RATE_WINDOW_MS)
-
-  if (recent.length >= RATE_LIMIT) {
-    store.set(key, recent)
-    return { allowed: false, retryAfterSeconds: Math.ceil((RATE_WINDOW_MS - (now - recent[0])) / 1000) }
-  }
-
-  recent.push(now)
-  store.set(key, recent)
-  return { allowed: true, retryAfterSeconds: 0 }
+  return consumePersistentRateLimit({
+    scope: 'comment-post',
+    actorKey: key,
+    limit: RATE_LIMIT,
+    windowMs: RATE_WINDOW_MS,
+  })
 }

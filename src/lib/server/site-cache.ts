@@ -33,14 +33,28 @@ export const getCachedPublicPost = unstable_cache(
   { tags: [CACHE_TAGS.posts], revalidate: 300 }
 )
 
+function safeRevalidateTag(tag: string) {
+  try {
+    revalidateTag(tag, 'max')
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('static generation store missing')
+    ) {
+      return
+    }
+    throw error
+  }
+}
+
 export function invalidatePostsCache() {
-  revalidateTag(CACHE_TAGS.posts, 'max')
+  safeRevalidateTag(CACHE_TAGS.posts)
 }
 
 export function invalidateCommentsCache() {
-  revalidateTag(CACHE_TAGS.comments, 'max')
+  safeRevalidateTag(CACHE_TAGS.comments)
 }
 
 export function invalidateMusicCache() {
-  revalidateTag(CACHE_TAGS.music, 'max')
+  safeRevalidateTag(CACHE_TAGS.music)
 }

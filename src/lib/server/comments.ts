@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import type { CommentRecord, CommentRow, CommentStatus } from './store-types'
 import {
   ensureStoreReady,
@@ -128,7 +129,7 @@ export async function createComment(input: {
   await ensureStoreReady()
 
   const comment: CommentRecord = {
-    id: Date.now().toString(),
+    id: `${Date.now()}-${randomUUID()}`,
     postId: input.postId,
     author: input.author.trim(),
     content: input.content.trim(),

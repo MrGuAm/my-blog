@@ -135,6 +135,24 @@ export interface MediaAssetRecord {
   updatedAt: string
 }
 
+export interface RateLimitBucketRow {
+  bucket: string
+  scope: string
+  actor_key: string
+  count: number
+  window_started_at: number
+  updated_at: string
+}
+
+export interface RateLimitBucketRecord {
+  bucket: string
+  scope: string
+  actorKey: string
+  count: number
+  windowStartedAt: number
+  updatedAt: string
+}
+
 export interface CommentRow {
   id: string
   post_id: string
@@ -240,6 +258,17 @@ export function rowToMediaAsset(row: MediaAssetRow): MediaAssetRecord {
     contentType: row.content_type,
     size: row.size,
     uploadedAt: row.uploaded_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function rowToRateLimitBucket(row: RateLimitBucketRow): RateLimitBucketRecord {
+  return {
+    bucket: row.bucket,
+    scope: row.scope,
+    actorKey: row.actor_key,
+    count: row.count,
+    windowStartedAt: row.window_started_at,
     updatedAt: row.updated_at,
   }
 }

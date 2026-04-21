@@ -43,11 +43,18 @@ export {
   saveSiteSettingsRecord as saveStoredSiteSettingsRecord,
 } from './store-settings'
 
+export {
+  deleteRateLimitBucket,
+  getRateLimitBucket,
+  upsertRateLimitBucket,
+} from './store-rate-limits'
+
 export type {
   CommentRecord,
   CommentRow,
   CommentStatus,
   MediaAssetRecord,
+  RateLimitBucketRecord,
   PostVersionRecord,
   UserMusicLibrary,
   UserRecord,

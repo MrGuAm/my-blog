@@ -51,7 +51,7 @@ export async function POST(
     return NextResponse.json({ error: validationError }, { status: 400 })
   }
 
-  const rateLimit = checkCommentRateLimit(request, commentUser?.userId || null)
+  const rateLimit = await checkCommentRateLimit(request, commentUser?.userId || null)
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: `评论太快啦，${rateLimit.retryAfterSeconds} 秒后再试` }, { status: 429 })
   }

@@ -72,3 +72,81 @@ test("comment user registration route creates a user and session cookie in an is
     assert.equal(created?.display_name, "路由用户")
   })
 })
+
+test("admin login route rate-limits repeated failed attempts in an isolated workspace", async () => {
+  await withTempWorkspace(async () => {
+    const loginRoute = await importFresh<typeof import("../src/app/api/auth/login/route")>("src/app/api/auth/login/route.ts")
+
+    for (let index = 0; index < 5; index += 1) {
+      const request = new NextRequest("https://champion.cc.cd/api/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-real-ip": "198.51.100.10",
+        },
+        body: JSON.stringify({ password: "wrong-password" }),
+      })
+      const response = await loginRoute.POST(request)
+      assert.equal(response.status, 401)
+    }
+
+    const blockedRequest = new NextRequest("https://champion.cc.cd/api/auth/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-real-ip": "198.51.100.10",
+      },
+      body: JSON.stringify({ password: "wrong-password" }),
+    })
+    const blockedResponse = await loginRoute.POST(blockedRequest)
+    const blockedPayload = await blockedResponse.json()
+
+    assert.equal(blockedResponse.status, 429)
+    assert.match(blockedPayload.error, /登录尝试过于频繁/)
+  })
+})
+
+test("comment route rate-limits repeated posts in an isolated workspace", async () => {
+  await withTempWorkspace(async () => {
+    const commentsRoute = await importFresh<typeof import("../src/app/api/comments/[postId]/route")>("src/app/api/comments/[postId]/route.ts")
+
+    for (let index = 0; index < 4; index += 1) {
+      const request = new NextRequest("https://champion.cc.cd/api/comments/welcome", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-real-ip": "198.51.100.11",
+        },
+        body: JSON.stringify({
+          author: "游客",
+          content: `这是一条测试评论 ${index + 1}`,
+        }),
+      })
+
+      const response = await commentsRoute.POST(request, {
+        params: Promise.resolve({ postId: "welcome" }),
+      })
+      assert.equal(response.status, 200)
+    }
+
+    const blockedRequest = new NextRequest("https://champion.cc.cd/api/comments/welcome", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-real-ip": "198.51.100.11",
+      },
+      body: JSON.stringify({
+        author: "游客",
+        content: "这是一条测试评论 5",
+      }),
+    })
+
+    const blockedResponse = await commentsRoute.POST(blockedRequest, {
+      params: Promise.resolve({ postId: "welcome" }),
+    })
+    const blockedPayload = await blockedResponse.json()
+
+    assert.equal(blockedResponse.status, 429)
+    assert.match(blockedPayload.error, /评论太快啦/)
+  })
+})
