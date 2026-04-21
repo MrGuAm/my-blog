@@ -32,6 +32,7 @@ export default async function AdminPage() {
     draftPosts: posts.filter((post) => post.draft).length,
     pinnedPosts: posts.filter((post) => post.pinned).length,
     featuredPosts: posts.filter((post) => post.featured).length,
+    seriesCount: new Set(posts.map((post) => post.series?.trim()).filter(Boolean)).size,
     totalViews: posts.reduce((sum, post) => sum + (post.views || 0), 0),
     approvedComments: comments.filter((comment) => comment.status === "approved").length,
     pendingComments: comments.filter((comment) => comment.status === "pending").length,
@@ -40,16 +41,6 @@ export default async function AdminPage() {
     bannedUserCount: users.filter((user) => user.isBanned).length,
     mediaCount: mediaAssets.length,
   }
-
-  const topPosts = [...posts]
-    .filter((post) => !post.draft)
-    .sort((a, b) => (b.views || 0) - (a.views || 0))
-    .slice(0, 5)
-
-  const recentDrafts = [...posts]
-    .filter((post) => post.draft)
-    .sort((a, b) => new Date(b.updatedAt || b.date).getTime() - new Date(a.updatedAt || a.date).getTime())
-    .slice(0, 5)
 
   const latestComments = comments.slice(0, 8).map((comment) => {
     const post = posts.find((item) => item.id === comment.postId)
@@ -70,16 +61,30 @@ export default async function AdminPage() {
     .slice(0, 6)
     .map(([label, value]) => ({ label, value, tone: "bg-[#FF9B6B]" }))
 
+  const topSeries = [...posts]
+    .filter((post) => !post.draft && post.series)
+    .reduce<Map<string, number>>((map, post) => {
+      const key = post.series!.trim()
+      if (!key) return map
+      map.set(key, (map.get(key) || 0) + 1)
+      return map
+    }, new Map())
+
+  const topSeriesItems = [...topSeries.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, value]) => ({ label, value, tone: "bg-[#6C8CFF]" }))
+
   return (
     <AdminDashboardClient
       stats={stats}
-      topPosts={topPosts}
-      recentDrafts={recentDrafts}
+      posts={posts}
       latestComments={latestComments}
       users={users}
       mediaAssets={mediaAssets.slice(0, 6)}
       mediaWarning={mediaWarning}
       topTagItems={topTagItems}
+      topSeriesItems={topSeriesItems}
     />
   )
 }
