@@ -58,6 +58,40 @@ function SidebarSection({ title, children }: { title: string; children: ReactNod
   )
 }
 
+function FeaturedStoryCard({ post, isAuthenticated }: { post: Post; isAuthenticated: boolean }) {
+  const href = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.slug || post.id}`
+
+  return (
+    <Link
+      href={href}
+      className="editorial-card-soft block h-full transition-all duration-300 hover:-translate-y-0.5"
+    >
+      {post.coverImage ? (
+        <div className="mb-4 overflow-hidden rounded-[1.5rem] border border-white/70 dark:border-white/10">
+          <img src={post.coverImage} alt={post.title} className="h-40 w-full object-cover" />
+        </div>
+      ) : null}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-[#ffb98f]/20 px-2.5 py-1 text-xs font-medium text-[#c46d35]">
+          精选
+        </span>
+        <span className="text-xs text-muted-foreground">{post.date}</span>
+        {post.series ? (
+          <span className="apple-pill">
+            系列：{post.series}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
+          </span>
+        ) : null}
+      </div>
+      <h3 className="text-xl font-semibold tracking-[-0.04em] text-foreground">{post.title}</h3>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{post.excerpt}</p>
+      <div className="mt-5 flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{post.category}</span>
+        <span className="font-medium text-foreground/80">进入阅读 →</span>
+      </div>
+    </Link>
+  )
+}
+
 function PostCard({
   post,
   isAuthenticated,
@@ -243,9 +277,18 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
     return new Date(b.date).getTime() - new Date(a.date).getTime()
   })
 
-  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / postsPerPage))
+  const showFeaturedSection = !searchQuery && selectedTag === null && currentPage === 1
+  const featuredPosts = showFeaturedSection
+    ? filteredPosts.filter((post) => post.featured && !post.draft).slice(0, 3)
+    : []
+  const featuredIds = new Set(featuredPosts.map((post) => post.id))
+  const listSourcePosts = showFeaturedSection
+    ? filteredPosts.filter((post) => !featuredIds.has(post.id))
+    : filteredPosts
+
+  const totalPages = Math.max(1, Math.ceil(listSourcePosts.length / postsPerPage))
   const safeCurrentPage = Math.min(currentPage, totalPages)
-  const paginatedPosts = filteredPosts.slice((safeCurrentPage - 1) * postsPerPage, safeCurrentPage * postsPerPage)
+  const paginatedPosts = listSourcePosts.slice((safeCurrentPage - 1) * postsPerPage, safeCurrentPage * postsPerPage)
   const playModeLabel = playMode === "loop" ? "列表循环" : playMode === "repeat-one" ? "单曲循环" : "随机播放"
 
   return (
@@ -337,6 +380,25 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
         <div className="flex flex-col gap-6 pb-24 lg:flex-row lg:gap-10">
           {/* Blog Posts */}
           <main className="flex-1 space-y-5">
+            {featuredPosts.length > 0 ? (
+              <section className="mb-8">
+                <div className="mb-4 flex items-end justify-between">
+                  <div>
+                    <p className="section-kicker">Featured Stories</p>
+                    <h2 className="section-title mt-2">精选内容</h2>
+                  </div>
+                  <Link href="/series" className="hidden text-sm text-muted-foreground transition-colors hover:text-primary sm:block">
+                    浏览全部系列
+                  </Link>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {featuredPosts.map((post) => (
+                    <FeaturedStoryCard key={post.id} post={post} isAuthenticated={isAuthenticated} />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
             <div className="mb-2 flex items-end justify-between">
               <div>
                 <p className="section-kicker">Latest Writing</p>
