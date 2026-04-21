@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
-import { siteConfig } from "@/lib/site-config"
+import SiteBrand from "@/components/SiteBrand"
 
 interface PostEditorPageShellProps {
   pageTitle: string
@@ -26,12 +26,7 @@ export default function PostEditorPageShell({
       <nav className="apple-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <div className="brand-mark">
-                <span className="text-sm font-bold text-current">C</span>
-              </div>
-              <span className="text-lg font-semibold tracking-[-0.03em]">{siteConfig.name}</span>
-            </div>
+            <SiteBrand />
             <div className="flex flex-wrap items-center gap-3 sm:gap-6">
               <button
                 type="button"

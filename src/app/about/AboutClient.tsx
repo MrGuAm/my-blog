@@ -2,6 +2,8 @@
 
 import { PaletteBadge, paletteTones } from "@/components/PaletteCharacters"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
+import SiteBrand from "@/components/SiteBrand"
+import SiteFooter from "@/components/SiteFooter"
 
 const aboutHighlights = [
   { title: "关键词", copy: "技术、音乐、生活" },
@@ -39,12 +41,7 @@ export default function AboutClient() {
       <nav className="apple-nav sticky top-0 z-50">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <div className="brand-mark">
-                <span className="text-white text-sm font-bold">C</span>
-              </div>
-              <span className="text-lg font-semibold tracking-[-0.03em]">Champion&apos;s Blog</span>
-            </div>
+            <SiteBrand />
             <div className="flex flex-wrap items-center gap-3 sm:gap-6">
               <PrimaryNavLinks active="about" />
             </div>
@@ -92,11 +89,7 @@ export default function AboutClient() {
         </div>
       </div>
       {/* Footer */}
-      <footer className="border-t border-white/60 py-10 dark:border-white/10">
-        <div className="mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground sm:px-6">
-          © 2026 Champion&apos;s Blog
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

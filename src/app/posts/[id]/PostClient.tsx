@@ -8,6 +8,8 @@ import { useState, useEffect, useRef } from "react"
 import { Post, TocItem } from "@/lib/posts"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import Comments from "@/components/Comments"
+import SiteBrand from "@/components/SiteBrand"
+import SiteFooter from "@/components/SiteFooter"
 import hljs from "highlight.js"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 
@@ -91,12 +93,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
       <nav className="apple-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2">
-              <div className="brand-mark">
-                <span className="text-sm font-bold text-current">C</span>
-              </div>
-              <span className="text-lg font-semibold tracking-[-0.03em]">Champion&apos;s Blog</span>
-            </div>
+            <SiteBrand />
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4 md:gap-6">
               <PrimaryNavLinks />
               {isAuthenticated ? (
@@ -297,11 +294,10 @@ export default function PostClient({ post, content, readingTime, headings, relat
       </button>
 
       {/* Footer */}
-      <footer className="mt-16 border-t border-white/60 py-10 dark:border-white/10">
-        <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          © 2026 Champion&apos;s Blog
-        </div>
-      </footer>
+      <SiteFooter
+        className="mt-16 border-t border-white/60 py-10 dark:border-white/10"
+        innerClassName="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground"
+      />
     </div>
   )
 }

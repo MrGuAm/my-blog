@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 import { PaletteHeroTrio } from "@/components/PaletteCharacters"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
+import SiteBrand from "@/components/SiteBrand"
+import SiteFooter from "@/components/SiteFooter"
 import MarqueeText from "@/components/music/MarqueeText"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
@@ -231,12 +233,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
       <nav className="apple-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2">
-              <div className="brand-mark">
-                <span className="text-sm font-bold text-current">C</span>
-              </div>
-              <span className="text-lg font-semibold tracking-[-0.03em] text-foreground">Champion&apos;s Blog</span>
-            </div>
+            <SiteBrand className="text-foreground" />
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="relative w-full sm:w-auto">
                 <input
@@ -599,11 +596,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
         </div>
       </div>
       {/* Footer */}
-      <footer className="border-t border-white/60 py-10 dark:border-white/10">
-        <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          © 2026 Champion&apos;s Blog
-        </div>
-      </footer>
+      <SiteFooter innerClassName="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground" />
 
       {/* Back to Top Button */}
       <button
