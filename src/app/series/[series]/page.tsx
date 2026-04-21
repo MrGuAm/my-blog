@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import { calculateReadingTime, getAllSeries, getPostsBySeries } from "@/lib/posts"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import { siteConfig } from "@/lib/site-config"
 
 interface SeriesPageProps {
@@ -29,7 +30,7 @@ export async function generateStaticParams() {
 export default async function SeriesDetailPage({ params }: SeriesPageProps) {
   const { series } = await params
   const decodedSeries = decodeURIComponent(series)
-  const posts = await getPostsBySeries(decodedSeries)
+  const [posts, siteSettings] = await Promise.all([getPostsBySeries(decodedSeries), getSiteSettings()])
   const featuredCount = posts.filter((post) => post.featured).length
   const totalReadingTime = posts.reduce((sum, post) => sum + calculateReadingTime(post.content), 0)
   const totalViews = posts.reduce((sum, post) => sum + (post.views || 0), 0)
@@ -41,6 +42,7 @@ export default async function SeriesDetailPage({ params }: SeriesPageProps) {
   return (
     <SectionPageShell
       navLabel="系列聚合"
+      brandLabel={siteSettings.brandName}
       navActions={<Link href="/series" className="text-sm text-muted-foreground transition-colors hover:text-primary">全部系列</Link>}
       backLinkHref="/series"
       backLinkLabel="← 返回全部系列"

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { notFound } from "next/navigation"
 import { getAdjacentPosts, getAllPosts, getPost, getPostContent, calculateReadingTime, extractHeadings, getRelatedPosts } from "@/lib/posts"
 import { isAuthenticatedServer } from "@/lib/server/auth"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import { siteConfig } from "@/lib/site-config"
 import PostClient from "./PostClient"
 
@@ -78,9 +79,10 @@ export default async function PostPage({ params }: Props) {
 
   const readingTime = calculateReadingTime(content)
   const headings = extractHeadings(contentWithIds)
-  const [relatedPosts, adjacentPosts] = await Promise.all([
+  const [relatedPosts, adjacentPosts, siteSettings] = await Promise.all([
     getRelatedPosts(post),
     getAdjacentPosts(post),
+    getSiteSettings(),
   ])
 
   return (
@@ -92,6 +94,8 @@ export default async function PostPage({ params }: Props) {
       relatedPosts={relatedPosts}
       previousPost={adjacentPosts.previousPost}
       nextPost={adjacentPosts.nextPost}
+      brandName={siteSettings.brandName}
+      footerText={siteSettings.footerText}
     />
   )
 }

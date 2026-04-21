@@ -6,6 +6,7 @@ import SiteBrand from "@/components/SiteBrand"
 interface SectionPageShellProps {
   navLabel: string
   activeNav?: NavKey
+  brandLabel?: string
   title?: string
   description?: string
   navActions?: ReactNode
@@ -19,6 +20,7 @@ interface SectionPageShellProps {
 export default function SectionPageShell({
   navLabel,
   activeNav,
+  brandLabel,
   title,
   description,
   navActions,
@@ -33,7 +35,7 @@ export default function SectionPageShell({
       <nav className="apple-nav sticky top-0 z-50">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <SiteBrand label={navLabel} />
+            <SiteBrand label={brandLabel || navLabel} />
             <div className="flex flex-wrap items-center gap-3 sm:gap-6">
               <PrimaryNavLinks active={activeNav} />
               {navActions}

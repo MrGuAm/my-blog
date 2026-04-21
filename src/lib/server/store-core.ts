@@ -404,6 +404,16 @@ export function getDb() {
       ensureSqliteColumn(db, 'post_versions', 'series_order', 'INTEGER')
     })
 
+    runSqliteMigration(db, '012-site-settings', () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS site_settings (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          settings_json TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `)
+    })
+
     global.__championBlogDb = db
   }
 
@@ -597,6 +607,16 @@ async function ensureRemoteSchema() {
     await sql`ALTER TABLE post_versions ADD COLUMN IF NOT EXISTS featured INTEGER NOT NULL DEFAULT 0`
     await sql`ALTER TABLE post_versions ADD COLUMN IF NOT EXISTS series TEXT NOT NULL DEFAULT ''`
     await sql`ALTER TABLE post_versions ADD COLUMN IF NOT EXISTS series_order INTEGER`
+  })
+
+  await runRemoteMigration('012-site-settings', async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS site_settings (
+        id INTEGER PRIMARY KEY,
+        settings_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>

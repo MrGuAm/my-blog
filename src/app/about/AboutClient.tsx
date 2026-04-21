@@ -4,12 +4,7 @@ import { PaletteBadge, paletteTones } from "@/components/PaletteCharacters"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import SiteBrand from "@/components/SiteBrand"
 import SiteFooter from "@/components/SiteFooter"
-
-const aboutHighlights = [
-  { title: "关键词", copy: "技术、音乐、生活" },
-  { title: "写作感觉", copy: "轻一点，真一点" },
-  { title: "想留下的", copy: "长期可回看的内容" },
-]
+import type { SiteSettings } from "@/lib/site-settings"
 
 const aboutSections = [
   {
@@ -34,14 +29,20 @@ const aboutSections = [
   },
 ]
 
-export default function AboutClient() {
+export default function AboutClient({ siteSettings }: { siteSettings: SiteSettings }) {
+  const aboutHighlights = [
+    { title: "关键词", copy: siteSettings.aboutHighlightKeywords },
+    { title: "写作感觉", copy: siteSettings.aboutHighlightStyle },
+    { title: "想留下的", copy: siteSettings.aboutHighlightGoal },
+  ]
+
   return (
     <div className="min-h-screen text-foreground">
       {/* Navigation */}
       <nav className="apple-nav sticky top-0 z-50">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <SiteBrand />
+            <SiteBrand label={siteSettings.brandName} />
             <div className="flex flex-wrap items-center gap-3 sm:gap-6">
               <PrimaryNavLinks active="about" />
             </div>
@@ -55,10 +56,10 @@ export default function AboutClient() {
           <section className="editorial-card sm:p-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-2xl">
-                <span className="section-kicker">About Champion</span>
-                <h1 className="mt-4 text-[2.1rem] font-semibold tracking-[-0.08em] sm:text-[2.6rem]">关于我。</h1>
+                <span className="section-kicker">{siteSettings.aboutKicker}</span>
+                <h1 className="mt-4 text-[2.1rem] font-semibold tracking-[-0.08em] sm:text-[2.6rem]">{siteSettings.aboutTitle}</h1>
                 <p className="section-copy mt-3">
-                  这里记录我正在做的事、喜欢的内容，以及这个博客为什么会长成现在这个样子。
+                  {siteSettings.aboutDescription}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -89,7 +90,7 @@ export default function AboutClient() {
         </div>
       </div>
       {/* Footer */}
-      <SiteFooter />
+      <SiteFooter text={siteSettings.footerText} />
     </div>
   )
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import { getSeriesSummaries } from "@/lib/posts"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import { siteConfig } from "@/lib/site-config"
 
 export const metadata: Metadata = {
@@ -10,11 +11,12 @@ export const metadata: Metadata = {
 }
 
 export default async function SeriesPage() {
-  const seriesSummaries = await getSeriesSummaries()
+  const [seriesSummaries, siteSettings] = await Promise.all([getSeriesSummaries(), getSiteSettings()])
 
   return (
     <SectionPageShell
       navLabel="全部系列"
+      brandLabel={siteSettings.brandName}
       title="文章系列"
       description="按系列阅读内容，比按时间线更容易连贯地看下去。"
       headerActions={

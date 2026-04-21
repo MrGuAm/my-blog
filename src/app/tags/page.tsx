@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import { getAllTags, getPostsByTag } from "@/lib/posts"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import { siteConfig } from "@/lib/site-config"
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 }
 
 export default async function TagsPage() {
-  const tags = await getAllTags()
+  const [tags, siteSettings] = await Promise.all([getAllTags(), getSiteSettings()])
   const tagSummaries = await Promise.all(
     tags.map(async (tag) => ({
       tag,
@@ -22,6 +23,7 @@ export default async function TagsPage() {
     <SectionPageShell
       navLabel="全部标签"
       activeNav="tags"
+      brandLabel={siteSettings.brandName}
       title="内容标签"
       description="按主题快速发现你感兴趣的内容。"
     >

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import LoginModal from "@/components/LoginModal"
 
-export type NavKey = "home" | "about" | "music" | "write" | "moderation" | "admin" | "media" | "tags"
+export type NavKey = "home" | "about" | "music" | "write" | "moderation" | "admin" | "media" | "settings" | "tags"
 
 interface PrimaryNavLinksProps {
   active?: NavKey
@@ -57,6 +57,7 @@ export default function PrimaryNavLinks({
     { href: "/moderation", label: "审核评论", key: "moderation" as NavKey },
     { href: "/admin", label: "后台", key: "admin" as NavKey },
     { href: "/admin/media", label: "媒体库", key: "media" as NavKey },
+    { href: "/admin/settings", label: "设置", key: "settings" as NavKey },
   ]
   const tagItem = active === "tags" ? [{ href: "/tags", label: "全部标签", key: "tags" as NavKey }] : []
   const navItems = [...baseItems, ...tagItem, ...(isAuthenticated ? authItems : [])]

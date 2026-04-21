@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import { getAllTags, getPostsByTag } from "@/lib/posts"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import { siteConfig } from "@/lib/site-config"
 
 interface TagPageProps {
@@ -29,12 +30,13 @@ export async function generateStaticParams() {
 export default async function TagPage({ params }: TagPageProps) {
   const { tag } = await params
   const decodedTag = decodeURIComponent(tag)
-  const posts = await getPostsByTag(decodedTag)
+  const [posts, siteSettings] = await Promise.all([getPostsByTag(decodedTag), getSiteSettings()])
 
   return (
     <SectionPageShell
       navLabel="标签聚合"
       activeNav="tags"
+      brandLabel={siteSettings.brandName}
       navActions={<Link href="/tags" className="text-sm text-muted-foreground transition-colors hover:text-primary">全部标签</Link>}
       backLinkHref="/home"
       backLinkLabel="← 返回首页"

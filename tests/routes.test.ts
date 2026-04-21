@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { NextRequest } from "next/server"
 import { POST as postsPost } from "../src/app/api/posts/route"
 import { DELETE as adminMediaDelete, POST as adminMediaPost } from "../src/app/api/admin/media/route"
+import { GET as adminSettingsGet, PATCH as adminSettingsPatch } from "../src/app/api/admin/settings/route"
 import { GET as authStatusGet } from "../src/app/api/auth/status/route"
 import { GET as feedGet } from "../src/app/api/feed/route"
 import { GET as adminMediaGet } from "../src/app/api/admin/media/route"
@@ -45,6 +46,28 @@ test("admin media route rejects unauthenticated access", async () => {
 
   assert.equal(response.status, 401)
   assert.equal(payload.error, "请先登录管理员账号")
+})
+
+test("admin settings route rejects unauthenticated access and validates payload", async () => {
+  const guestRequest = new NextRequest("https://champion.cc.cd/api/admin/settings")
+  const guestResponse = await adminSettingsGet(guestRequest)
+  const guestPayload = await guestResponse.json()
+  assert.equal(guestResponse.status, 401)
+  assert.equal(guestPayload.error, "请先登录管理员账号")
+
+  const cookie = buildSessionCookie(createSessionToken())
+  const invalidPatchRequest = new NextRequest("https://champion.cc.cd/api/admin/settings", {
+    method: "PATCH",
+    headers: {
+      cookie,
+      "content-type": "application/json",
+    },
+    body: "null",
+  })
+  const invalidPatchResponse = await adminSettingsPatch(invalidPatchRequest)
+  const invalidPatchPayload = await invalidPatchResponse.json()
+  assert.equal(invalidPatchResponse.status, 400)
+  assert.equal(invalidPatchPayload.error, "提交的设置内容无效")
 })
 
 test("admin media route validates authenticated upload and delete input", async () => {

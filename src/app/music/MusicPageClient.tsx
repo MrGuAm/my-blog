@@ -136,7 +136,7 @@ function TrackProgressBar({
   )
 }
 
-export default function MusicPageClient() {
+export default function MusicPageClient({ brandName }: { brandName: string }) {
   const {
     playlist,
     track,
@@ -164,7 +164,7 @@ export default function MusicPageClient() {
   } = useMusic()
 
   return (
-    <SectionPageShell navLabel="音乐角落" activeNav="music">
+    <SectionPageShell navLabel="音乐角落" brandLabel={brandName} activeNav="music">
         <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] sm:gap-6">
           <div className="editorial-card !p-5 sm:!p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">

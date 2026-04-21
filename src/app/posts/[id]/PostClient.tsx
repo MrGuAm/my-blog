@@ -23,9 +23,11 @@ interface PostClientProps {
   relatedPosts: Post[]
   previousPost?: Post
   nextPost?: Post
+  brandName: string
+  footerText: string
 }
 
-export default function PostClient({ post, content, readingTime, headings, relatedPosts, previousPost, nextPost }: PostClientProps) {
+export default function PostClient({ post, content, readingTime, headings, relatedPosts, previousPost, nextPost, brandName, footerText }: PostClientProps) {
   const router = useRouter()
   const [views, setViews] = useState(post.views || 0)
   const [showBackToTop, setShowBackToTop] = useState(false)
@@ -93,7 +95,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
       <nav className="apple-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <SiteBrand />
+            <SiteBrand label={brandName} />
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4 md:gap-6">
               <PrimaryNavLinks />
               {isAuthenticated ? (
@@ -310,6 +312,7 @@ export default function PostClient({ post, content, readingTime, headings, relat
 
       {/* Footer */}
       <SiteFooter
+        text={footerText}
         className="mt-16 border-t border-white/60 py-10 dark:border-white/10"
         innerClassName="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground"
       />

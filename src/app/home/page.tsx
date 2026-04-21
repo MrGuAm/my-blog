@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { getAllPosts, getAllTags } from "@/lib/posts"
 import { siteConfig } from "@/lib/site-config"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import HomeClient from "./HomeClient"
 
 export const revalidate = 300
@@ -29,13 +30,18 @@ function getSafeNextPath(value?: string | string[]) {
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const [posts, allTags] = await Promise.all([getAllPosts({ includeDrafts: false, cached: true }), getAllTags()])
+  const [posts, allTags, siteSettings] = await Promise.all([
+    getAllPosts({ includeDrafts: false, cached: true }),
+    getAllTags(),
+    getSiteSettings(),
+  ])
   const params = (await searchParams) || {}
 
   return (
     <HomeClient
       posts={posts}
       allTags={allTags}
+      siteSettings={siteSettings}
       loginRequested={getSingleParam(params.login) === "1"}
       nextPath={getSafeNextPath(params.next)}
     />

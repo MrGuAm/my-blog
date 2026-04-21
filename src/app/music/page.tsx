@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/lib/site-config"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import MusicPageClient from "./MusicPageClient"
 
 export const metadata: Metadata = {
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function MusicPage() {
-  return <MusicPageClient />
+export default async function MusicPage() {
+  const siteSettings = await getSiteSettings()
+  return <MusicPageClient brandName={siteSettings.brandName} />
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { listComments } from "@/lib/server/comments"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import { listPosts } from "@/lib/server/store"
 import ModerationClient from "./ModerationClient"
 
@@ -16,10 +17,11 @@ export default async function ModerationPage() {
     redirect("/home?login=1&next=/moderation")
   }
 
-  const [comments, allComments, posts] = await Promise.all([
+  const [comments, allComments, posts, siteSettings] = await Promise.all([
     listComments({ statuses: ["pending", "rejected"], limit: 120 }),
     listComments({ statuses: ["approved", "pending", "rejected"], limit: 500 }),
     listPosts({ includeDrafts: true }),
+    getSiteSettings(),
   ])
 
   const postMap = new Map(posts.map((post) => [post.id, post]))
@@ -54,5 +56,5 @@ export default async function ModerationPage() {
     }
   })
 
-  return <ModerationClient comments={items} />
+  return <ModerationClient comments={items} brandName={siteSettings.brandName} />
 }

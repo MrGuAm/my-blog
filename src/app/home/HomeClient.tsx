@@ -12,10 +12,12 @@ import SiteFooter from "@/components/SiteFooter"
 import MarqueeText from "@/components/music/MarqueeText"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
+import type { SiteSettings } from "@/lib/site-settings"
 
 interface HomeClientProps {
   posts: Post[]
   allTags: string[]
+  siteSettings: SiteSettings
   loginRequested?: boolean
   nextPath?: string | null
 }
@@ -191,7 +193,19 @@ function PostCard({
   );
 }
 
-export default function HomeClient({ posts, allTags, loginRequested = false, nextPath = null }: HomeClientProps) {
+function renderHomeTitle(title: string) {
+  if (!title.includes("自己的")) return title
+  const [before, ...afterParts] = title.split("自己的")
+  return (
+    <>
+      {before}
+      <span className="palette-gradient-text">自己的</span>
+      {afterParts.join("自己的")}
+    </>
+  )
+}
+
+export default function HomeClient({ posts, allTags, siteSettings, loginRequested = false, nextPath = null }: HomeClientProps) {
   const router = useRouter()
   const {
     playlist,
@@ -297,7 +311,7 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
       <nav className="apple-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <SiteBrand className="text-foreground" />
+            <SiteBrand label={siteSettings.brandName} className="text-foreground" />
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="relative w-full sm:w-auto">
                 <input
@@ -355,14 +369,12 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
         <section className="pb-3 pt-3 sm:pb-4 sm:pt-4">
           <div className="apple-panel flex flex-col gap-4 rounded-[2rem] px-5 py-5 sm:px-6 sm:py-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 flex-1 lg:max-w-none">
-              <span className="section-kicker">Champion&apos;s Blog</span>
+              <span className="section-kicker">{siteSettings.homeKicker}</span>
               <h1 className="mt-3 max-w-[16.5ch] text-balance text-[2.1rem] leading-[0.96] font-semibold tracking-[-0.07em] text-foreground sm:max-w-[15.5ch] sm:text-[2.7rem] lg:max-w-[18ch] lg:text-[3rem]">
-                干净一点，轻松一点，
-                <br className="hidden sm:block" />
-                也更有<span className="palette-gradient-text">自己的</span>样子。
+                {renderHomeTitle(siteSettings.homeTitle)}
               </h1>
               <p className="section-copy mt-3 max-w-2xl">
-                保持白色基底，用少量柔和彩色元素提气，不会太冷，也不会太花，整体更像一个干净但有个性的个人博客。
+                {siteSettings.homeDescription}
               </p>
               <div className="mt-4 grid max-w-md grid-cols-3 gap-3 sm:flex sm:max-w-none sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-2">
                 <StatItem value={filteredPosts.length} label="篇文章" />
@@ -679,7 +691,10 @@ export default function HomeClient({ posts, allTags, loginRequested = false, nex
         </div>
       </div>
       {/* Footer */}
-      <SiteFooter innerClassName="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground" />
+      <SiteFooter
+        text={siteSettings.footerText}
+        innerClassName="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground"
+      />
 
       {/* Back to Top Button */}
       <button

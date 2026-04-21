@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { canWriteMediaLibrary, getMediaLibraryWarning, listMediaAssets } from "@/lib/server/media"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import { siteConfig } from "@/lib/site-config"
 import AdminMediaClient from "./AdminMediaClient"
 
@@ -16,12 +17,13 @@ export default async function AdminMediaPage() {
     redirect("/home?login=1&next=/admin/media")
   }
 
-  const assets = await listMediaAssets()
+  const [assets, siteSettings] = await Promise.all([listMediaAssets(), getSiteSettings()])
   return (
     <AdminMediaClient
       initialAssets={assets}
       initialWarning={getMediaLibraryWarning()}
       initialCanUpload={canWriteMediaLibrary()}
+      brandName={siteSettings.brandName}
     />
   )
 }

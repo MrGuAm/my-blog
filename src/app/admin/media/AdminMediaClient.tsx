@@ -15,10 +15,12 @@ export default function AdminMediaClient({
   initialAssets,
   initialWarning = null,
   initialCanUpload = true,
+  brandName,
 }: {
   initialAssets: MediaAsset[]
   initialWarning?: string | null
   initialCanUpload?: boolean
+  brandName: string
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [assets, setAssets] = useState(initialAssets)
@@ -110,6 +112,7 @@ export default function AdminMediaClient({
     <SectionPageShell
       navLabel="媒体库"
       activeNav="media"
+      brandLabel={brandName}
       title="站内媒体素材"
       description="集中管理文章中要复用的图片素材。"
       headerActions={

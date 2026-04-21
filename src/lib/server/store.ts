@@ -38,6 +38,11 @@ export {
   upsertUserMusicLibrary,
 } from './store-user-media'
 
+export {
+  getSiteSettingsRecord as getStoredSiteSettingsRecord,
+  saveSiteSettingsRecord as saveStoredSiteSettingsRecord,
+} from './store-settings'
+
 export type {
   CommentRecord,
   CommentRow,

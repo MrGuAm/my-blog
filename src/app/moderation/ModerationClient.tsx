@@ -21,7 +21,13 @@ interface ModerationComment {
   parentContent?: string | null
 }
 
-export default function ModerationClient({ comments: initialComments }: { comments: ModerationComment[] }) {
+export default function ModerationClient({
+  comments: initialComments,
+  brandName,
+}: {
+  comments: ModerationComment[]
+  brandName: string
+}) {
   const router = useRouter()
   const [comments, setComments] = useState(initialComments)
   const [filter, setFilter] = useState<"pending" | "rejected" | "all">("pending")
@@ -96,6 +102,7 @@ export default function ModerationClient({ comments: initialComments }: { commen
     <SectionPageShell
       navLabel="评论审核"
       activeNav="moderation"
+      brandLabel={brandName}
       title="待审核评论"
       description="游客评论会先进入这里，确认后再公开显示。"
       headerActions={

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { listComments } from "@/lib/server/comments"
 import { getMediaLibraryWarning, listMediaAssets } from "@/lib/server/media"
+import { getSiteSettings } from "@/lib/server/site-settings"
 import { siteConfig } from "@/lib/site-config"
 import { listPosts, listUsers } from "@/lib/server/store"
 import AdminDashboardClient from "./AdminDashboardClient"
@@ -18,11 +19,12 @@ export default async function AdminPage() {
     redirect("/home?login=1&next=/admin")
   }
 
-  const [posts, comments, users, mediaAssets] = await Promise.all([
+  const [posts, comments, users, mediaAssets, siteSettings] = await Promise.all([
     listPosts({ includeDrafts: true }),
     listComments({ statuses: ["approved", "pending", "rejected"], limit: 200 }),
     listUsers(30),
     listMediaAssets(),
+    getSiteSettings(),
   ])
   const mediaWarning = getMediaLibraryWarning()
 
@@ -85,6 +87,7 @@ export default async function AdminPage() {
       mediaWarning={mediaWarning}
       topTagItems={topTagItems}
       topSeriesItems={topSeriesItems}
+      brandName={siteSettings.brandName}
     />
   )
 }

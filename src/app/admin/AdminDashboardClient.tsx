@@ -98,6 +98,7 @@ export default function AdminDashboardClient({
   mediaWarning,
   topTagItems,
   topSeriesItems,
+  brandName,
 }: {
   stats: DashboardStats
   posts: Post[]
@@ -107,6 +108,7 @@ export default function AdminDashboardClient({
   mediaWarning?: string | null
   topTagItems: Array<{ label: string; value: number; tone?: string }>
   topSeriesItems: Array<{ label: string; value: number; tone?: string }>
+  brandName: string
 }) {
   const router = useRouter()
   const [postsState, setPostsState] = useState(posts)
@@ -247,6 +249,7 @@ export default function AdminDashboardClient({
     <SectionPageShell
       navLabel="后台总览"
       activeNav="admin"
+      brandLabel={brandName}
       title="站点控制台"
       description="把文章、评论、用户和内容运营信息收在一个入口里。"
     >
