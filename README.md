@@ -118,6 +118,12 @@ AUTH_SECRET=replace-this-with-a-long-random-string
 npm run lint
 ```
 
+自动化测试：
+
+```bash
+npm test
+```
+
 生产构建：
 
 ```bash
