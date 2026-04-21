@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { getAllPosts, getAllTags } from "@/lib/posts"
+import { parseHomeQueryState } from "@/lib/home-query"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 import HomeClient from "./home/HomeClient"
@@ -18,11 +19,29 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function HomePage() {
+interface HomePageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function HomePage({ searchParams }: HomePageProps) {
   const [posts, allTags, siteSettings] = await Promise.all([
     getAllPosts({ includeDrafts: false, cached: true }),
     getAllTags(),
     getSiteSettings(),
   ])
-  return <HomeClient posts={posts} allTags={allTags} siteSettings={siteSettings} />
+  const state = parseHomeQueryState((await searchParams) || {})
+
+  return (
+    <HomeClient
+      posts={posts}
+      allTags={allTags}
+      siteSettings={siteSettings}
+      initialSearchQuery={state.searchQuery}
+      initialSelectedTag={state.selectedTag}
+      initialPage={state.currentPage}
+      initialShowDrafts={state.showDrafts}
+      loginRequested={state.loginRequested}
+      nextPath={state.nextPath}
+    />
+  )
 }

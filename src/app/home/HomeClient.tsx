@@ -3,7 +3,7 @@
 
 import { useState, useEffect, type ReactNode } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Post } from "@/lib/posts"
 import { PaletteHeroTrio } from "@/components/PaletteCharacters"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
@@ -18,6 +18,10 @@ interface HomeClientProps {
   posts: Post[]
   allTags: string[]
   siteSettings: SiteSettings
+  initialSearchQuery?: string
+  initialSelectedTag?: string | null
+  initialPage?: number
+  initialShowDrafts?: boolean
   loginRequested?: boolean
   nextPath?: string | null
 }
@@ -205,8 +209,20 @@ function renderHomeTitle(title: string) {
   )
 }
 
-export default function HomeClient({ posts, allTags, siteSettings, loginRequested = false, nextPath = null }: HomeClientProps) {
+export default function HomeClient({
+  posts,
+  allTags,
+  siteSettings,
+  initialSearchQuery = "",
+  initialSelectedTag = null,
+  initialPage = 1,
+  initialShowDrafts = false,
+  loginRequested = false,
+  nextPath = null,
+}: HomeClientProps) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const {
     playlist,
     isPlaying,
@@ -230,19 +246,20 @@ export default function HomeClient({ posts, allTags, siteSettings, loginRequeste
     formatTime,
   } = useMusic()
   const { isAuthenticated } = useAuthStatus()
-  const [showDrafts, setShowDrafts] = useState(false)
+  const [showDrafts, setShowDrafts] = useState(initialShowDrafts)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [recentComments, setRecentComments] = useState<RecentComment[]>([])
   const [adminPosts, setAdminPosts] = useState<Post[] | null>(null)
   const [showList, setShowList] = useState(false)
   const [isSidebarHovering, setIsSidebarHovering] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
+  const [selectedTag, setSelectedTag] = useState<string | null>(initialSelectedTag)
+  const [currentPage, setCurrentPage] = useState(initialPage)
   const postsPerPage = 6
 
   const visiblePosts = isAuthenticated ? (adminPosts ?? posts) : posts
+  const effectiveShowDrafts = isAuthenticated && showDrafts
 
   // Scroll listener for back to top
   useEffect(() => {
@@ -271,7 +288,7 @@ export default function HomeClient({ posts, allTags, siteSettings, loginRequeste
   }, [isAuthenticated])
 
   const filteredPosts = visiblePosts.filter(post =>
-    (showDrafts || !post.draft) &&
+    (effectiveShowDrafts || !post.draft) &&
     (searchQuery === "" ||
     post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -304,6 +321,30 @@ export default function HomeClient({ posts, allTags, siteSettings, loginRequeste
   const safeCurrentPage = Math.min(currentPage, totalPages)
   const paginatedPosts = listSourcePosts.slice((safeCurrentPage - 1) * postsPerPage, safeCurrentPage * postsPerPage)
   const playModeLabel = playMode === "loop" ? "列表循环" : playMode === "repeat-one" ? "单曲循环" : "随机播放"
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams()
+    const normalizedQuery = searchQuery.trim()
+
+    if (normalizedQuery) nextParams.set("q", normalizedQuery)
+    if (selectedTag) nextParams.set("tag", selectedTag)
+    if (safeCurrentPage > 1) nextParams.set("page", String(safeCurrentPage))
+    if (effectiveShowDrafts) nextParams.set("drafts", "1")
+
+    const currentParams = new URLSearchParams(searchParams.toString())
+    currentParams.delete("login")
+    currentParams.delete("next")
+
+    const currentNormalized = currentParams.toString()
+    const nextNormalized = nextParams.toString()
+
+    if (currentNormalized === nextNormalized) {
+      return
+    }
+
+    const nextUrl = nextNormalized ? `${pathname}?${nextNormalized}` : pathname
+    router.replace(nextUrl, { scroll: false })
+  }, [effectiveShowDrafts, pathname, router, safeCurrentPage, searchParams, searchQuery, selectedTag])
 
   return (
     <div className="min-h-screen text-foreground">
@@ -354,9 +395,9 @@ export default function HomeClient({ posts, allTags, siteSettings, loginRequeste
                     setShowDrafts(!showDrafts)
                     setCurrentPage(1)
                   }}
-                  className={`apple-button-secondary px-3 py-1.5 ${showDrafts ? "bg-white text-foreground dark:bg-white/12" : ""}`}
+                  className={`apple-button-secondary px-3 py-1.5 ${effectiveShowDrafts ? "bg-white text-foreground dark:bg-white/12" : ""}`}
                 >
-                  {showDrafts ? '隐藏草稿' : '显示草稿'}
+                  {effectiveShowDrafts ? '隐藏草稿' : '显示草稿'}
                 </button>
               ) : null}
             </div>
