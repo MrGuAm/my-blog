@@ -7,6 +7,7 @@ import { GET as adminSettingsGet, PATCH as adminSettingsPatch } from "../src/app
 import { GET as authStatusGet } from "../src/app/api/auth/status/route"
 import { GET as feedGet } from "../src/app/api/feed/route"
 import { GET as adminMediaGet } from "../src/app/api/admin/media/route"
+import { GET as publicSiteSettingsGet } from "../src/app/api/site-settings/route"
 import { POST as postViewsPost } from "../src/app/api/posts/[id]/views/route"
 import { GET as postDetailGet, PATCH as postPatch } from "../src/app/api/posts/[id]/route"
 import { GET as versionsGet, POST as versionsPost } from "../src/app/api/posts/[id]/versions/route"
@@ -37,6 +38,15 @@ test("auth status route reflects whether a valid session cookie exists", async (
   const sessionResponse = await authStatusGet(sessionRequest)
   const sessionPayload = await sessionResponse.json()
   assert.equal(sessionPayload.authenticated, true)
+})
+
+test("public site settings route exposes the normalized site settings", async () => {
+  const response = await publicSiteSettingsGet()
+  const payload = await response.json()
+
+  assert.equal(response.status, 200)
+  assert.equal(typeof payload.settings.brandName, "string")
+  assert.equal(typeof payload.settings.homeTitle, "string")
 })
 
 test("admin media route rejects unauthenticated access", async () => {

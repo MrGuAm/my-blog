@@ -1,6 +1,9 @@
+"use client"
+
 import type { ReactNode } from "react"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
 import SiteBrand from "@/components/SiteBrand"
+import { useSiteSettings } from "@/hooks/useSiteSettings"
 
 interface PostEditorPageShellProps {
   pageTitle: string
@@ -21,12 +24,14 @@ export default function PostEditorPageShell({
   preForm,
   children,
 }: PostEditorPageShellProps) {
+  const siteSettings = useSiteSettings()
+
   return (
     <div className="min-h-screen bg-background">
       <nav className="apple-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <SiteBrand />
+            <SiteBrand label={siteSettings.brandName} />
             <div className="flex flex-wrap items-center gap-3 sm:gap-6">
               <button
                 type="button"

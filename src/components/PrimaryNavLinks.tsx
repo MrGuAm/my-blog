@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
+import { useSiteSettings } from "@/hooks/useSiteSettings"
 import LoginModal from "@/components/LoginModal"
 
 export type NavKey = "home" | "about" | "music" | "write" | "moderation" | "admin" | "media" | "settings" | "tags"
@@ -46,6 +47,7 @@ export default function PrimaryNavLinks({
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isAuthenticated, logout } = useAuthStatus()
+  const siteSettings = useSiteSettings()
   const loginModalOpen = isLoginModalOpen || (loginRequested && !isAuthenticated)
   const baseItems = [
     { href: "/home", label: "Home", key: "home" as NavKey },
@@ -133,7 +135,7 @@ export default function PrimaryNavLinks({
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="section-kicker">Navigation</p>
-                <p className="mt-1 text-base font-semibold tracking-[-0.03em]">站点菜单</p>
+                <p className="mt-1 text-base font-semibold tracking-[-0.03em]">{siteSettings.brandName} 菜单</p>
               </div>
               <button
                 type="button"
@@ -181,6 +183,7 @@ export default function PrimaryNavLinks({
         isOpen={loginModalOpen}
         onClose={handleClose}
         onSuccess={handleSuccess}
+        brandName={siteSettings.brandName}
       />
     </>
   )

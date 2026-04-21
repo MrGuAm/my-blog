@@ -8,13 +8,15 @@ interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  brandName?: string
 }
 
-export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onSuccess, brandName = "Champion's Blog" }: LoginModalProps) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuthStatus()
+  const brandMark = brandName.trim().charAt(0).toUpperCase() || "C"
 
   if (!isOpen || typeof document === "undefined") return null
 
@@ -36,11 +38,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
       <div className="absolute inset-0 bg-black/24 backdrop-blur-xl" onClick={onClose} />
       <div className="apple-panel relative mx-4 w-full max-w-sm rounded-[2rem] p-8 shadow-2xl">
         <div className="brand-mark mx-auto mb-6 h-12 w-12 rounded-2xl">
-          C
+          {brandMark}
         </div>
         <p className="text-center text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">Admin Access</p>
-        <h2 className="mt-2 text-center text-3xl font-semibold tracking-[-0.04em]">站点管理</h2>
-        <p className="mt-2 text-sm text-muted-foreground text-center mb-6">输入管理员密码继续</p>
+        <h2 className="mt-2 text-center text-3xl font-semibold tracking-[-0.04em]">{brandName} 管理</h2>
+        <p className="mt-2 text-center text-sm text-muted-foreground mb-6">输入管理员密码继续进入 {brandName}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
