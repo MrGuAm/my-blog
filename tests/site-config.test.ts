@@ -26,11 +26,17 @@ test("absoluteUrl preserves encoded nested paths for series pages", () => {
 test("normalizeSiteSettings falls back to defaults for empty values", () => {
   const normalized = normalizeSiteSettings({
     brandName: "  ",
+    authorName: "",
+    twitterHandle: "   ",
+    seoKeywords: "",
     homeTitle: "新的首页标题",
     footerText: "",
   })
 
   assert.equal(normalized.brandName, defaultSiteSettings.brandName)
+  assert.equal(normalized.authorName, defaultSiteSettings.authorName)
+  assert.equal(normalized.twitterHandle, defaultSiteSettings.twitterHandle)
+  assert.equal(normalized.seoKeywords, defaultSiteSettings.seoKeywords)
   assert.equal(normalized.homeTitle, "新的首页标题")
   assert.equal(normalized.footerText, defaultSiteSettings.footerText)
 })

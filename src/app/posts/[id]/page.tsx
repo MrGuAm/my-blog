@@ -5,7 +5,6 @@ import { getAdjacentPosts, getAllPosts, getPost, getPostContent, calculateReadin
 import { isAuthenticatedServer } from "@/lib/server/auth"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
-import { siteConfig } from "@/lib/site-config"
 import PostClient from "./PostClient"
 
 interface Props {
@@ -32,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "article",
       publishedTime: post.date,
       tags: post.tags,
-      authors: [siteConfig.author],
+      authors: [settings.authorName],
     },
     twitter: {
       card: "summary_large_image",

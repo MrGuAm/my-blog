@@ -110,6 +110,31 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             />
           </FieldBlock>
 
+          <div className="grid gap-4 md:grid-cols-2">
+            <FieldBlock label="作者名称" hint="会用于 metadata 作者信息和文章作者标识。">
+              <input
+                value={settings.authorName}
+                onChange={(event) => updateField("authorName", event.target.value)}
+                className={getInputClassName({})}
+              />
+            </FieldBlock>
+            <FieldBlock label="Twitter 标识" hint="例如 @champion，用于分享卡片。">
+              <input
+                value={settings.twitterHandle}
+                onChange={(event) => updateField("twitterHandle", event.target.value)}
+                className={getInputClassName({})}
+              />
+            </FieldBlock>
+          </div>
+
+          <FieldBlock label="SEO 关键词" hint="用逗号或换行分隔，会用于 metadata keywords。">
+            <textarea
+              value={settings.seoKeywords}
+              onChange={(event) => updateField("seoKeywords", event.target.value)}
+              className={getInputClassName({ multiline: true })}
+            />
+          </FieldBlock>
+
           <FieldBlock label="页脚文案" hint="适合放版权信息或一句更个性化的收尾。">
             <input
               value={settings.footerText}
@@ -258,8 +283,11 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
           <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
             <p className="section-kicker">Preview</p>
             <h2 className="mt-2 text-xl font-bold">{settings.brandName}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">作者：{settings.authorName}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Twitter：{settings.twitterHandle}</p>
             <p className="mt-3 text-sm text-muted-foreground">{settings.footerText}</p>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">SEO：{settings.siteDescription}</p>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">关键词：{settings.seoKeywords}</p>
           </section>
 
           <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">

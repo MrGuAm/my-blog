@@ -2,6 +2,9 @@ import { siteConfig } from "@/lib/site-config"
 
 export interface SiteSettings {
   brandName: string
+  authorName: string
+  twitterHandle: string
+  seoKeywords: string
   footerText: string
   siteDescription: string
   aboutMetaDescription: string
@@ -27,6 +30,9 @@ export interface SiteSettings {
 
 export const defaultSiteSettings: SiteSettings = {
   brandName: siteConfig.name,
+  authorName: siteConfig.author,
+  twitterHandle: siteConfig.twitterHandle,
+  seoKeywords: siteConfig.keywords.join(", "),
   footerText: `© 2026 ${siteConfig.name}`,
   siteDescription: siteConfig.description,
   aboutMetaDescription: `关于 ${siteConfig.name} - 这是一个分享生活和技术的个人博客`,
@@ -58,6 +64,9 @@ export function normalizeSiteSettings(input?: Partial<SiteSettings> | null): Sit
   const source = input || {}
   return {
     brandName: normalizeText(source.brandName, defaultSiteSettings.brandName),
+    authorName: normalizeText(source.authorName, defaultSiteSettings.authorName),
+    twitterHandle: normalizeText(source.twitterHandle, defaultSiteSettings.twitterHandle),
+    seoKeywords: normalizeText(source.seoKeywords, defaultSiteSettings.seoKeywords),
     footerText: normalizeText(source.footerText, defaultSiteSettings.footerText),
     siteDescription: normalizeText(source.siteDescription, defaultSiteSettings.siteDescription),
     aboutMetaDescription: normalizeText(source.aboutMetaDescription, defaultSiteSettings.aboutMetaDescription),
