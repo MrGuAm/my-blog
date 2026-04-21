@@ -19,6 +19,8 @@ interface MediaLibraryDialogProps {
   isOpen: boolean
   onClose: () => void
   onSelect: (url: string) => void
+  autoSelectUpload?: boolean
+  uploadHint?: string
 }
 
 function formatSize(size: number) {
@@ -27,7 +29,13 @@ function formatSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaLibraryDialogProps) {
+export default function MediaLibraryDialog({
+  isOpen,
+  onClose,
+  onSelect,
+  autoSelectUpload = false,
+  uploadHint,
+}: MediaLibraryDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [assets, setAssets] = useState<MediaAsset[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -105,6 +113,12 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
         return
       }
       setAssets((current) => [data.asset, ...current.filter((item) => item.id !== data.asset.id)])
+      if (autoSelectUpload && data.asset?.url) {
+        onSelect(data.asset.url)
+        setMessage("图片已上传并自动选用")
+        onClose()
+        return
+      }
       setMessage("图片已上传到媒体库")
       setReferenceNow(Date.now())
     } catch {
@@ -144,6 +158,7 @@ export default function MediaLibraryDialog({ isOpen, onClose, onSelect }: MediaL
           <div>
             <h2 className="text-xl font-black">媒体库</h2>
             <p className="text-sm text-muted-foreground">上传图片并在文章里复用。</p>
+            {uploadHint ? <p className="mt-1 text-xs text-muted-foreground">{uploadHint}</p> : null}
           </div>
           <div className="flex items-center gap-3">
             <input

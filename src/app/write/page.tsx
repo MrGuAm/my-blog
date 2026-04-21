@@ -9,6 +9,7 @@ import { useAuthStatus } from "@/hooks/useAuthStatus"
 import type { MusicTrack } from "@/app/api/music/route"
 import type { Post } from "@/lib/posts"
 import MediaLibraryDialog from "@/components/MediaLibraryDialog"
+import { buildEditorImageTag, normalizeEditorImageFile, readFileAsDataUrl, uploadEditorImageToMediaLibrary } from "@/lib/editor-media"
 
 interface LocalDraft {
   slug: string
@@ -202,11 +203,28 @@ export default function WritePage() {
 
   const handleInsertImage = () => {
     if (!imageUrl.trim()) return
-    const imgTag = `\n<img src="${imageUrl}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
-    insertTextAtCursor(imgTag)
+    insertTextAtCursor(buildEditorImageTag(imageUrl))
     setImageUrl("")
     setImageDialogOpen(false)
   }
+
+  const handleUploadAndInsertImage = useCallback(async (file: File) => {
+    try {
+      const uploaded = await uploadEditorImageToMediaLibrary(file)
+      insertTextAtCursor(buildEditorImageTag(uploaded.url, uploaded.fileName))
+      setMessage("图片已上传到媒体库并插入正文")
+      return
+    } catch (error) {
+      try {
+        const normalizedFile = await normalizeEditorImageFile(file)
+        const base64 = await readFileAsDataUrl(normalizedFile)
+        insertTextAtCursor(buildEditorImageTag(base64, file.name))
+        setMessage(error instanceof Error ? `${error.message}，已改为直接嵌入图片` : "媒体库上传失败，已改为直接嵌入图片")
+      } catch {
+        setMessage("图片处理失败，请重试")
+      }
+    }
+  }, [insertTextAtCursor])
 
   // Toolbar insert helpers
   const insertFormat = (before: string, after: string = before) => {
@@ -569,30 +587,7 @@ export default function WritePage() {
             onChange={async (e) => {
               const file = e.target.files?.[0]
               if (!file) return
-              try {
-                let blob: Blob = file
-                // Convert HEIC to JPEG if needed
-                if (file.type === "image/heic" || file.type === "image/heif") {
-                  const heic = (await import("heic2any")).default
-                  blob = (await heic({ blob: file, toType: "image/jpeg", quality: 0.85 })) as Blob
-                }
-                const reader = new FileReader()
-                reader.onload = (ev) => {
-                  const base64 = ev.target?.result as string
-                  const imgTag = `\n<img src="${base64}" alt="${file.name}" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
-                  insertTextAtCursor(imgTag)
-                }
-                reader.readAsDataURL(blob)
-              } catch {
-                // Fallback: try reading as-is
-                const reader = new FileReader()
-                reader.onload = (ev) => {
-                  const base64 = ev.target?.result as string
-                  const imgTag = `\n<img src="${base64}" alt="${file.name}" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
-                  insertTextAtCursor(imgTag)
-                }
-                reader.readAsDataURL(file)
-              }
+              await handleUploadAndInsertImage(file)
               e.target.value = ''
             }}
           />
@@ -634,13 +629,16 @@ export default function WritePage() {
           <MediaLibraryDialog
             isOpen={mediaDialogOpen}
             onClose={() => setMediaDialogOpen(false)}
+            autoSelectUpload
+            uploadHint={mediaDialogMode === "cover" ? "上传后会自动设为封面图" : "上传后会自动插入正文"}
             onSelect={(url) => {
               if (mediaDialogMode === "cover") {
                 setCoverImage(url)
+                setMessage("已设为文章封面")
                 return
               }
-              const imgTag = `\n<img src="${url}" alt="图片" style="max-width:100%;border-radius:8px;margin:16px 0;" />\n`
-              insertTextAtCursor(imgTag)
+              insertTextAtCursor(buildEditorImageTag(url))
+              setMessage("图片已插入正文")
             }}
           />
 
