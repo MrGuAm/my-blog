@@ -84,3 +84,11 @@ export function describeMediaAssetUsage(
 
   return usage
 }
+
+export function getMediaUsageHref(reference: Pick<MediaUsageReference, "postId" | "postSlug" | "draft">) {
+  if (reference.draft) {
+    return `/write/${reference.postId}`
+  }
+
+  return `/posts/${encodeURIComponent(reference.postSlug || reference.postId)}`
+}

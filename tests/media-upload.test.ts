@@ -9,7 +9,7 @@ import {
   sortMediaAssets,
   validateMediaUploadInput,
 } from "../src/lib/media-upload"
-import { countMediaAssetUsage, describeMediaAssetUsage } from "../src/lib/media-usage"
+import { countMediaAssetUsage, describeMediaAssetUsage, getMediaUsageHref } from "../src/lib/media-usage"
 
 test("validateMediaUploadInput rejects empty, oversized, and unsupported files", () => {
   assert.equal(validateMediaUploadInput({ size: 0, type: "image/png" }), "图片内容为空，请重新选择")
@@ -158,4 +158,19 @@ test("describeMediaAssetUsage preserves reference details and usage kinds", () =
   assert.equal(usage.get("hero")?.posts[1]?.draft, true)
   assert.equal(usage.get("inline")?.count, 1)
   assert.equal(usage.get("inline")?.posts[0]?.kind, "content")
+})
+
+test("getMediaUsageHref points drafts to editor and published posts to reader view", () => {
+  assert.equal(
+    getMediaUsageHref({ postId: "draft-1", postSlug: "draft-slug", draft: true }),
+    "/write/draft-1"
+  )
+  assert.equal(
+    getMediaUsageHref({ postId: "post-1", postSlug: "hello-world", draft: false }),
+    "/posts/hello-world"
+  )
+  assert.equal(
+    getMediaUsageHref({ postId: "post-2", draft: false }),
+    "/posts/post-2"
+  )
 })

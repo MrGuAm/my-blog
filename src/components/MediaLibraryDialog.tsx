@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import {
   getMediaOrientation,
@@ -14,6 +15,7 @@ import {
   type MediaUploadFailure,
 } from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
+import { getMediaUsageHref } from "@/lib/media-usage"
 
 interface MediaLibraryDialogProps {
   isOpen: boolean
@@ -402,12 +404,15 @@ export default function MediaLibraryDialog({
                     {asset.usagePosts && asset.usagePosts.length > 0 ? (
                       <div className="flex flex-wrap gap-2 pt-1">
                         {asset.usagePosts.slice(0, 2).map((usage) => (
-                          <span
+                          <Link
                             key={`${asset.id}-${usage.postId}-${usage.kind}`}
+                            href={getMediaUsageHref(usage)}
+                            target="_blank"
+                            rel="noreferrer"
                             className="rounded-full border border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground"
                           >
                             {usage.draft ? "草稿" : "文章"} · {formatUsageKind(usage.kind)} · {usage.postTitle}
-                          </span>
+                          </Link>
                         ))}
                         {asset.usagePosts.length > 2 ? (
                           <span className="rounded-full border border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
