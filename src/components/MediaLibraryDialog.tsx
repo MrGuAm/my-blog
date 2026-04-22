@@ -460,6 +460,7 @@ export default function MediaLibraryDialog({
           )}
         </div>
         <MediaAssetPreviewDialog
+          key={previewAsset?.id || "dialog-media-preview"}
           asset={previewAsset}
           isOpen={Boolean(previewAsset)}
           onClose={() => setPreviewAsset(null)}

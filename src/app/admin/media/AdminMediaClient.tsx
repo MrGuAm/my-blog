@@ -766,6 +766,7 @@ export default function AdminMediaClient({
         </div>
       ) : null}
       <MediaAssetPreviewDialog
+        key={previewAsset?.id || "media-preview"}
         asset={previewAsset}
         isOpen={Boolean(previewAsset)}
         onClose={() => setPreviewAsset(null)}

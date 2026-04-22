@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import type { MediaAsset } from "@/lib/server/media"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 
@@ -43,6 +43,8 @@ export default function MediaAssetPreviewDialog({
   thumbnailAssets?: MediaAsset[]
   onJumpToAsset?: ((asset: MediaAsset) => void) | null
 }) {
+  const [zoom, setZoom] = useState(1)
+
   useEffect(() => {
     if (!isOpen) return
 
@@ -62,6 +64,24 @@ export default function MediaAssetPreviewDialog({
       if (event.key === "ArrowRight" && hasNext && onNext) {
         event.preventDefault()
         onNext()
+        return
+      }
+
+      if ((event.key === "+" || event.key === "=") && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault()
+        setZoom((current) => Math.min(3, Number((current + 0.25).toFixed(2))))
+        return
+      }
+
+      if (event.key === "-" && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault()
+        setZoom((current) => Math.max(0.5, Number((current - 0.25).toFixed(2))))
+        return
+      }
+
+      if (event.key === "0" && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault()
+        setZoom(1)
       }
     }
 
@@ -76,6 +96,8 @@ export default function MediaAssetPreviewDialog({
       await navigator.clipboard.writeText(value)
     } catch {}
   }
+
+  const zoomLabel = `${Math.round(zoom * 100)}%`
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center">
@@ -122,6 +144,27 @@ export default function MediaAssetPreviewDialog({
             ) : null}
             <button
               type="button"
+              onClick={() => setZoom((current) => Math.max(0.5, Number((current - 0.25).toFixed(2))))}
+              className="rounded-xl border border-border/60 px-3 py-2 text-sm hover:bg-accent"
+            >
+              缩小
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom(1)}
+              className="rounded-xl border border-border/60 px-3 py-2 text-sm hover:bg-accent"
+            >
+              {zoomLabel}
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom((current) => Math.min(3, Number((current + 0.25).toFixed(2))))}
+              className="rounded-xl border border-border/60 px-3 py-2 text-sm hover:bg-accent"
+            >
+              放大
+            </button>
+            <button
+              type="button"
               onClick={onClose}
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
@@ -132,8 +175,13 @@ export default function MediaAssetPreviewDialog({
 
         <div className="grid gap-0 overflow-y-auto lg:grid-cols-[1.3fr_0.7fr]">
           <div className="border-b border-border/50 bg-background/50 p-4 lg:border-b-0 lg:border-r">
-            <div className="flex min-h-[20rem] items-center justify-center overflow-hidden rounded-[1.5rem] border border-border/50 bg-card">
-              <img src={asset.url} alt={asset.name} className="max-h-[68vh] w-full object-contain" />
+            <div className="flex min-h-[20rem] items-center justify-center overflow-auto rounded-[1.5rem] border border-border/50 bg-card p-4">
+              <img
+                src={asset.url}
+                alt={asset.name}
+                className="max-h-[68vh] w-full object-contain transition-transform duration-150"
+                style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
+              />
             </div>
             {thumbnailAssets.length > 1 ? (
               <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
