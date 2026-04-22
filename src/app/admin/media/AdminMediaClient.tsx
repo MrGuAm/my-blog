@@ -12,7 +12,6 @@ import {
   getMediaUploadHint,
   sortMediaAssets,
   validateMediaUploadInput,
-  type MediaOrientation,
   type MediaSortOption,
   type MediaUploadFailure,
 } from "@/lib/media-upload"
