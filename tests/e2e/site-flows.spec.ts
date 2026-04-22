@@ -103,7 +103,8 @@ test("admin can see uploaded media and deletion results in the media library UI"
 
   await page.goto("/admin/media")
   await expect(page.getByRole("heading", { name: "站内媒体素材" })).toBeVisible()
-  await expect(page.getByText(new RegExp(fileBase))).toBeVisible()
+  const uploadedCard = page.locator("div").filter({ hasText: new RegExp(fileBase) }).first()
+  await expect(uploadedCard).toBeVisible()
 
   const deleteResponse = await page.context().request.delete(
     `${localBaseUrl}/api/admin/media?id=${encodeURIComponent(uploadPayload.asset.id)}`
@@ -111,7 +112,7 @@ test("admin can see uploaded media and deletion results in the media library UI"
   expect(deleteResponse.ok()).toBeTruthy()
 
   await page.reload()
-  await expect(page.getByText(new RegExp(fileBase))).toHaveCount(0)
+  await expect(page.locator("div").filter({ hasText: new RegExp(fileBase) })).toHaveCount(0)
 })
 
 test("admin can filter media by usage state and see protected deletion controls", async ({ page }) => {
@@ -127,14 +128,15 @@ test("admin can filter media by usage state and see protected deletion controls"
   await page.goto("/admin/media?usage=used")
   await expect(page.getByRole("heading", { name: "站内媒体素材" })).toBeVisible()
   await expect(page).toHaveURL(/usage=used/)
-  await expect(page.getByText(new RegExp(usedBase))).toBeVisible()
-  await expect(page.getByText(new RegExp(unusedBase))).toHaveCount(0)
-
   const usedCard = page.locator("div").filter({ hasText: new RegExp(usedBase) }).first()
+  await expect(usedCard).toBeVisible()
+  await expect(page.locator("div").filter({ hasText: new RegExp(unusedBase) })).toHaveCount(0)
+
   await expect(usedCard.getByRole("button", { name: "使用中" })).toBeDisabled()
 
   await page.goto("/admin/media?usage=unused")
   await expect(page).toHaveURL(/usage=unused/)
-  await expect(page.getByText(new RegExp(unusedBase))).toBeVisible()
-  await expect(page.getByText(new RegExp(usedBase))).toHaveCount(0)
+  const unusedCard = page.locator("div").filter({ hasText: new RegExp(unusedBase) }).first()
+  await expect(unusedCard).toBeVisible()
+  await expect(page.locator("div").filter({ hasText: new RegExp(usedBase) })).toHaveCount(0)
 })

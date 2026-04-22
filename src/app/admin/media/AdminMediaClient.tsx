@@ -58,6 +58,7 @@ export default function AdminMediaClient({
   const assetsPerPage = 12
   const [assets, setAssets] = useState(initialAssets)
   const [isUploading, setIsUploading] = useState(false)
+  const [isReindexing, setIsReindexing] = useState(false)
   const [message, setMessage] = useState("")
   const [warning, setWarning] = useState(initialWarning)
   const [canUpload, setCanUpload] = useState(initialCanUpload)
@@ -349,6 +350,25 @@ export default function AdminMediaClient({
     }
   }
 
+  const handleReindexUsage = async () => {
+    setIsReindexing(true)
+    setMessage("")
+    try {
+      const response = await fetch("/api/admin/media/reindex", { method: "POST" })
+      const data = await response.json()
+      if (!response.ok) {
+        setMessage(data.error || "重建引用索引失败")
+        return
+      }
+      await refreshAssets()
+      setMessage(`引用索引已重建：扫描 ${data.postCount ?? 0} 篇文章，记录 ${data.referenceCount ?? 0} 条引用`)
+    } catch {
+      setMessage("重建引用索引失败，请重试")
+    } finally {
+      setIsReindexing(false)
+    }
+  }
+
   const resetFilters = () => {
     setKeyword("")
     setTimeFilter("all")
@@ -509,6 +529,14 @@ export default function AdminMediaClient({
               className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
             >
               刷新
+            </button>
+            <button
+              type="button"
+              onClick={handleReindexUsage}
+              disabled={isReindexing}
+              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isReindexing ? "重建中..." : "重建引用索引"}
             </button>
             {hasActiveFilters ? (
               <button

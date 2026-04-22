@@ -220,6 +220,69 @@ test("admin media routes reject unreadable image buffers in an isolated workspac
   })
 })
 
+test("admin media reindex route rebuilds usage references in an isolated workspace", async () => {
+  await withTempWorkspace(async () => {
+    const mediaRoute = await importFresh<typeof import("../src/app/api/admin/media/route")>("src/app/api/admin/media/route.ts")
+    const reindexRoute = await importFresh<typeof import("../src/app/api/admin/media/reindex/route")>("src/app/api/admin/media/reindex/route.ts")
+    const store = await importFresh<typeof import("../src/lib/server/store")>("src/lib/server/store.ts")
+
+    const tinyPngBuffer = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: { r: 100, g: 180, b: 240 },
+      },
+    })
+      .png()
+      .toBuffer()
+
+    const cookie = buildSessionCookie(createSessionToken())
+    const uploadFormData = new FormData()
+    uploadFormData.append("file", new File([tinyPngBuffer], "reindex.png", { type: "image/png" }))
+
+    const uploadResponse = await mediaRoute.POST(
+      new NextRequest("https://champion.cc.cd/api/admin/media", {
+        method: "POST",
+        headers: { cookie },
+        body: uploadFormData,
+      })
+    )
+    const uploadPayload = await uploadResponse.json()
+    const uploadedAsset = uploadPayload.asset
+
+    await store.createPost({
+      title: "需要重建引用的文章",
+      content: `<p><img src="${uploadedAsset.url}" /></p>`,
+      coverImage: uploadedAsset.url,
+      category: "测试",
+      tags: ["reindex"],
+      draft: false,
+    })
+
+    store.getDb().prepare("DELETE FROM post_media_references").run()
+
+    const beforeReferences = await store.listPostMediaReferenceDetails()
+    assert.equal(beforeReferences.length, 0)
+
+    const reindexResponse = await reindexRoute.POST(
+      new NextRequest("https://champion.cc.cd/api/admin/media/reindex", {
+        method: "POST",
+        headers: { cookie },
+      })
+    )
+    const reindexPayload = await reindexResponse.json()
+
+    assert.equal(reindexResponse.status, 200)
+    assert.equal(reindexPayload.success, true)
+    assert.equal(typeof reindexPayload.referenceCount, "number")
+    assert.ok(reindexPayload.referenceCount >= 1)
+
+    const afterReferences = await store.listPostMediaReferenceDetails()
+    assert.ok(afterReferences.some((reference: { asset_id: string }) => reference.asset_id === uploadedAsset.id))
+  })
+})
+
 test("comment user registration route creates a user and session cookie in an isolated workspace", async () => {
   await withTempWorkspace(async () => {
     const registerRoute = await importFresh<typeof import("../src/app/api/user/register/route")>("src/app/api/user/register/route.ts")

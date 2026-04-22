@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { NextRequest } from "next/server"
 import { POST as postsPost } from "../src/app/api/posts/route"
 import { DELETE as adminMediaDelete, POST as adminMediaPost } from "../src/app/api/admin/media/route"
+import { POST as adminMediaReindexPost } from "../src/app/api/admin/media/reindex/route"
 import { GET as adminSettingsGet, PATCH as adminSettingsPatch } from "../src/app/api/admin/settings/route"
 import { GET as authStatusGet } from "../src/app/api/auth/status/route"
 import { GET as feedGet } from "../src/app/api/feed/route"
@@ -66,6 +67,15 @@ test("public site settings route exposes the normalized site settings", async ()
 test("admin media route rejects unauthenticated access", async () => {
   const request = new NextRequest("https://champion.cc.cd/api/admin/media")
   const response = await adminMediaGet(request)
+  const payload = await response.json()
+
+  assert.equal(response.status, 401)
+  assert.equal(payload.error, "请先登录管理员账号")
+})
+
+test("admin media reindex route rejects unauthenticated access", async () => {
+  const request = new NextRequest("https://champion.cc.cd/api/admin/media/reindex", { method: "POST" })
+  const response = await adminMediaReindexPost(request)
   const payload = await response.json()
 
   assert.equal(response.status, 401)
