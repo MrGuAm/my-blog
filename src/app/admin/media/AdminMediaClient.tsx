@@ -3,7 +3,7 @@
 
 import { useMemo, useRef, useState } from "react"
 import SectionPageShell from "@/components/SectionPageShell"
-import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint } from "@/lib/media-upload"
+import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint, validateMediaUploadInput } from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
 
 function formatSize(size: number) {
@@ -45,6 +45,11 @@ export default function AdminMediaClient({
 
   const handleUpload = async (file?: File | null) => {
     if (!file || !canUpload) return
+    const validationError = validateMediaUploadInput(file)
+    if (validationError) {
+      setMessage(validationError)
+      return
+    }
     setIsUploading(true)
     setMessage("")
     try {
@@ -120,27 +125,27 @@ export default function AdminMediaClient({
       headerActions={
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <input
-                type="text"
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                placeholder="搜索素材名称"
-                className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm sm:w-64"
-              />
-              <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
-                {[
-                  ["all", "全部"],
-                  ["7d", "7 天内"],
-                  ["30d", "30 天内"],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setTimeFilter(value as "all" | "7d" | "30d")}
-                    className={`rounded-full px-3 py-1 transition-colors ${
-                      timeFilter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                    }`}
-                  >
+            <input
+              type="text"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="搜索素材名称"
+              className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm sm:w-64"
+            />
+            <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
+              {[
+                ["all", "全部"],
+                ["7d", "7 天内"],
+                ["30d", "30 天内"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTimeFilter(value as "all" | "7d" | "30d")}
+                  className={`rounded-full px-3 py-1 transition-colors ${
+                    timeFilter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
                   {label}
                 </button>
               ))}
@@ -178,65 +183,65 @@ export default function AdminMediaClient({
         </>
       }
     >
-        {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
-        {warning ? <p className="mb-4 text-sm text-amber-600">{warning}</p> : null}
+      {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
+      {warning ? <p className="mb-4 text-sm text-amber-600">{warning}</p> : null}
 
-        {filteredAssets.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredAssets.map((asset) => (
-              <div key={asset.id} className="rounded-2xl border border-border/50 bg-card p-3">
-                <div className="overflow-hidden rounded-xl border border-border/40">
-                  <img src={asset.url} alt={asset.name} className="h-52 w-full object-cover" />
-                </div>
-                <div className="mt-3 space-y-1">
-                  <p className="truncate text-sm font-medium">{asset.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatSize(asset.size)} · {new Date(asset.updatedAt).toLocaleString("zh-CN")} · {asset.storage === "blob" ? "Blob" : "本地"}
-                  </p>
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => copyValue(asset.url, "素材链接")}
-                    className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
-                  >
-                    链接
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => copyValue(`![${asset.name}](${asset.url})`, "Markdown")}
-                    className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
-                  >
-                    Markdown
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => copyValue(`<img src="${asset.url}" alt="${asset.name}" />`, "HTML")}
-                    className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
-                  >
-                    HTML
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(asset)}
-                    disabled={!asset.deletable}
-                    className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    删除
-                  </button>
-                </div>
+      {filteredAssets.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredAssets.map((asset) => (
+            <div key={asset.id} className="rounded-2xl border border-border/50 bg-card p-3">
+              <div className="overflow-hidden rounded-xl border border-border/40">
+                <img src={asset.url} alt={asset.name} className="h-52 w-full object-cover" />
               </div>
-            ))}
-          </div>
-        ) : assets.length > 0 ? (
-          <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
-            当前筛选条件下没有素材，换个关键词或时间范围试试。
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
-            还没有任何素材，先上传一张图片试试。
-          </div>
-        )}
+              <div className="mt-3 space-y-1">
+                <p className="truncate text-sm font-medium">{asset.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatSize(asset.size)} · {new Date(asset.updatedAt).toLocaleString("zh-CN")} · {asset.storage === "blob" ? "Blob" : "本地"}
+                </p>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyValue(asset.url, "素材链接")}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
+                >
+                  链接
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyValue(`![${asset.name}](${asset.url})`, "Markdown")}
+                  className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                >
+                  Markdown
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyValue(`<img src="${asset.url}" alt="${asset.name}" />`, "HTML")}
+                  className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                >
+                  HTML
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(asset)}
+                  disabled={!asset.deletable}
+                  className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : assets.length > 0 ? (
+        <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
+          当前筛选条件下没有素材，换个关键词或时间范围试试。
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
+          还没有任何素材，先上传一张图片试试。
+        </div>
+      )}
     </SectionPageShell>
   )
 }

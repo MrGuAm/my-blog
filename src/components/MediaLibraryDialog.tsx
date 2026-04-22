@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint } from "@/lib/media-upload"
+import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint, validateMediaUploadInput } from "@/lib/media-upload"
 
 interface MediaAsset {
   id: string
@@ -100,6 +100,11 @@ export default function MediaLibraryDialog({
 
   const handleUpload = async (file?: File | null) => {
     if (!file || !canUpload) return
+    const validationError = validateMediaUploadInput(file)
+    if (validationError) {
+      setMessage(validationError)
+      return
+    }
     setIsUploading(true)
     setMessage("")
     try {
