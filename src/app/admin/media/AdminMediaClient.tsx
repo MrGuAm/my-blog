@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
+import MediaFiltersBar from "@/components/MediaFiltersBar"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import SectionPageShell from "@/components/SectionPageShell"
@@ -524,129 +525,50 @@ export default function AdminMediaClient({
       description="集中管理文章中要复用的图片素材。"
       headerActions={
         <>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <input
-              type="text"
-              value={keyword}
-              onChange={(event) => {
-                setKeyword(event.target.value)
-                setCurrentPage(1)
-              }}
-              aria-label="搜索素材名称"
-              placeholder="搜索素材名称"
-              className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm sm:w-64"
-            />
-            <div className="inline-flex rounded-full border border-border/50 bg-card p-1 text-sm">
-              {[
-                ["all", "全部"],
-                ["7d", "7 天内"],
-                ["30d", "30 天内"],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    setTimeFilter(value as "all" | "7d" | "30d")
-                    setCurrentPage(1)
-                  }}
-                  className={`rounded-full px-3 py-1 transition-colors ${
-                    timeFilter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <select
-              value={storageFilter}
-              aria-label="媒体来源筛选"
-              onChange={(event) => {
-                setStorageFilter(event.target.value as "all" | "blob" | "local")
-                setCurrentPage(1)
-              }}
-              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
-            >
-              <option value="all">全部来源</option>
-              <option value="blob">仅 Blob</option>
-              <option value="local">仅本地</option>
-            </select>
-            <select
-              value={formatFilter}
-              aria-label="媒体格式筛选"
-              onChange={(event) => {
-                setFormatFilter(event.target.value as MediaFormatFilter)
-                setCurrentPage(1)
-              }}
-              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
-            >
-              <option value="all">全部格式</option>
-              <option value="webp">WebP</option>
-              <option value="svg">SVG</option>
-              <option value="gif">GIF</option>
-              <option value="png">PNG</option>
-              <option value="jpeg">JPEG</option>
-              <option value="other">其他</option>
-            </select>
-            <select
-              value={orientationFilter}
-              aria-label="媒体形态筛选"
-              onChange={(event) => {
-                setOrientationFilter(event.target.value as "all" | "landscape" | "portrait" | "square")
-                setCurrentPage(1)
-              }}
-              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
-            >
-              <option value="all">全部形态</option>
-              <option value="landscape">横图</option>
-              <option value="portrait">竖图</option>
-              <option value="square">方图</option>
-            </select>
-            <select
-              value={usageFilter}
-              aria-label="媒体使用筛选"
-              onChange={(event) => {
-                setUsageFilter(event.target.value as "all" | "used" | "unused")
-                setCurrentPage(1)
-              }}
-              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
-            >
-              <option value="all">全部使用状态</option>
-              <option value="used">仅使用中</option>
-              <option value="unused">仅未使用</option>
-            </select>
-            <select
-              value={usageKindFilter}
-              aria-label="媒体用途筛选"
-              onChange={(event) => {
-                setUsageKindFilter(event.target.value as "all" | "cover" | "content" | "mixed")
-                setCurrentPage(1)
-              }}
-              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
-            >
-              <option value="all">全部用途</option>
-              <option value="cover">仅封面相关</option>
-              <option value="content">仅正文相关</option>
-              <option value="mixed">封面+正文</option>
-            </select>
-            <select
-              value={sortBy}
-              aria-label="媒体排序"
-              onChange={(event) => {
-                setSortBy(event.target.value as MediaSortOption)
-                setCurrentPage(1)
-              }}
-              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
-            >
-              <option value="newest">最新优先</option>
-              <option value="oldest">最旧优先</option>
-              <option value="largest">文件最大</option>
-              <option value="smallest">文件最小</option>
-              <option value="most-used">引用最多</option>
-              <option value="least-used">引用最少</option>
-              <option value="name-asc">名称 A-Z</option>
-              <option value="name-desc">名称 Z-A</option>
-            </select>
-          </div>
+          <MediaFiltersBar
+            keyword={keyword}
+            onKeywordChange={(value) => {
+              setKeyword(value)
+              setCurrentPage(1)
+            }}
+            timeFilter={timeFilter}
+            onTimeFilterChange={(value) => {
+              setTimeFilter(value)
+              setCurrentPage(1)
+            }}
+            storageFilter={storageFilter}
+            onStorageFilterChange={(value) => {
+              setStorageFilter(value)
+              setCurrentPage(1)
+            }}
+            formatFilter={formatFilter}
+            onFormatFilterChange={(value) => {
+              setFormatFilter(value)
+              setCurrentPage(1)
+            }}
+            orientationFilter={orientationFilter}
+            onOrientationFilterChange={(value) => {
+              setOrientationFilter(value)
+              setCurrentPage(1)
+            }}
+            usageFilter={usageFilter}
+            onUsageFilterChange={(value) => {
+              setUsageFilter(value)
+              setCurrentPage(1)
+            }}
+            usageKindFilter={usageKindFilter}
+            onUsageKindFilterChange={(value) => {
+              setUsageKindFilter(value)
+              setCurrentPage(1)
+            }}
+            sortBy={sortBy}
+            onSortByChange={(value) => {
+              setSortBy(value)
+              setCurrentPage(1)
+            }}
+            showReset={hasActiveFilters}
+            onReset={resetFilters}
+          />
           <div className="flex items-center gap-3">
             {selectedCount > 0 ? (
               <>
@@ -744,15 +666,6 @@ export default function AdminMediaClient({
             >
               {isReindexing ? "重建中..." : "重建引用索引"}
             </button>
-            {hasActiveFilters ? (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
-              >
-                重置筛选
-              </button>
-            ) : null}
           </div>
           <p className="text-xs text-muted-foreground sm:basis-full sm:text-right">{uploadHint}</p>
         </>
@@ -1004,6 +917,8 @@ export default function AdminMediaClient({
                   type="button"
                   onClick={() => handleDelete(asset)}
                   disabled={!asset.deletable || (asset.usageCount ?? 0) > 0}
+                  aria-label={(asset.usageCount ?? 0) > 0 ? `素材 ${asset.name} 使用中，无法删除` : `删除素材 ${asset.name}`}
+                  title={(asset.usageCount ?? 0) > 0 ? `素材 ${asset.name} 使用中，无法删除` : `删除素材 ${asset.name}`}
                   className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {(asset.usageCount ?? 0) > 0 ? "使用中" : "删除"}

@@ -132,7 +132,7 @@ test("admin can filter media by usage state and see protected deletion controls"
   await expect(usedCard).toBeVisible()
   await expect(page.locator("div").filter({ hasText: new RegExp(unusedBase) })).toHaveCount(0)
 
-  await expect(usedCard.getByRole("button", { name: "使用中" })).toBeDisabled()
+  await expect(usedCard.getByRole("button", { name: new RegExp(`素材 ${usedBase}.*无法删除`) })).toBeDisabled()
 
   await page.goto("/admin/media?usage=unused")
   await expect(page).toHaveURL(/usage=unused/)
