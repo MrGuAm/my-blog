@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {
+  buildMediaAssetBatchText,
   extractClipboardMediaFiles,
   formatMediaUploadBatchMessage,
   getMediaUploadHint,
@@ -58,4 +59,18 @@ test("extractClipboardMediaFiles keeps supported image files only", () => {
 
   assert.equal(files.length, 1)
   assert.equal(files[0]?.name, "clip.png")
+})
+
+test("buildMediaAssetBatchText renders selected assets for url, markdown, and html copy", () => {
+  const assets = [
+    { name: "封面图", url: "https://example.com/a.webp" },
+    { name: "插图", url: "https://example.com/b.webp" },
+  ]
+
+  assert.equal(
+    buildMediaAssetBatchText(assets, "url"),
+    "https://example.com/a.webp\nhttps://example.com/b.webp"
+  )
+  assert.match(buildMediaAssetBatchText(assets, "markdown"), /!\[封面图\]\(https:\/\/example.com\/a.webp\)/)
+  assert.match(buildMediaAssetBatchText(assets, "html"), /<img src="https:\/\/example.com\/b.webp" alt="插图" \/>/)
 })

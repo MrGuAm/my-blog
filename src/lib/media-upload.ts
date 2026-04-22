@@ -14,6 +14,11 @@ export interface ClipboardMediaItemLike {
   getAsFile: () => File | null
 }
 
+export interface MediaExportAssetLike {
+  name: string
+  url: string
+}
+
 export const MEDIA_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
 export const MEDIA_UPLOAD_MIME_TYPES = [
   "image/jpeg",
@@ -90,4 +95,19 @@ export function extractClipboardMediaFiles(items: Iterable<ClipboardMediaItemLik
     }
   }
   return files
+}
+
+export function buildMediaAssetBatchText(
+  assets: MediaExportAssetLike[],
+  format: "url" | "markdown" | "html"
+) {
+  if (format === "url") {
+    return assets.map((asset) => asset.url).join("\n")
+  }
+
+  if (format === "markdown") {
+    return assets.map((asset) => `![${asset.name}](${asset.url})`).join("\n")
+  }
+
+  return assets.map((asset) => `<img src="${asset.url}" alt="${asset.name}" />`).join("\n")
 }

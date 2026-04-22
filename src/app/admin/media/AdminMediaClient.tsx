@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import SectionPageShell from "@/components/SectionPageShell"
 import {
+  buildMediaAssetBatchText,
   MEDIA_UPLOAD_ACCEPT,
   formatMediaUploadBatchMessage,
   getMediaUploadHint,
@@ -149,14 +150,19 @@ export default function AdminMediaClient({
     })
   }, [assets, keyword, referenceNow, timeFilter])
 
-  const selectableFilteredAssets = useMemo(
-    () => filteredAssets.filter((asset) => asset.deletable),
-    [filteredAssets]
+  const selectedAssets = useMemo(
+    () => assets.filter((asset) => selectedAssetIds.includes(asset.id)),
+    [assets, selectedAssetIds]
+  )
+  const deletableSelectedAssets = useMemo(
+    () => selectedAssets.filter((asset) => asset.deletable),
+    [selectedAssets]
   )
   const selectedCount = selectedAssetIds.length
+  const deletableSelectedCount = deletableSelectedAssets.length
   const allSelectableVisibleSelected =
-    selectableFilteredAssets.length > 0 &&
-    selectableFilteredAssets.every((asset) => selectedAssetIds.includes(asset.id))
+    filteredAssets.length > 0 &&
+    filteredAssets.every((asset) => selectedAssetIds.includes(asset.id))
 
   const toggleSelectedAsset = (assetId: string) => {
     setSelectedAssetIds((current) =>
@@ -165,7 +171,7 @@ export default function AdminMediaClient({
   }
 
   const handleToggleSelectAllVisible = () => {
-    const visibleIds = selectableFilteredAssets.map((asset) => asset.id)
+    const visibleIds = filteredAssets.map((asset) => asset.id)
     if (visibleIds.length === 0) return
 
     setSelectedAssetIds((current) => {
@@ -176,16 +182,26 @@ export default function AdminMediaClient({
     })
   }
 
+  const handleCopySelected = async (format: "url" | "markdown" | "html", label: string) => {
+    if (selectedAssets.length === 0) return
+    try {
+      await navigator.clipboard.writeText(buildMediaAssetBatchText(selectedAssets, format))
+      setMessage(`已复制 ${selectedAssets.length} 项${label}`)
+    } catch {
+      setMessage("复制失败，请重试")
+    }
+  }
+
   const handleDeleteSelected = async () => {
-    if (selectedAssetIds.length === 0) return
-    if (!confirm(`确定删除已选中的 ${selectedAssetIds.length} 张素材吗？`)) return
+    if (deletableSelectedAssets.length === 0) return
+    if (!confirm(`确定删除已选中的 ${deletableSelectedAssets.length} 张素材吗？`)) return
 
     setMessage("")
     try {
       const response = await fetch("/api/admin/media", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedAssetIds }),
+        body: JSON.stringify({ ids: deletableSelectedAssets.map((asset) => asset.id) }),
       })
       const data = await response.json()
       if (!response.ok) {
@@ -200,8 +216,11 @@ export default function AdminMediaClient({
       setAssets((current) => current.filter((asset) => !deletedIds.includes(asset.id)))
       setSelectedAssetIds((current) => current.filter((id) => !deletedIds.includes(id)))
 
-      if (failedIds.length > 0 || missingIds.length > 0) {
-        setMessage(`已删除 ${deletedIds.length} 张素材，${failedIds.length + missingIds.length} 张未处理`)
+      const skippedCount = selectedCount - deletableSelectedAssets.length
+      if (failedIds.length > 0 || missingIds.length > 0 || skippedCount > 0) {
+        setMessage(
+          `已删除 ${deletedIds.length} 张素材，${failedIds.length + missingIds.length + skippedCount} 张未处理`
+        )
       } else {
         setMessage(`已删除 ${deletedIds.length} 张素材`)
       }
@@ -258,12 +277,30 @@ export default function AdminMediaClient({
           </div>
           <div className="flex items-center gap-3">
             {selectedCount > 0 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleCopySelected("url", "个素材链接")}
+                  className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
+                >
+                  复制已选链接
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopySelected("markdown", "个 Markdown")}
+                  className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
+                >
+                  复制已选 Markdown
+                </button>
+              </>
+            ) : null}
+            {deletableSelectedCount > 0 ? (
               <button
                 type="button"
                 onClick={handleDeleteSelected}
                 className="rounded-xl border border-red-500/30 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"
               >
-                删除已选 {selectedCount} 项
+                删除可删 {deletableSelectedCount} 项
               </button>
             ) : null}
             <button
@@ -309,13 +346,15 @@ export default function AdminMediaClient({
       />
       <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-border/50 bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground">
-          {selectedCount > 0 ? `已选中 ${selectedCount} 张素材` : "可以先筛选，再批量选中可删除素材"}
+          {selectedCount > 0
+            ? `已选中 ${selectedCount} 张素材${deletableSelectedCount < selectedCount ? `，其中 ${deletableSelectedCount} 张可删除` : ""}`
+            : "可以先筛选，再批量选中素材后复制或删除"}
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleToggleSelectAllVisible}
-            disabled={selectableFilteredAssets.length === 0}
+            disabled={filteredAssets.length === 0}
             className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {allSelectableVisibleSelected ? "取消全选可见项" : "全选可见项"}
@@ -342,14 +381,13 @@ export default function AdminMediaClient({
               }`}
             >
               <div className="mb-3 flex items-center justify-between gap-3">
-                <label className={`inline-flex items-center gap-2 text-xs ${asset.deletable ? "cursor-pointer" : "text-muted-foreground"}`}>
+                <label className="inline-flex cursor-pointer items-center gap-2 text-xs">
                   <input
                     type="checkbox"
                     checked={selectedAssetIds.includes(asset.id)}
-                    disabled={!asset.deletable}
                     onChange={() => toggleSelectedAsset(asset.id)}
                   />
-                  {asset.deletable ? "加入批量删除" : "此素材不可删除"}
+                  {asset.deletable ? "选中素材" : "只读素材，可复制不可删除"}
                 </label>
                 <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                   {asset.storage === "blob" ? "Blob" : "本地"}
