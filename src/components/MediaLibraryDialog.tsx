@@ -102,6 +102,11 @@ export default function MediaLibraryDialog({
     })
     return sortMediaAssets(nextAssets, sortBy)
   }, [assets, keyword, referenceNow, sortBy, storageFilter, timeFilter])
+  const hasActiveFilters =
+    keyword.trim().length > 0 ||
+    timeFilter !== "all" ||
+    storageFilter !== "all" ||
+    sortBy !== "newest"
 
   if (!isOpen) return null
 
@@ -112,6 +117,13 @@ export default function MediaLibraryDialog({
     } catch {
       setMessage("复制失败，请重试")
     }
+  }
+
+  const resetFilters = () => {
+    setKeyword("")
+    setTimeFilter("all")
+    setStorageFilter("all")
+    setSortBy("newest")
   }
 
   const handleUploads = async (files: File[] = []) => {
@@ -310,6 +322,15 @@ export default function MediaLibraryDialog({
               <option value="name-asc">名称 A-Z</option>
               <option value="name-desc">名称 Z-A</option>
             </select>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
+              >
+                重置筛选
+              </button>
+            ) : null}
           </div>
 
           {isLoading ? (

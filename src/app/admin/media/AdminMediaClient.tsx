@@ -207,6 +207,12 @@ export default function AdminMediaClient({
   )
   const selectedCount = selectedAssetIds.length
   const deletableSelectedCount = deletableSelectedAssets.length
+  const hasActiveFilters =
+    keyword.trim().length > 0 ||
+    timeFilter !== "all" ||
+    storageFilter !== "all" ||
+    sortBy !== "newest" ||
+    safeCurrentPage > 1
   const allSelectableVisibleSelected =
     visibleAssets.length > 0 &&
     visibleAssets.every((asset) => selectedAssetIds.includes(asset.id))
@@ -290,6 +296,14 @@ export default function AdminMediaClient({
     } catch {
       setMessage("复制失败，请重试")
     }
+  }
+
+  const resetFilters = () => {
+    setKeyword("")
+    setTimeFilter("all")
+    setStorageFilter("all")
+    setSortBy("newest")
+    setCurrentPage(1)
   }
 
   return (
@@ -378,6 +392,13 @@ export default function AdminMediaClient({
                 >
                   复制已选 Markdown
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopySelected("html", "个 HTML 片段")}
+                  className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
+                >
+                  复制已选 HTML
+                </button>
               </>
             ) : null}
             {deletableSelectedCount > 0 ? (
@@ -404,6 +425,15 @@ export default function AdminMediaClient({
             >
               刷新
             </button>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
+              >
+                重置筛选
+              </button>
+            ) : null}
           </div>
           <p className="text-xs text-muted-foreground sm:basis-full sm:text-right">{uploadHint}</p>
         </>
@@ -434,7 +464,7 @@ export default function AdminMediaClient({
         <p className="text-muted-foreground">
           {selectedCount > 0
             ? `已选中 ${selectedCount} 张素材${deletableSelectedCount < selectedCount ? `，其中 ${deletableSelectedCount} 张可删除` : ""}`
-            : `共 ${filteredAssets.length} 张素材，当前第 ${safeCurrentPage} / ${totalPages} 页`}
+            : `筛选结果共 ${filteredAssets.length} 张素材，当前第 ${safeCurrentPage} / ${totalPages} 页`}
         </p>
         <div className="flex items-center gap-2">
           <button
