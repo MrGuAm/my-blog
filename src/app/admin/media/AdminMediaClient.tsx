@@ -21,6 +21,7 @@ import {
   type MediaUploadFailure,
 } from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
+import { getMediaUsageScope } from "@/lib/media-usage"
 
 function formatSize(size: number) {
   if (size < 1024) return `${size} B`
@@ -52,6 +53,7 @@ export default function AdminMediaClient({
   initialFormatFilter = "all",
   initialOrientationFilter = "all",
   initialUsageFilter = "all",
+  initialUsageKindFilter = "all",
   initialSortBy = "newest",
   initialPage = 1,
 }: {
@@ -65,6 +67,7 @@ export default function AdminMediaClient({
   initialFormatFilter?: MediaFormatFilter
   initialOrientationFilter?: "all" | "landscape" | "portrait" | "square"
   initialUsageFilter?: "all" | "used" | "unused"
+  initialUsageKindFilter?: "all" | "cover" | "content" | "mixed"
   initialSortBy?: MediaSortOption
   initialPage?: number
 }) {
@@ -82,6 +85,7 @@ export default function AdminMediaClient({
   const [formatFilter, setFormatFilter] = useState<MediaFormatFilter>(initialFormatFilter)
   const [orientationFilter, setOrientationFilter] = useState<"all" | "landscape" | "portrait" | "square">(initialOrientationFilter)
   const [usageFilter, setUsageFilter] = useState<"all" | "used" | "unused">(initialUsageFilter)
+  const [usageKindFilter, setUsageKindFilter] = useState<"all" | "cover" | "content" | "mixed">(initialUsageKindFilter)
   const [sortBy, setSortBy] = useState<MediaSortOption>(initialSortBy)
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
@@ -100,6 +104,7 @@ export default function AdminMediaClient({
     if (formatFilter !== "all") nextParams.set("format", formatFilter)
     if (orientationFilter !== "all") nextParams.set("orientation", orientationFilter)
     if (usageFilter !== "all") nextParams.set("usage", usageFilter)
+    if (usageKindFilter !== "all") nextParams.set("kind", usageKindFilter)
     if (sortBy !== "newest") nextParams.set("sort", sortBy)
     if (currentPage > 1) nextParams.set("page", String(currentPage))
 
@@ -110,7 +115,7 @@ export default function AdminMediaClient({
 
     const nextUrl = nextNormalized ? `${window.location.pathname}?${nextNormalized}` : window.location.pathname
     window.history.replaceState(null, "", nextUrl)
-  }, [currentPage, formatFilter, keyword, orientationFilter, sortBy, storageFilter, timeFilter, usageFilter])
+  }, [currentPage, formatFilter, keyword, orientationFilter, sortBy, storageFilter, timeFilter, usageFilter, usageKindFilter])
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
@@ -234,12 +239,17 @@ export default function AdminMediaClient({
         return false
       }
 
+      const usageScope = getMediaUsageScope(asset.usagePosts)
+      if (usageKindFilter !== "all" && usageScope !== usageKindFilter) {
+        return false
+      }
+
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, formatFilter, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
+  }, [assets, formatFilter, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter, usageKindFilter])
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetsPerPage))
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
   const visibleAssets = filteredAssets.slice(
@@ -285,6 +295,7 @@ export default function AdminMediaClient({
     formatFilter !== "all" ||
     orientationFilter !== "all" ||
     usageFilter !== "all" ||
+    usageKindFilter !== "all" ||
     sortBy !== "newest" ||
     safeCurrentPage > 1
   const allSelectableVisibleSelected =
@@ -424,6 +435,7 @@ export default function AdminMediaClient({
     setFormatFilter("all")
     setOrientationFilter("all")
     setUsageFilter("all")
+    setUsageKindFilter("all")
     setSortBy("newest")
     setCurrentPage(1)
   }
@@ -526,6 +538,20 @@ export default function AdminMediaClient({
               <option value="all">全部使用状态</option>
               <option value="used">仅使用中</option>
               <option value="unused">仅未使用</option>
+            </select>
+            <select
+              value={usageKindFilter}
+              aria-label="媒体用途筛选"
+              onChange={(event) => {
+                setUsageKindFilter(event.target.value as "all" | "cover" | "content" | "mixed")
+                setCurrentPage(1)
+              }}
+              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
+            >
+              <option value="all">全部用途</option>
+              <option value="cover">仅封面相关</option>
+              <option value="content">仅正文相关</option>
+              <option value="mixed">封面+正文</option>
             </select>
             <select
               value={sortBy}

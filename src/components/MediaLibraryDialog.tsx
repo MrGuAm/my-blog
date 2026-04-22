@@ -18,6 +18,7 @@ import {
   type MediaUploadFailure,
 } from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
+import { getMediaUsageScope } from "@/lib/media-usage"
 
 interface MediaLibraryDialogProps {
   isOpen: boolean
@@ -58,6 +59,7 @@ export default function MediaLibraryDialog({
   const [formatFilter, setFormatFilter] = useState<MediaFormatFilter>("all")
   const [orientationFilter, setOrientationFilter] = useState<"all" | "landscape" | "portrait" | "square">("all")
   const [usageFilter, setUsageFilter] = useState<"all" | "used" | "unused">("all")
+  const [usageKindFilter, setUsageKindFilter] = useState<"all" | "cover" | "content" | "mixed">("all")
   const [sortBy, setSortBy] = useState<MediaSortOption>("newest")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null)
@@ -116,12 +118,17 @@ export default function MediaLibraryDialog({
         return false
       }
 
+      const usageScope = getMediaUsageScope(asset.usagePosts)
+      if (usageKindFilter !== "all" && usageScope !== usageKindFilter) {
+        return false
+      }
+
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, formatFilter, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
+  }, [assets, formatFilter, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter, usageKindFilter])
   const previewIndex = previewAsset ? filteredAssets.findIndex((asset) => asset.id === previewAsset.id) : -1
   const hasActiveFilters =
     keyword.trim().length > 0 ||
@@ -130,6 +137,7 @@ export default function MediaLibraryDialog({
     formatFilter !== "all" ||
     orientationFilter !== "all" ||
     usageFilter !== "all" ||
+    usageKindFilter !== "all" ||
     sortBy !== "newest"
 
   if (!isOpen) return null
@@ -150,6 +158,7 @@ export default function MediaLibraryDialog({
     setFormatFilter("all")
     setOrientationFilter("all")
     setUsageFilter("all")
+    setUsageKindFilter("all")
     setSortBy("newest")
   }
 
@@ -373,6 +382,17 @@ export default function MediaLibraryDialog({
               <option value="all">全部使用状态</option>
               <option value="used">仅使用中</option>
               <option value="unused">仅未使用</option>
+            </select>
+            <select
+              value={usageKindFilter}
+              aria-label="媒体用途筛选"
+              onChange={(event) => setUsageKindFilter(event.target.value as "all" | "cover" | "content" | "mixed")}
+              className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
+            >
+              <option value="all">全部用途</option>
+              <option value="cover">仅封面相关</option>
+              <option value="content">仅正文相关</option>
+              <option value="mixed">封面+正文</option>
             </select>
             <select
               value={sortBy}

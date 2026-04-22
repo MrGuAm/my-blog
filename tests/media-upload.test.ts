@@ -11,7 +11,7 @@ import {
   sortMediaAssets,
   validateMediaUploadInput,
 } from "../src/lib/media-upload"
-import { countMediaAssetUsage, describeMediaAssetUsage, getMediaUsageHref } from "../src/lib/media-usage"
+import { countMediaAssetUsage, describeMediaAssetUsage, getMediaUsageHref, getMediaUsageScope } from "../src/lib/media-usage"
 
 test("validateMediaUploadInput rejects empty, oversized, and unsupported files", () => {
   assert.equal(validateMediaUploadInput({ size: 0, type: "image/png" }), "图片内容为空，请重新选择")
@@ -204,5 +204,21 @@ test("getMediaUsageHref points drafts to editor and published posts to reader vi
   assert.equal(
     getMediaUsageHref({ postId: "post-2", draft: false }),
     "/posts/post-2"
+  )
+})
+
+test("getMediaUsageScope distinguishes cover, content, mixed, and unused assets", () => {
+  assert.equal(getMediaUsageScope(), "unused")
+  assert.equal(
+    getMediaUsageScope([{ postId: "1", postTitle: "封面稿", draft: false, kind: "cover" }]),
+    "cover"
+  )
+  assert.equal(
+    getMediaUsageScope([{ postId: "2", postTitle: "正文稿", draft: false, kind: "content" }]),
+    "content"
+  )
+  assert.equal(
+    getMediaUsageScope([{ postId: "3", postTitle: "双用途稿", draft: false, kind: "cover+content" }]),
+    "mixed"
   )
 })

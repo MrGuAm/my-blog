@@ -10,6 +10,7 @@ test("parseMediaQueryState normalizes media admin query params", () => {
     format: "webp",
     orientation: "portrait",
     usage: "unused",
+    kind: "cover",
     sort: "most-used",
     page: "3",
   })
@@ -20,6 +21,7 @@ test("parseMediaQueryState normalizes media admin query params", () => {
   assert.equal(state.formatFilter, "webp")
   assert.equal(state.orientationFilter, "portrait")
   assert.equal(state.usageFilter, "unused")
+  assert.equal(state.usageKindFilter, "cover")
   assert.equal(state.sortBy, "most-used")
   assert.equal(state.currentPage, 3)
 })
@@ -37,6 +39,7 @@ test("parseMediaQueryState falls back to safe defaults", () => {
   assert.equal(state.formatFilter, "all")
   assert.equal(state.orientationFilter, "all")
   assert.equal(state.usageFilter, "all")
+  assert.equal(state.usageKindFilter, "all")
   assert.equal(state.sortBy, "newest")
   assert.equal(state.currentPage, 1)
 })

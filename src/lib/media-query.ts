@@ -7,6 +7,7 @@ export interface MediaQueryState {
   formatFilter: MediaFormatFilter
   orientationFilter: "all" | "landscape" | "portrait" | "square"
   usageFilter: "all" | "used" | "unused"
+  usageKindFilter: "all" | "cover" | "content" | "mixed"
   sortBy: MediaSortOption
   currentPage: number
 }
@@ -16,6 +17,7 @@ const MEDIA_STORAGE_FILTERS = new Set<MediaQueryState["storageFilter"]>(["all", 
 const MEDIA_FORMAT_FILTERS = new Set<MediaQueryState["formatFilter"]>(["all", "webp", "svg", "gif", "png", "jpeg", "other"])
 const MEDIA_ORIENTATION_FILTERS = new Set<MediaQueryState["orientationFilter"]>(["all", "landscape", "portrait", "square"])
 const MEDIA_USAGE_FILTERS = new Set<MediaQueryState["usageFilter"]>(["all", "used", "unused"])
+const MEDIA_USAGE_KIND_FILTERS = new Set<MediaQueryState["usageKindFilter"]>(["all", "cover", "content", "mixed"])
 const MEDIA_SORT_OPTIONS = new Set<MediaSortOption>([
   "newest",
   "oldest",
@@ -44,6 +46,7 @@ export function parseMediaQueryState(params?: Record<string, string | string[] |
   const formatParam = getSingleParam(source.format)?.trim() || "all"
   const orientationParam = getSingleParam(source.orientation)?.trim() || "all"
   const usageParam = getSingleParam(source.usage)?.trim() || "all"
+  const kindParam = getSingleParam(source.kind)?.trim() || "all"
   const sortParam = getSingleParam(source.sort)?.trim() || "newest"
 
   return {
@@ -62,6 +65,9 @@ export function parseMediaQueryState(params?: Record<string, string | string[] |
       : "all",
     usageFilter: MEDIA_USAGE_FILTERS.has(usageParam as MediaQueryState["usageFilter"])
       ? (usageParam as MediaQueryState["usageFilter"])
+      : "all",
+    usageKindFilter: MEDIA_USAGE_KIND_FILTERS.has(kindParam as MediaQueryState["usageKindFilter"])
+      ? (kindParam as MediaQueryState["usageKindFilter"])
       : "all",
     sortBy: MEDIA_SORT_OPTIONS.has(sortParam as MediaSortOption)
       ? (sortParam as MediaSortOption)

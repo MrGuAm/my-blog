@@ -21,6 +21,8 @@ export interface MediaUsageReference {
   kind: "cover" | "content" | "cover+content"
 }
 
+export type MediaUsageScope = "unused" | "cover" | "content" | "mixed"
+
 export interface MediaUsageDetails {
   count: number
   posts: MediaUsageReference[]
@@ -91,4 +93,16 @@ export function getMediaUsageHref(reference: Pick<MediaUsageReference, "postId" 
   }
 
   return `/posts/${encodeURIComponent(reference.postSlug || reference.postId)}`
+}
+
+export function getMediaUsageScope(usagePosts?: MediaUsageReference[]): MediaUsageScope {
+  if (!usagePosts || usagePosts.length === 0) return "unused"
+
+  const hasCover = usagePosts.some((usage) => usage.kind === "cover" || usage.kind === "cover+content")
+  const hasContent = usagePosts.some((usage) => usage.kind === "content" || usage.kind === "cover+content")
+
+  if (hasCover && hasContent) return "mixed"
+  if (hasCover) return "cover"
+  if (hasContent) return "content"
+  return "unused"
 }
