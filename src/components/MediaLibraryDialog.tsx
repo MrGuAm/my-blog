@@ -55,6 +55,7 @@ export default function MediaLibraryDialog({
   const [canUpload, setCanUpload] = useState(true)
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
+  const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">("all")
   const [sortBy, setSortBy] = useState<MediaSortOption>("newest")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const uploadHintText = uploadHint ?? getMediaUploadHint()
@@ -91,12 +92,16 @@ export default function MediaLibraryDialog({
         return false
       }
 
+      if (storageFilter !== "all" && asset.storage !== storageFilter) {
+        return false
+      }
+
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, keyword, referenceNow, sortBy, timeFilter])
+  }, [assets, keyword, referenceNow, sortBy, storageFilter, timeFilter])
 
   if (!isOpen) return null
 
@@ -284,6 +289,15 @@ export default function MediaLibraryDialog({
                 </button>
               ))}
             </div>
+            <select
+              value={storageFilter}
+              onChange={(event) => setStorageFilter(event.target.value as "all" | "blob" | "local")}
+              className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
+            >
+              <option value="all">全部来源</option>
+              <option value="blob">仅 Blob</option>
+              <option value="local">仅本地</option>
+            </select>
             <select
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value as MediaSortOption)}

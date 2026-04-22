@@ -29,6 +29,7 @@ export default function AdminMediaClient({
   brandName,
   initialKeyword = "",
   initialTimeFilter = "all",
+  initialStorageFilter = "all",
   initialSortBy = "newest",
 }: {
   initialAssets: MediaAsset[]
@@ -37,6 +38,7 @@ export default function AdminMediaClient({
   brandName: string
   initialKeyword?: string
   initialTimeFilter?: "all" | "7d" | "30d"
+  initialStorageFilter?: "all" | "blob" | "local"
   initialSortBy?: MediaSortOption
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -47,6 +49,7 @@ export default function AdminMediaClient({
   const [canUpload, setCanUpload] = useState(initialCanUpload)
   const [keyword, setKeyword] = useState(initialKeyword)
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">(initialTimeFilter)
+  const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">(initialStorageFilter)
   const [sortBy, setSortBy] = useState<MediaSortOption>(initialSortBy)
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
@@ -59,6 +62,7 @@ export default function AdminMediaClient({
     const normalizedKeyword = keyword.trim()
     if (normalizedKeyword) nextParams.set("q", normalizedKeyword)
     if (timeFilter !== "all") nextParams.set("time", timeFilter)
+    if (storageFilter !== "all") nextParams.set("storage", storageFilter)
     if (sortBy !== "newest") nextParams.set("sort", sortBy)
 
     const currentNormalized = new URLSearchParams(window.location.search).toString()
@@ -68,7 +72,7 @@ export default function AdminMediaClient({
 
     const nextUrl = nextNormalized ? `${window.location.pathname}?${nextNormalized}` : window.location.pathname
     window.history.replaceState(null, "", nextUrl)
-  }, [keyword, sortBy, timeFilter])
+  }, [keyword, sortBy, storageFilter, timeFilter])
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
@@ -171,12 +175,16 @@ export default function AdminMediaClient({
         return false
       }
 
+      if (storageFilter !== "all" && asset.storage !== storageFilter) {
+        return false
+      }
+
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, keyword, referenceNow, sortBy, timeFilter])
+  }, [assets, keyword, referenceNow, sortBy, storageFilter, timeFilter])
 
   const selectedAssets = useMemo(
     () => assets.filter((asset) => selectedAssetIds.includes(asset.id)),
@@ -302,6 +310,15 @@ export default function AdminMediaClient({
                 </button>
               ))}
             </div>
+            <select
+              value={storageFilter}
+              onChange={(event) => setStorageFilter(event.target.value as "all" | "blob" | "local")}
+              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
+            >
+              <option value="all">全部来源</option>
+              <option value="blob">仅 Blob</option>
+              <option value="local">仅本地</option>
+            </select>
             <select
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value as MediaSortOption)}
