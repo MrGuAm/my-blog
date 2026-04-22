@@ -332,6 +332,27 @@ export default function AdminMediaClient({
     })
   }
 
+  const handleInvertVisibleSelection = () => {
+    const visibleIds = visibleAssets.map((asset) => asset.id)
+    if (visibleIds.length === 0) return
+
+    setSelectedAssetIds((current) => {
+      const currentSet = new Set(current)
+      const nextSet = new Set(current)
+
+      for (const id of visibleIds) {
+        if (currentSet.has(id)) {
+          nextSet.delete(id)
+        } else {
+          nextSet.add(id)
+        }
+      }
+
+      return [...nextSet]
+    })
+    setMessage(`已反选当前可见的 ${visibleIds.length} 项素材`)
+  }
+
   const handleSelectVisibleUnused = () => {
     if (visibleUnusedAssetIds.length === 0) return
     setSelectedAssetIds((current) => [...new Set([...current, ...visibleUnusedAssetIds])])
@@ -753,6 +774,14 @@ export default function AdminMediaClient({
             className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {allSelectableVisibleSelected ? "取消全选可见项" : "全选可见项"}
+          </button>
+          <button
+            type="button"
+            onClick={handleInvertVisibleSelection}
+            disabled={visibleAssets.length === 0}
+            className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            反选可见项
           </button>
           <button
             type="button"
