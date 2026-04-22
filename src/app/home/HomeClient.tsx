@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, type ReactNode } from "react"
+import { useState, useEffect, useMemo, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
@@ -12,6 +12,7 @@ import SiteFooter from "@/components/SiteFooter"
 import MarqueeText from "@/components/music/MarqueeText"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
+import { filterPostsForListing } from "@/lib/post-search"
 import type { SiteSettings } from "@/lib/site-settings"
 
 interface HomeClientProps {
@@ -285,26 +286,15 @@ export default function HomeClient({
       .catch(() => setAdminPosts(null))
   }, [isAuthenticated])
 
-  const filteredPosts = visiblePosts.filter(post =>
-    (effectiveShowDrafts || !post.draft) &&
-    (searchQuery === "" ||
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))) &&
-    (selectedTag === null || post.tags.includes(selectedTag))
-  ).sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1
-    if (!a.pinned && b.pinned) return 1
-    if (a.featured && !b.featured) return -1
-    if (!a.featured && b.featured) return 1
-    if (a.series && b.series && a.series === b.series) {
-      const left = typeof a.seriesOrder === "number" ? a.seriesOrder : Number.MAX_SAFE_INTEGER
-      const right = typeof b.seriesOrder === "number" ? b.seriesOrder : Number.MAX_SAFE_INTEGER
-      if (left !== right) return left - right
-    }
-    return new Date(b.date).getTime() - new Date(a.date).getTime()
-  })
+  const filteredPosts = useMemo(
+    () =>
+      filterPostsForListing(visiblePosts, {
+        includeDrafts: effectiveShowDrafts,
+        searchQuery,
+        selectedTag,
+      }),
+    [effectiveShowDrafts, searchQuery, selectedTag, visiblePosts]
+  )
 
   const showFeaturedSection = !searchQuery && selectedTag === null && currentPage === 1
   const featuredPosts = showFeaturedSection

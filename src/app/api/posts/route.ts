@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Post } from '@/lib/posts'
+import { filterPostsForListing } from '@/lib/post-search'
 import { isAuthenticatedRequest } from '@/lib/server/auth'
 import { invalidatePostsCache } from '@/lib/server/site-cache'
 import { createPost, listPosts } from '@/lib/server/store'
@@ -7,7 +8,15 @@ import { createPost, listPosts } from '@/lib/server/store'
 export async function GET(request: NextRequest) {
   try {
     const includeDrafts = isAuthenticatedRequest(request)
-    return NextResponse.json(await listPosts({ includeDrafts }))
+    const url = new URL(request.url)
+    const posts = await listPosts({ includeDrafts })
+    return NextResponse.json(
+      filterPostsForListing(posts, {
+        includeDrafts,
+        searchQuery: url.searchParams.get('q') || '',
+        selectedTag: url.searchParams.get('tag'),
+      })
+    )
   } catch {
     return NextResponse.json({ error: '数据存储暂不可用' }, { status: 500 })
   }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { getAllPosts, getAllTags } from "@/lib/posts"
 import { parseHomeQueryState } from "@/lib/home-query"
+import { filterPostsForListing } from "@/lib/post-search"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 import HomeClient from "./home/HomeClient"
@@ -24,16 +25,21 @@ interface HomePageProps {
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
+  const state = parseHomeQueryState((await searchParams) || {})
   const [posts, allTags, siteSettings] = await Promise.all([
     getAllPosts({ includeDrafts: false, cached: true }),
     getAllTags(),
     getSiteSettings(),
   ])
-  const state = parseHomeQueryState((await searchParams) || {})
+  const initialPosts = filterPostsForListing(posts, {
+    includeDrafts: false,
+    searchQuery: state.searchQuery,
+    selectedTag: state.selectedTag,
+  })
 
   return (
     <HomeClient
-      posts={posts}
+      posts={initialPosts}
       allTags={allTags}
       siteSettings={siteSettings}
       initialSearchQuery={state.searchQuery}

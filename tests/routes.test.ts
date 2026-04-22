@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { NextRequest } from "next/server"
-import { POST as postsPost } from "../src/app/api/posts/route"
+import { GET as postsGet, POST as postsPost } from "../src/app/api/posts/route"
 import { DELETE as adminMediaDelete, POST as adminMediaPost } from "../src/app/api/admin/media/route"
 import { POST as adminMediaReindexPost } from "../src/app/api/admin/media/reindex/route"
 import { GET as adminSettingsGet, PATCH as adminSettingsPatch } from "../src/app/api/admin/settings/route"
@@ -216,6 +216,17 @@ test("posts route rejects unauthenticated creation requests", async () => {
 
   assert.equal(response.status, 401)
   assert.equal(payload.error, "请先登录")
+})
+
+test("posts route supports public search filters", async () => {
+  const request = new NextRequest("https://champion.cc.cd/api/posts?q=%E6%AC%A2%E8%BF%8E")
+  const response = await postsGet(request)
+  const payload = await response.json()
+
+  assert.equal(response.status, 200)
+  assert.equal(Array.isArray(payload), true)
+  assert.equal(payload.length >= 1, true)
+  assert.equal(payload.some((post: { title?: string }) => post.title?.includes("欢迎")), true)
 })
 
 test("post detail route hides content for public requests and reveals it for authenticated ones", async () => {
