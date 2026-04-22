@@ -6,12 +6,30 @@ export interface PostSearchState {
   includeDrafts: boolean
 }
 
+export interface HighlightPart {
+  text: string
+  match: boolean
+}
+
+export interface PostSearchMatchScope {
+  title: boolean
+  excerpt: boolean
+  category: boolean
+  series: boolean
+  tags: boolean
+  content: boolean
+}
+
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, " ")
 }
 
 function normalizeSearchQuery(value: string) {
   return value.trim().toLowerCase()
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
 function buildPostSearchText(post: Post) {
@@ -31,6 +49,49 @@ export function matchesPostSearch(post: Post, searchQuery: string) {
   const normalizedQuery = normalizeSearchQuery(searchQuery)
   if (!normalizedQuery) return true
   return buildPostSearchText(post).includes(normalizedQuery)
+}
+
+export function getPostSearchMatchScope(post: Post, searchQuery: string): PostSearchMatchScope {
+  const normalizedQuery = normalizeSearchQuery(searchQuery)
+
+  if (!normalizedQuery) {
+    return {
+      title: false,
+      excerpt: false,
+      category: false,
+      series: false,
+      tags: false,
+      content: false,
+    }
+  }
+
+  return {
+    title: post.title.toLowerCase().includes(normalizedQuery),
+    excerpt: post.excerpt.toLowerCase().includes(normalizedQuery),
+    category: post.category.toLowerCase().includes(normalizedQuery),
+    series: (post.series || "").toLowerCase().includes(normalizedQuery),
+    tags: post.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery)),
+    content: stripHtml(post.content).toLowerCase().includes(normalizedQuery),
+  }
+}
+
+export function splitHighlightedText(text: string, searchQuery: string): HighlightPart[] {
+  const normalizedQuery = normalizeSearchQuery(searchQuery)
+  if (!normalizedQuery) {
+    return [{ text, match: false }]
+  }
+
+  const matcher = new RegExp(`(${escapeRegExp(normalizedQuery)})`, "ig")
+  const parts = text.split(matcher).filter(Boolean)
+
+  if (parts.length === 0) {
+    return [{ text, match: false }]
+  }
+
+  return parts.map((part) => ({
+    text: part,
+    match: part.toLowerCase() === normalizedQuery,
+  }))
 }
 
 export function sortPostsForDisplay(posts: Post[]) {

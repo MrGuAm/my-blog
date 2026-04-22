@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import type { Post } from "../src/lib/posts"
-import { filterPostsForListing, matchesPostSearch } from "../src/lib/post-search"
+import { filterPostsForListing, getPostSearchMatchScope, matchesPostSearch, splitHighlightedText } from "../src/lib/post-search"
 
 const posts: Post[] = [
   {
@@ -49,4 +49,26 @@ test("filterPostsForListing respects drafts, tag, and search query", () => {
   })
 
   assert.deepEqual(withDraft.map((post) => post.id), ["music-draft"])
+})
+
+test("getPostSearchMatchScope reports which post fields matched", () => {
+  const scope = getPostSearchMatchScope(posts[0], "useEffect")
+
+  assert.deepEqual(scope, {
+    title: false,
+    excerpt: true,
+    category: false,
+    series: false,
+    tags: false,
+    content: true,
+  })
+})
+
+test("splitHighlightedText preserves text order and marks matched segments", () => {
+  const parts = splitHighlightedText("React Hooks 心得", "react")
+
+  assert.deepEqual(parts, [
+    { text: "React", match: true },
+    { text: " Hooks 心得", match: false },
+  ])
 })

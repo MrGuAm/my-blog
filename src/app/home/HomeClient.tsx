@@ -12,7 +12,7 @@ import SiteFooter from "@/components/SiteFooter"
 import MarqueeText from "@/components/music/MarqueeText"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
-import { filterPostsForListing } from "@/lib/post-search"
+import { filterPostsForListing, getPostSearchMatchScope, splitHighlightedText } from "@/lib/post-search"
 import type { SiteSettings } from "@/lib/site-settings"
 
 interface HomeClientProps {
@@ -65,8 +65,37 @@ function SidebarSection({ title, children }: { title: string; children: ReactNod
   )
 }
 
-function FeaturedStoryCard({ post, isAuthenticated }: { post: Post; isAuthenticated: boolean }) {
+function renderHighlightedText(text: string, searchQuery: string) {
+  return splitHighlightedText(text, searchQuery).map((part, index) =>
+    part.match ? (
+      <mark key={`${text}-${index}`} className="rounded bg-[#ffe1b3]/80 px-1 text-foreground">
+        {part.text}
+      </mark>
+    ) : (
+      <span key={`${text}-${index}`}>{part.text}</span>
+    )
+  )
+}
+
+function FeaturedStoryCard({
+  post,
+  isAuthenticated,
+  searchQuery,
+}: {
+  post: Post
+  isAuthenticated: boolean
+  searchQuery: string
+}) {
   const href = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.slug || post.id}`
+  const matchScope = getPostSearchMatchScope(post, searchQuery)
+  const showContentMatch =
+    Boolean(searchQuery.trim()) &&
+    matchScope.content &&
+    !matchScope.title &&
+    !matchScope.excerpt &&
+    !matchScope.category &&
+    !matchScope.series &&
+    !matchScope.tags
 
   return (
     <Link
@@ -85,14 +114,17 @@ function FeaturedStoryCard({ post, isAuthenticated }: { post: Post; isAuthentica
         <span className="text-xs text-muted-foreground">{post.date}</span>
         {post.series ? (
           <span className="apple-pill">
-            系列：{post.series}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
+            系列：{renderHighlightedText(post.series, searchQuery)}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
           </span>
         ) : null}
+        {showContentMatch ? (
+          <span className="apple-pill">正文命中</span>
+        ) : null}
       </div>
-      <h3 className="text-xl font-semibold tracking-[-0.04em] text-foreground">{post.title}</h3>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">{post.excerpt}</p>
+      <h3 className="text-xl font-semibold tracking-[-0.04em] text-foreground">{renderHighlightedText(post.title, searchQuery)}</h3>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{renderHighlightedText(post.excerpt, searchQuery)}</p>
       <div className="mt-5 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{post.category}</span>
+        <span className="text-muted-foreground">{renderHighlightedText(post.category, searchQuery)}</span>
         <span className="font-medium text-foreground/80">进入阅读 →</span>
       </div>
     </Link>
@@ -105,14 +137,25 @@ function PostCard({
   onTagClick,
   onPlayBgm,
   isCurrentBgm,
+  searchQuery,
 }: {
   post: Post
   isAuthenticated: boolean
   onTagClick: (tag: string) => void
   onPlayBgm: (src?: string | null) => void
   isCurrentBgm: boolean
+  searchQuery: string
 }) {
   const postHref = post.draft && isAuthenticated ? `/write/${post.id}` : `/posts/${post.slug || post.id}`
+  const matchScope = getPostSearchMatchScope(post, searchQuery)
+  const showContentMatch =
+    Boolean(searchQuery.trim()) &&
+    matchScope.content &&
+    !matchScope.title &&
+    !matchScope.excerpt &&
+    !matchScope.category &&
+    !matchScope.series &&
+    !matchScope.tags
   return (
     <article className="editorial-card group overflow-hidden transition-all duration-300 hover:-translate-y-0.5 sm:p-6">
       {post.coverImage && (
@@ -122,7 +165,7 @@ function PostCard({
       )}
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
         <span className="apple-pill">
-          {post.category}
+          {renderHighlightedText(post.category, searchQuery)}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{post.date}</span>
@@ -164,8 +207,11 @@ function PostCard({
             onClick={(event) => event.stopPropagation()}
             className="apple-pill hover:bg-white dark:hover:bg-white/12"
           >
-            系列：{post.series}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
+            系列：{renderHighlightedText(post.series, searchQuery)}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
           </Link>
+        ) : null}
+        {showContentMatch ? (
+          <span className="apple-pill">正文命中</span>
         ) : null}
         <div className="ml-auto flex flex-wrap gap-2">
           {post.tags.map(tag => (
@@ -174,16 +220,16 @@ function PostCard({
               onClick={(e) => { e.stopPropagation(); onTagClick(tag); }}
               className="apple-pill hover:bg-white dark:hover:bg-white/12"
             >
-              #{tag}
+              #{renderHighlightedText(tag, searchQuery)}
             </button>
           ))}
         </div>
       </div>
       <Link href={postHref} className="block">
         <h2 className="text-[1.9rem] font-semibold tracking-[-0.05em] text-foreground transition-colors group-hover:text-foreground/80">
-          {post.title}
+          {renderHighlightedText(post.title, searchQuery)}
         </h2>
-        <p className="mt-3 text-[15px] leading-7 text-muted-foreground">{post.excerpt}</p>
+        <p className="mt-3 text-[15px] leading-7 text-muted-foreground">{renderHighlightedText(post.excerpt, searchQuery)}</p>
         <div className="mt-6 flex items-center justify-between">
           <span className="text-sm font-medium text-foreground/80">
             {post.draft ? "继续编辑" : "继续阅读"}
@@ -439,7 +485,7 @@ export default function HomeClient({
                 </div>
                 <div className="grid gap-4 lg:grid-cols-3">
                   {featuredPosts.map((post) => (
-                    <FeaturedStoryCard key={post.id} post={post} isAuthenticated={isAuthenticated} />
+                    <FeaturedStoryCard key={post.id} post={post} isAuthenticated={isAuthenticated} searchQuery={searchQuery} />
                   ))}
                 </div>
               </section>
@@ -460,6 +506,7 @@ export default function HomeClient({
                   isAuthenticated={isAuthenticated}
                   onPlayBgm={(src) => playTrackBySrc(src)}
                   isCurrentBgm={Boolean(post.bgmSrc && track.src === post.bgmSrc)}
+                  searchQuery={searchQuery}
                   onTagClick={(tag) => {
                     setSelectedTag(tag)
                     setCurrentPage(1)
