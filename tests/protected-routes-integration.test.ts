@@ -145,6 +145,61 @@ test("admin media routes can batch delete files in one request", async () => {
   })
 })
 
+test("admin media routes block deleting assets that are still referenced by posts", async () => {
+  await withTempWorkspace(async () => {
+    const mediaRoute = await importFresh<typeof import("../src/app/api/admin/media/route")>("src/app/api/admin/media/route.ts")
+    const store = await importFresh<typeof import("../src/lib/server/store")>("src/lib/server/store.ts")
+
+    const tinyPngBuffer = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: { r: 20, g: 120, b: 220 },
+      },
+    })
+      .png()
+      .toBuffer()
+
+    const cookie = buildSessionCookie(createSessionToken())
+    const formData = new FormData()
+    formData.append("file", new File([tinyPngBuffer], "used.png", { type: "image/png" }))
+
+    const uploadResponse = await mediaRoute.POST(
+      new NextRequest("https://champion.cc.cd/api/admin/media", {
+        method: "POST",
+        headers: { cookie },
+        body: formData,
+      })
+    )
+    const uploadPayload = await uploadResponse.json()
+    const uploadedAsset = uploadPayload.asset
+
+    await store.createPost({
+      title: "引用素材的文章",
+      content: `<p><img src="${uploadedAsset.url}" /></p>`,
+      coverImage: uploadedAsset.url,
+      tags: ["media"],
+      category: "测试",
+      draft: false,
+    })
+
+    const deleteResponse = await mediaRoute.DELETE(
+      new NextRequest(`https://champion.cc.cd/api/admin/media?id=${encodeURIComponent(uploadedAsset.id)}`, {
+        method: "DELETE",
+        headers: { cookie },
+      })
+    )
+    const deletePayload = await deleteResponse.json()
+
+    assert.equal(deleteResponse.status, 409)
+    assert.equal(deletePayload.error, "素材仍在文章中使用，暂时不能删除")
+    assert.equal(Array.isArray(deletePayload.blockedIds), true)
+    assert.equal(deletePayload.blockedIds.length, 1)
+    assert.equal(deletePayload.blockedIds[0]?.usageCount, 1)
+  })
+})
+
 test("admin media routes reject unreadable image buffers in an isolated workspace", async () => {
   await withTempWorkspace(async () => {
     const mediaRoute = await importFresh<typeof import("../src/app/api/admin/media/route")>("src/app/api/admin/media/route.ts")

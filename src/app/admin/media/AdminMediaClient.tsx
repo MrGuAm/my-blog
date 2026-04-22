@@ -257,7 +257,7 @@ export default function AdminMediaClient({
     [assets, selectedAssetIds]
   )
   const deletableSelectedAssets = useMemo(
-    () => selectedAssets.filter((asset) => asset.deletable),
+    () => selectedAssets.filter((asset) => asset.deletable && (asset.usageCount ?? 0) === 0),
     [selectedAssets]
   )
   const selectedCount = selectedAssetIds.length
@@ -326,6 +326,7 @@ export default function AdminMediaClient({
       }
 
       const deletedIds = Array.isArray(data.deletedIds) ? data.deletedIds : []
+      const blockedIds = Array.isArray(data.blockedIds) ? data.blockedIds : []
       const failedIds = Array.isArray(data.failedIds) ? data.failedIds : []
       const missingIds = Array.isArray(data.missingIds) ? data.missingIds : []
 
@@ -333,9 +334,9 @@ export default function AdminMediaClient({
       setSelectedAssetIds((current) => current.filter((id) => !deletedIds.includes(id)))
 
       const skippedCount = selectedCount - deletableSelectedAssets.length
-      if (failedIds.length > 0 || missingIds.length > 0 || skippedCount > 0) {
+      if (failedIds.length > 0 || missingIds.length > 0 || skippedCount > 0 || blockedIds.length > 0) {
         setMessage(
-          `已删除 ${deletedIds.length} 张素材，${failedIds.length + missingIds.length + skippedCount} 张未处理`
+          `已删除 ${deletedIds.length} 张素材，${failedIds.length + missingIds.length + skippedCount + blockedIds.length} 张未处理`
         )
       } else {
         setMessage(`已删除 ${deletedIds.length} 张素材`)
@@ -681,10 +682,10 @@ export default function AdminMediaClient({
                 <button
                   type="button"
                   onClick={() => handleDelete(asset)}
-                  disabled={!asset.deletable}
+                  disabled={!asset.deletable || (asset.usageCount ?? 0) > 0}
                   className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  删除
+                  {(asset.usageCount ?? 0) > 0 ? "使用中" : "删除"}
                 </button>
               </div>
             </div>

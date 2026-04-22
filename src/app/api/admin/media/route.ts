@@ -98,11 +98,36 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
+    const assets = await listMediaAssets()
+    const assetLookup = new Map<string, (typeof assets)[number]>()
+    assets.forEach((asset) => {
+      assetLookup.set(asset.id, asset)
+      assetLookup.set(asset.pathname, asset)
+      assetLookup.set(asset.name, asset)
+    })
+
     const deletedIds: string[] = []
     const missingIds: string[] = []
+    const blockedIds: Array<{
+      id: string
+      reason: string
+      usageCount: number
+      usagePosts: NonNullable<(typeof assets)[number]["usagePosts"]>
+    }> = []
     const failedIds: Array<{ id: string; reason: string }> = []
 
     for (const identifier of identifiers) {
+      const asset = assetLookup.get(identifier)
+      if (asset && (asset.usageCount ?? 0) > 0) {
+        blockedIds.push({
+          id: identifier,
+          reason: '素材仍在文章中使用，暂时不能删除',
+          usageCount: asset.usageCount ?? 0,
+          usagePosts: asset.usagePosts ?? [],
+        })
+        continue
+      }
+
       try {
         const deleted = await deleteMediaFile(identifier)
         if (deleted) {
@@ -119,12 +144,22 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (deletedIds.length === 0) {
-      if (missingIds.length > 0 && failedIds.length === 0) {
+      if (blockedIds.length > 0 && missingIds.length === 0 && failedIds.length === 0) {
+        return NextResponse.json(
+          {
+            error: '素材仍在文章中使用，暂时不能删除',
+            blockedIds,
+          },
+          { status: 409 }
+        )
+      }
+      if (missingIds.length > 0 && failedIds.length === 0 && blockedIds.length === 0) {
         return NextResponse.json({ error: '素材不存在', missingIds }, { status: 404 })
       }
       return NextResponse.json(
         {
-          error: failedIds[0]?.reason || '删除失败',
+          error: failedIds[0]?.reason || blockedIds[0]?.reason || '删除失败',
+          blockedIds,
           failedIds,
           missingIds,
         },
@@ -135,6 +170,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       deletedIds,
+      blockedIds,
       missingIds,
       failedIds,
     })

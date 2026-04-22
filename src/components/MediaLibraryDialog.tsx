@@ -452,10 +452,10 @@ export default function MediaLibraryDialog({
                     <button
                       type="button"
                       onClick={() => handleDelete(asset)}
-                      disabled={!asset.deletable}
+                      disabled={!asset.deletable || (asset.usageCount ?? 0) > 0}
                       className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      删除
+                      {(asset.usageCount ?? 0) > 0 ? "使用中" : "删除"}
                     </button>
                   </div>
                 </div>
