@@ -90,14 +90,18 @@ test("buildMediaAssetCsv exports a stable csv table for selected assets", () => 
       height: 900,
       storage: "blob",
       usageCount: 2,
+      usageScope: "封面+正文",
+      usageTitles: "首页封面 | 关于页插图",
       updatedAt: "2026-04-22T10:00:00.000Z",
     },
   ])
 
-  assert.match(csv, /^name,url,size,dimensions,storage,usageCount,updatedAt/m)
+  assert.match(csv, /^name,url,size,dimensions,storage,usageCount,usageScope,usageTitles,updatedAt/m)
   assert.match(csv, /"封面图 ""A"""/)
   assert.match(csv, /1600x900/)
   assert.match(csv, /blob/)
+  assert.match(csv, /封面\+正文/)
+  assert.match(csv, /首页封面 \| 关于页插图/)
   assert.match(csv, /2026-04-22T10:00:00.000Z/)
 })
 

@@ -42,6 +42,13 @@ function summaryFilterButtonClass(active: boolean) {
   }`
 }
 
+function formatCsvUsageScope(scope: "unused" | "cover" | "content" | "mixed") {
+  if (scope === "cover") return "封面相关"
+  if (scope === "content") return "正文相关"
+  if (scope === "mixed") return "封面+正文"
+  return "未使用"
+}
+
 export default function AdminMediaClient({
   initialAssets,
   initialWarning = null,
@@ -388,7 +395,13 @@ export default function AdminMediaClient({
   const handleExportSelectedCsv = () => {
     if (selectedAssets.length === 0 || typeof window === "undefined") return
 
-    const csv = buildMediaAssetCsv(selectedAssets)
+    const csv = buildMediaAssetCsv(
+      selectedAssets.map((asset) => ({
+        ...asset,
+        usageScope: formatCsvUsageScope(getMediaUsageScope(asset.usagePosts)),
+        usageTitles: asset.usagePosts?.map((usage) => usage.postTitle).join(" | ") || "",
+      }))
+    )
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
     const url = window.URL.createObjectURL(blob)
     const anchor = document.createElement("a")
@@ -404,7 +417,13 @@ export default function AdminMediaClient({
   const handleExportFilteredCsv = () => {
     if (filteredAssets.length === 0 || typeof window === "undefined") return
 
-    const csv = buildMediaAssetCsv(filteredAssets)
+    const csv = buildMediaAssetCsv(
+      filteredAssets.map((asset) => ({
+        ...asset,
+        usageScope: formatCsvUsageScope(getMediaUsageScope(asset.usagePosts)),
+        usageTitles: asset.usagePosts?.map((usage) => usage.postTitle).join(" | ") || "",
+      }))
+    )
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
     const url = window.URL.createObjectURL(blob)
     const anchor = document.createElement("a")

@@ -25,6 +25,8 @@ export interface MediaCsvAssetLike extends MediaExportAssetLike {
   width?: number | null
   height?: number | null
   usageCount?: number
+  usageScope?: string
+  usageTitles?: string
   updatedAt?: string
 }
 
@@ -150,7 +152,7 @@ function formatCsvDimensions(width?: number | null, height?: number | null) {
 }
 
 export function buildMediaAssetCsv(assets: MediaCsvAssetLike[]) {
-  const header = ["name", "url", "size", "dimensions", "storage", "usageCount", "updatedAt"]
+  const header = ["name", "url", "size", "dimensions", "storage", "usageCount", "usageScope", "usageTitles", "updatedAt"]
   const rows = assets.map((asset) => [
     asset.name,
     asset.url,
@@ -158,6 +160,8 @@ export function buildMediaAssetCsv(assets: MediaCsvAssetLike[]) {
     formatCsvDimensions(asset.width, asset.height),
     asset.storage || "",
     String(asset.usageCount ?? 0),
+    asset.usageScope || "",
+    asset.usageTitles || "",
     asset.updatedAt || "",
   ])
 
