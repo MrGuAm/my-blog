@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { MediaAsset } from "@/lib/server/media"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 
@@ -44,6 +44,9 @@ export default function MediaAssetPreviewDialog({
   onJumpToAsset?: ((asset: MediaAsset) => void) | null
 }) {
   const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -82,6 +85,7 @@ export default function MediaAssetPreviewDialog({
       if (event.key === "0" && !event.metaKey && !event.ctrlKey) {
         event.preventDefault()
         setZoom(1)
+        setPan({ x: 0, y: 0 })
       }
     }
 
@@ -90,6 +94,16 @@ export default function MediaAssetPreviewDialog({
   }, [hasNext, hasPrevious, isOpen, onClose, onNext, onPrevious])
 
   if (!isOpen || !asset) return null
+
+  const clampZoom = (value: number) => Math.min(4, Math.max(0.5, Number(value.toFixed(2))))
+
+  const applyZoom = (nextZoom: number) => {
+    const normalized = clampZoom(nextZoom)
+    setZoom(normalized)
+    if (normalized === 1) {
+      setPan({ x: 0, y: 0 })
+    }
+  }
 
   const copyValue = async (value: string) => {
     try {
@@ -144,21 +158,24 @@ export default function MediaAssetPreviewDialog({
             ) : null}
             <button
               type="button"
-              onClick={() => setZoom((current) => Math.max(0.5, Number((current - 0.25).toFixed(2))))}
+              onClick={() => applyZoom(zoom - 0.25)}
               className="rounded-xl border border-border/60 px-3 py-2 text-sm hover:bg-accent"
             >
               缩小
             </button>
             <button
               type="button"
-              onClick={() => setZoom(1)}
+              onClick={() => {
+                setPan({ x: 0, y: 0 })
+                setZoom(1)
+              }}
               className="rounded-xl border border-border/60 px-3 py-2 text-sm hover:bg-accent"
             >
               {zoomLabel}
             </button>
             <button
               type="button"
-              onClick={() => setZoom((current) => Math.min(3, Number((current + 0.25).toFixed(2))))}
+              onClick={() => applyZoom(zoom + 0.25)}
               className="rounded-xl border border-border/60 px-3 py-2 text-sm hover:bg-accent"
             >
               放大
@@ -175,12 +192,48 @@ export default function MediaAssetPreviewDialog({
 
         <div className="grid gap-0 overflow-y-auto lg:grid-cols-[1.3fr_0.7fr]">
           <div className="border-b border-border/50 bg-background/50 p-4 lg:border-b-0 lg:border-r">
-            <div className="flex min-h-[20rem] items-center justify-center overflow-auto rounded-[1.5rem] border border-border/50 bg-card p-4">
+            <div
+              className={`flex min-h-[20rem] items-center justify-center overflow-auto rounded-[1.5rem] border border-border/50 bg-card p-4 ${
+                zoom > 1 ? "cursor-grab" : "cursor-default"
+              } ${isDragging ? "cursor-grabbing" : ""}`}
+              onWheel={(event) => {
+                event.preventDefault()
+                const delta = event.deltaY > 0 ? -0.1 : 0.1
+                applyZoom(zoom + delta)
+              }}
+              onPointerDown={(event) => {
+                if (zoom <= 1) return
+                setIsDragging(true)
+                dragStateRef.current = {
+                  startX: event.clientX,
+                  startY: event.clientY,
+                  originX: pan.x,
+                  originY: pan.y,
+                }
+              }}
+              onPointerMove={(event) => {
+                if (!dragStateRef.current) return
+                const deltaX = event.clientX - dragStateRef.current.startX
+                const deltaY = event.clientY - dragStateRef.current.startY
+                setPan({
+                  x: dragStateRef.current.originX + deltaX,
+                  y: dragStateRef.current.originY + deltaY,
+                })
+              }}
+              onPointerUp={() => {
+                setIsDragging(false)
+                dragStateRef.current = null
+              }}
+              onPointerLeave={() => {
+                setIsDragging(false)
+                dragStateRef.current = null
+              }}
+            >
               <img
                 src={asset.url}
                 alt={asset.name}
                 className="max-h-[68vh] w-full object-contain transition-transform duration-150"
-                style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
+                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center center" }}
               />
             </div>
             {thumbnailAssets.length > 1 ? (
