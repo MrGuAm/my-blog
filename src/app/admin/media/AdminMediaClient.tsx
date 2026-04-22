@@ -37,6 +37,7 @@ export default function AdminMediaClient({
   initialTimeFilter = "all",
   initialStorageFilter = "all",
   initialOrientationFilter = "all",
+  initialUsageFilter = "all",
   initialSortBy = "newest",
   initialPage = 1,
 }: {
@@ -48,6 +49,7 @@ export default function AdminMediaClient({
   initialTimeFilter?: "all" | "7d" | "30d"
   initialStorageFilter?: "all" | "blob" | "local"
   initialOrientationFilter?: "all" | "landscape" | "portrait" | "square"
+  initialUsageFilter?: "all" | "used" | "unused"
   initialSortBy?: MediaSortOption
   initialPage?: number
 }) {
@@ -62,6 +64,7 @@ export default function AdminMediaClient({
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">(initialTimeFilter)
   const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">(initialStorageFilter)
   const [orientationFilter, setOrientationFilter] = useState<"all" | "landscape" | "portrait" | "square">(initialOrientationFilter)
+  const [usageFilter, setUsageFilter] = useState<"all" | "used" | "unused">(initialUsageFilter)
   const [sortBy, setSortBy] = useState<MediaSortOption>(initialSortBy)
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
@@ -77,6 +80,7 @@ export default function AdminMediaClient({
     if (timeFilter !== "all") nextParams.set("time", timeFilter)
     if (storageFilter !== "all") nextParams.set("storage", storageFilter)
     if (orientationFilter !== "all") nextParams.set("orientation", orientationFilter)
+    if (usageFilter !== "all") nextParams.set("usage", usageFilter)
     if (sortBy !== "newest") nextParams.set("sort", sortBy)
     if (currentPage > 1) nextParams.set("page", String(currentPage))
 
@@ -87,7 +91,7 @@ export default function AdminMediaClient({
 
     const nextUrl = nextNormalized ? `${window.location.pathname}?${nextNormalized}` : window.location.pathname
     window.history.replaceState(null, "", nextUrl)
-  }, [currentPage, keyword, orientationFilter, sortBy, storageFilter, timeFilter])
+  }, [currentPage, keyword, orientationFilter, sortBy, storageFilter, timeFilter, usageFilter])
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
@@ -199,12 +203,20 @@ export default function AdminMediaClient({
         return false
       }
 
+      const usageCount = asset.usageCount ?? 0
+      if (usageFilter === "used" && usageCount === 0) {
+        return false
+      }
+      if (usageFilter === "unused" && usageCount > 0) {
+        return false
+      }
+
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter])
+  }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetsPerPage))
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
   const visibleAssets = filteredAssets.slice(
@@ -218,6 +230,8 @@ export default function AdminMediaClient({
     const landscapeCount = filteredAssets.filter((asset) => getMediaOrientation(asset.width, asset.height) === "landscape").length
     const portraitCount = filteredAssets.filter((asset) => getMediaOrientation(asset.width, asset.height) === "portrait").length
     const squareCount = filteredAssets.filter((asset) => getMediaOrientation(asset.width, asset.height) === "square").length
+    const usedCount = filteredAssets.filter((asset) => (asset.usageCount ?? 0) > 0).length
+    const unusedCount = filteredAssets.filter((asset) => (asset.usageCount ?? 0) === 0).length
     return {
       totalSize,
       blobCount,
@@ -225,6 +239,8 @@ export default function AdminMediaClient({
       landscapeCount,
       portraitCount,
       squareCount,
+      usedCount,
+      unusedCount,
     }
   }, [filteredAssets])
 
@@ -243,6 +259,7 @@ export default function AdminMediaClient({
     timeFilter !== "all" ||
     storageFilter !== "all" ||
     orientationFilter !== "all" ||
+    usageFilter !== "all" ||
     sortBy !== "newest" ||
     safeCurrentPage > 1
   const allSelectableVisibleSelected =
@@ -335,6 +352,7 @@ export default function AdminMediaClient({
     setTimeFilter("all")
     setStorageFilter("all")
     setOrientationFilter("all")
+    setUsageFilter("all")
     setSortBy("newest")
     setCurrentPage(1)
   }
@@ -404,6 +422,18 @@ export default function AdminMediaClient({
               <option value="landscape">横图</option>
               <option value="portrait">竖图</option>
               <option value="square">方图</option>
+            </select>
+            <select
+              value={usageFilter}
+              onChange={(event) => {
+                setUsageFilter(event.target.value as "all" | "used" | "unused")
+                setCurrentPage(1)
+              }}
+              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
+            >
+              <option value="all">全部使用状态</option>
+              <option value="used">仅使用中</option>
+              <option value="unused">仅未使用</option>
             </select>
             <select
               value={sortBy}
@@ -550,6 +580,11 @@ export default function AdminMediaClient({
           <p className="mt-1 text-xs text-muted-foreground">横图 / 竖图 / 方图</p>
         </div>
         <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">使用情况</p>
+          <p className="mt-2 text-2xl font-semibold">{filteredSummary.usedCount} / {filteredSummary.unusedCount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">使用中 / 未使用</p>
+        </div>
+        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">总体积</p>
           <p className="mt-2 text-2xl font-semibold">{formatSize(filteredSummary.totalSize)}</p>
           <p className="mt-1 text-xs text-muted-foreground">当前筛选结果</p>
@@ -588,6 +623,7 @@ export default function AdminMediaClient({
                   {formatDimensions(asset.width, asset.height) ? ` · ${formatDimensions(asset.width, asset.height)}` : ""}
                   {" · "}
                   {new Date(asset.updatedAt).toLocaleString("zh-CN")}
+                  {typeof asset.usageCount === "number" ? ` · 使用于 ${asset.usageCount} 篇文章` : ""}
                 </p>
               </div>
               <div className="mt-3 flex items-center gap-2">

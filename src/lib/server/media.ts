@@ -3,7 +3,9 @@ import { del, list as listBlobs, put } from '@vercel/blob'
 import fs from 'fs'
 import path from 'path'
 import sharp from 'sharp'
+import { countMediaAssetUsage } from '@/lib/media-usage'
 import { MEDIA_UPLOAD_MIME_TYPE_SET } from '@/lib/media-upload'
+import { listPosts } from '@/lib/server/store-posts'
 import {
   deleteMediaAssetRecord,
   getMediaAssetRecordById,
@@ -25,6 +27,7 @@ export interface MediaAsset {
   updatedAt: string
   storage: 'local' | 'blob'
   deletable: boolean
+  usageCount?: number
 }
 
 const localMediaDirSegments = ['public', 'uploads'] as const
@@ -230,7 +233,12 @@ export async function listMediaAssets(): Promise<MediaAsset[]> {
   const staticAssets = await listStaticMediaAssets()
 
   if (!isBlobMediaLibraryEnabled()) {
-    return staticAssets
+    const posts = await listPosts({ includeDrafts: true })
+    const usage = countMediaAssetUsage(staticAssets, posts)
+    return staticAssets.map((asset) => ({
+      ...asset,
+      usageCount: usage.get(asset.id) ?? 0,
+    }))
   }
 
   const storedAssets = await listBlobMediaAssets()
@@ -241,7 +249,13 @@ export async function listMediaAssets(): Promise<MediaAsset[]> {
     ...staticAssets.filter((asset) => !seenPathnames.has(asset.pathname)),
   ]
 
-  return merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  const sortedAssets = merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  const posts = await listPosts({ includeDrafts: true })
+  const usage = countMediaAssetUsage(sortedAssets, posts)
+  return sortedAssets.map((asset) => ({
+    ...asset,
+    usageCount: usage.get(asset.id) ?? 0,
+  }))
 }
 
 export async function saveMediaFile(file: File) {

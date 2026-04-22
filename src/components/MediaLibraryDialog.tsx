@@ -52,6 +52,7 @@ export default function MediaLibraryDialog({
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
   const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">("all")
   const [orientationFilter, setOrientationFilter] = useState<"all" | "landscape" | "portrait" | "square">("all")
+  const [usageFilter, setUsageFilter] = useState<"all" | "used" | "unused">("all")
   const [sortBy, setSortBy] = useState<MediaSortOption>("newest")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const uploadHintText = uploadHint ?? getMediaUploadHint()
@@ -97,17 +98,26 @@ export default function MediaLibraryDialog({
         return false
       }
 
+      const usageCount = asset.usageCount ?? 0
+      if (usageFilter === "used" && usageCount === 0) {
+        return false
+      }
+      if (usageFilter === "unused" && usageCount > 0) {
+        return false
+      }
+
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter])
+  }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
   const hasActiveFilters =
     keyword.trim().length > 0 ||
     timeFilter !== "all" ||
     storageFilter !== "all" ||
     orientationFilter !== "all" ||
+    usageFilter !== "all" ||
     sortBy !== "newest"
 
   if (!isOpen) return null
@@ -126,6 +136,7 @@ export default function MediaLibraryDialog({
     setTimeFilter("all")
     setStorageFilter("all")
     setOrientationFilter("all")
+    setUsageFilter("all")
     setSortBy("newest")
   }
 
@@ -324,6 +335,15 @@ export default function MediaLibraryDialog({
               <option value="square">方图</option>
             </select>
             <select
+              value={usageFilter}
+              onChange={(event) => setUsageFilter(event.target.value as "all" | "used" | "unused")}
+              className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
+            >
+              <option value="all">全部使用状态</option>
+              <option value="used">仅使用中</option>
+              <option value="unused">仅未使用</option>
+            </select>
+            <select
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value as MediaSortOption)}
               className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
@@ -369,6 +389,7 @@ export default function MediaLibraryDialog({
                       {formatDimensions(asset.width, asset.height) ? ` · ${formatDimensions(asset.width, asset.height)}` : ""}
                       {" · "}
                       {new Date(asset.updatedAt).toLocaleString("zh-CN")} · {asset.storage === "blob" ? "Blob" : "本地"}
+                      {typeof asset.usageCount === "number" ? ` · 使用于 ${asset.usageCount} 篇文章` : ""}
                     </p>
                   </div>
                   <div className="mt-3 flex items-center gap-2">

@@ -9,6 +9,7 @@ import {
   sortMediaAssets,
   validateMediaUploadInput,
 } from "../src/lib/media-upload"
+import { countMediaAssetUsage } from "../src/lib/media-usage"
 
 test("validateMediaUploadInput rejects empty, oversized, and unsupported files", () => {
   assert.equal(validateMediaUploadInput({ size: 0, type: "image/png" }), "图片内容为空，请重新选择")
@@ -97,4 +98,29 @@ test("getMediaOrientation classifies landscape, portrait, square, and unknown as
   assert.equal(getMediaOrientation(900, 1600), "portrait")
   assert.equal(getMediaOrientation(1080, 1080), "square")
   assert.equal(getMediaOrientation(null, 1080), "unknown")
+})
+
+test("countMediaAssetUsage tracks cover and content references per post", () => {
+  const assets = [
+    { id: "cover", url: "https://example.com/cover.webp" },
+    { id: "inline", url: "https://example.com/inline.webp" },
+    { id: "unused", url: "https://example.com/unused.webp" },
+  ]
+  const posts = [
+    {
+      id: "post-a",
+      coverImage: "https://example.com/cover.webp",
+      content: '<p><img src="https://example.com/inline.webp" /></p>',
+    },
+    {
+      id: "post-b",
+      coverImage: "",
+      content: '<p><img src="https://example.com/inline.webp" /></p>',
+    },
+  ]
+
+  const usage = countMediaAssetUsage(assets, posts)
+  assert.equal(usage.get("cover"), 1)
+  assert.equal(usage.get("inline"), 2)
+  assert.equal(usage.get("unused"), 0)
 })
