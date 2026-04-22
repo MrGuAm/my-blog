@@ -115,6 +115,7 @@ export default function MediaLibraryDialog({
     })
     return sortMediaAssets(nextAssets, sortBy)
   }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
+  const previewIndex = previewAsset ? filteredAssets.findIndex((asset) => asset.id === previewAsset.id) : -1
   const hasActiveFilters =
     keyword.trim().length > 0 ||
     timeFilter !== "all" ||
@@ -464,6 +465,19 @@ export default function MediaLibraryDialog({
           onClose={() => setPreviewAsset(null)}
           onSelect={(asset) => onSelect(asset.url)}
           openUsageInNewTab
+          onPrevious={
+            previewIndex > 0
+              ? () => setPreviewAsset(filteredAssets[previewIndex - 1] ?? null)
+              : null
+          }
+          onNext={
+            previewIndex >= 0 && previewIndex < filteredAssets.length - 1
+              ? () => setPreviewAsset(filteredAssets[previewIndex + 1] ?? null)
+              : null
+          }
+          hasPrevious={previewIndex > 0}
+          hasNext={previewIndex >= 0 && previewIndex < filteredAssets.length - 1}
+          positionLabel={previewIndex >= 0 ? `${previewIndex + 1} / ${filteredAssets.length}` : undefined}
         />
       </div>
     </div>

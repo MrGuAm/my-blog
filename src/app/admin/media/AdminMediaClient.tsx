@@ -227,6 +227,7 @@ export default function AdminMediaClient({
     (safeCurrentPage - 1) * assetsPerPage,
     safeCurrentPage * assetsPerPage
   )
+  const previewIndex = previewAsset ? visibleAssets.findIndex((asset) => asset.id === previewAsset.id) : -1
   const filteredSummary = useMemo(() => {
     const totalSize = filteredAssets.reduce((sum, asset) => sum + asset.size, 0)
     const blobCount = filteredAssets.filter((asset) => asset.storage === "blob").length
@@ -751,6 +752,19 @@ export default function AdminMediaClient({
         asset={previewAsset}
         isOpen={Boolean(previewAsset)}
         onClose={() => setPreviewAsset(null)}
+        onPrevious={
+          previewIndex > 0
+            ? () => setPreviewAsset(visibleAssets[previewIndex - 1] ?? null)
+            : null
+        }
+        onNext={
+          previewIndex >= 0 && previewIndex < visibleAssets.length - 1
+            ? () => setPreviewAsset(visibleAssets[previewIndex + 1] ?? null)
+            : null
+        }
+        hasPrevious={previewIndex > 0}
+        hasNext={previewIndex >= 0 && previewIndex < visibleAssets.length - 1}
+        positionLabel={previewIndex >= 0 ? `${previewIndex + 1} / ${visibleAssets.length}` : undefined}
       />
     </SectionPageShell>
   )

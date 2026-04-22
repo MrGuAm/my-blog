@@ -1,6 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
+import { useEffect } from "react"
 import type { MediaAsset } from "@/lib/server/media"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 
@@ -21,13 +22,49 @@ export default function MediaAssetPreviewDialog({
   onClose,
   onSelect,
   openUsageInNewTab = false,
+  onPrevious,
+  onNext,
+  hasPrevious = false,
+  hasNext = false,
+  positionLabel,
 }: {
   asset: MediaAsset | null
   isOpen: boolean
   onClose: () => void
   onSelect?: ((asset: MediaAsset) => void) | null
   openUsageInNewTab?: boolean
+  onPrevious?: (() => void) | null
+  onNext?: (() => void) | null
+  hasPrevious?: boolean
+  hasNext?: boolean
+  positionLabel?: string
 }) {
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        onClose()
+        return
+      }
+
+      if (event.key === "ArrowLeft" && hasPrevious && onPrevious) {
+        event.preventDefault()
+        onPrevious()
+        return
+      }
+
+      if (event.key === "ArrowRight" && hasNext && onNext) {
+        event.preventDefault()
+        onNext()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [hasNext, hasPrevious, isOpen, onClose, onNext, onPrevious])
+
   if (!isOpen || !asset) return null
 
   const copyValue = async (value: string) => {
@@ -43,9 +80,30 @@ export default function MediaAssetPreviewDialog({
         <div className="flex items-center justify-between border-b border-border/50 px-6 py-4">
           <div>
             <h2 className="text-xl font-black">素材预览</h2>
-            <p className="text-sm text-muted-foreground">{asset.name}</p>
+            <p className="text-sm text-muted-foreground">
+              {asset.name}
+              {positionLabel ? ` · ${positionLabel}` : ""}
+            </p>
           </div>
           <div className="flex items-center gap-3">
+            {hasPrevious ? (
+              <button
+                type="button"
+                onClick={onPrevious || undefined}
+                className="rounded-xl border border-border/60 px-3 py-2 text-sm hover:bg-accent"
+              >
+                上一张
+              </button>
+            ) : null}
+            {hasNext ? (
+              <button
+                type="button"
+                onClick={onNext || undefined}
+                className="rounded-xl border border-border/60 px-3 py-2 text-sm hover:bg-accent"
+              >
+                下一张
+              </button>
+            ) : null}
             {onSelect ? (
               <button
                 type="button"
@@ -109,6 +167,21 @@ export default function MediaAssetPreviewDialog({
                 >
                   HTML
                 </button>
+                <a
+                  href={asset.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                >
+                  打开原图
+                </a>
+                <a
+                  href={asset.url}
+                  download={asset.name}
+                  className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                >
+                  下载
+                </a>
               </div>
             </div>
 
