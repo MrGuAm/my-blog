@@ -80,18 +80,64 @@ export async function DELETE(request: NextRequest) {
   const url = new URL(request.url)
   const assetId = url.searchParams.get('id')
   const fileName = url.searchParams.get('name')
-  const identifier = assetId || fileName
+  let identifiers = assetId || fileName ? [assetId || fileName].filter(Boolean) as string[] : []
 
-  if (!identifier) {
+  if (identifiers.length === 0) {
+    try {
+      const payload = await request.json()
+      if (Array.isArray(payload?.ids)) {
+        identifiers = payload.ids.filter((value: unknown): value is string => typeof value === 'string' && value.length > 0)
+      }
+    } catch {
+      identifiers = []
+    }
+  }
+
+  if (identifiers.length === 0) {
     return NextResponse.json({ error: '缺少素材标识' }, { status: 400 })
   }
 
   try {
-    const deleted = await deleteMediaFile(identifier)
-    if (!deleted) {
-      return NextResponse.json({ error: '素材不存在' }, { status: 404 })
+    const deletedIds: string[] = []
+    const missingIds: string[] = []
+    const failedIds: Array<{ id: string; reason: string }> = []
+
+    for (const identifier of identifiers) {
+      try {
+        const deleted = await deleteMediaFile(identifier)
+        if (deleted) {
+          deletedIds.push(identifier)
+        } else {
+          missingIds.push(identifier)
+        }
+      } catch (error) {
+        failedIds.push({
+          id: identifier,
+          reason: error instanceof Error ? error.message : '删除失败',
+        })
+      }
     }
-    return NextResponse.json({ success: true })
+
+    if (deletedIds.length === 0) {
+      if (missingIds.length > 0 && failedIds.length === 0) {
+        return NextResponse.json({ error: '素材不存在', missingIds }, { status: 404 })
+      }
+      return NextResponse.json(
+        {
+          error: failedIds[0]?.reason || '删除失败',
+          failedIds,
+          missingIds,
+        },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      deletedIds,
+      missingIds,
+      failedIds,
+    })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : '删除失败' }, { status: 400 })
   }

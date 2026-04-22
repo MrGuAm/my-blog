@@ -51,7 +51,10 @@ test("admin media routes can upload, list, and delete a file in an isolated work
     const deletedPayload = await deleteResponse.json()
 
     assert.equal(deleteResponse.status, 200)
-    assert.deepEqual(deletedPayload, { success: true })
+    assert.equal(deletedPayload.success, true)
+    assert.deepEqual(deletedPayload.deletedIds, [created.asset.id])
+    assert.deepEqual(deletedPayload.missingIds, [])
+    assert.deepEqual(deletedPayload.failedIds, [])
   })
 })
 
@@ -87,6 +90,54 @@ test("admin media routes can batch upload files in one request", async () => {
     assert.equal(payload.assets.length, 2)
     assert.equal(Array.isArray(payload.failures), true)
     assert.equal(payload.failures.length, 0)
+  })
+})
+
+test("admin media routes can batch delete files in one request", async () => {
+  await withTempWorkspace(async () => {
+    const mediaRoute = await importFresh<typeof import("../src/app/api/admin/media/route")>("src/app/api/admin/media/route.ts")
+    const tinyPngBuffer = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: { r: 200, g: 80, b: 120 },
+      },
+    })
+      .png()
+      .toBuffer()
+
+    const cookie = buildSessionCookie(createSessionToken())
+    const uploadFormData = new FormData()
+    uploadFormData.append("file", new File([tinyPngBuffer], "delete-a.png", { type: "image/png" }))
+    uploadFormData.append("file", new File([tinyPngBuffer], "delete-b.png", { type: "image/png" }))
+
+    const uploadResponse = await mediaRoute.POST(
+      new NextRequest("https://champion.cc.cd/api/admin/media", {
+        method: "POST",
+        headers: { cookie },
+        body: uploadFormData,
+      })
+    )
+    const uploadPayload = await uploadResponse.json()
+    const uploadedIds = uploadPayload.assets.map((asset: { id: string }) => asset.id)
+
+    const deleteResponse = await mediaRoute.DELETE(
+      new NextRequest("https://champion.cc.cd/api/admin/media", {
+        method: "DELETE",
+        headers: {
+          cookie,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ ids: uploadedIds }),
+      })
+    )
+    const deletePayload = await deleteResponse.json()
+
+    assert.equal(deleteResponse.status, 200)
+    assert.deepEqual(deletePayload.deletedIds, uploadedIds)
+    assert.equal(deletePayload.failedIds.length, 0)
+    assert.equal(deletePayload.missingIds.length, 0)
   })
 })
 

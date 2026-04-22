@@ -39,6 +39,7 @@ export default function AdminMediaClient({
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
   const uploadHint = getMediaUploadHint()
 
   const refreshAssets = async () => {
@@ -48,6 +49,7 @@ export default function AdminMediaClient({
     setWarning(typeof data.warning === "string" ? data.warning : null)
     setCanUpload(Boolean(data.canUpload))
     setReferenceNow(Date.now())
+    setSelectedAssetIds((current) => current.filter((id) => Array.isArray(data.assets) && data.assets.some((asset: MediaAsset) => asset.id === id)))
   }
 
   const handleUploads = async (files: File[] = []) => {
@@ -126,6 +128,7 @@ export default function AdminMediaClient({
         return
       }
       setAssets((current) => current.filter((item) => item.id !== asset.id))
+      setSelectedAssetIds((current) => current.filter((id) => id !== asset.id))
       setMessage("素材已删除")
       setReferenceNow(Date.now())
     } catch {
@@ -145,6 +148,68 @@ export default function AdminMediaClient({
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
   }, [assets, keyword, referenceNow, timeFilter])
+
+  const selectableFilteredAssets = useMemo(
+    () => filteredAssets.filter((asset) => asset.deletable),
+    [filteredAssets]
+  )
+  const selectedCount = selectedAssetIds.length
+  const allSelectableVisibleSelected =
+    selectableFilteredAssets.length > 0 &&
+    selectableFilteredAssets.every((asset) => selectedAssetIds.includes(asset.id))
+
+  const toggleSelectedAsset = (assetId: string) => {
+    setSelectedAssetIds((current) =>
+      current.includes(assetId) ? current.filter((id) => id !== assetId) : [...current, assetId]
+    )
+  }
+
+  const handleToggleSelectAllVisible = () => {
+    const visibleIds = selectableFilteredAssets.map((asset) => asset.id)
+    if (visibleIds.length === 0) return
+
+    setSelectedAssetIds((current) => {
+      if (visibleIds.every((id) => current.includes(id))) {
+        return current.filter((id) => !visibleIds.includes(id))
+      }
+      return [...new Set([...current, ...visibleIds])]
+    })
+  }
+
+  const handleDeleteSelected = async () => {
+    if (selectedAssetIds.length === 0) return
+    if (!confirm(`确定删除已选中的 ${selectedAssetIds.length} 张素材吗？`)) return
+
+    setMessage("")
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedAssetIds }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setMessage(data.error || "批量删除失败")
+        return
+      }
+
+      const deletedIds = Array.isArray(data.deletedIds) ? data.deletedIds : []
+      const failedIds = Array.isArray(data.failedIds) ? data.failedIds : []
+      const missingIds = Array.isArray(data.missingIds) ? data.missingIds : []
+
+      setAssets((current) => current.filter((asset) => !deletedIds.includes(asset.id)))
+      setSelectedAssetIds((current) => current.filter((id) => !deletedIds.includes(id)))
+
+      if (failedIds.length > 0 || missingIds.length > 0) {
+        setMessage(`已删除 ${deletedIds.length} 张素材，${failedIds.length + missingIds.length} 张未处理`)
+      } else {
+        setMessage(`已删除 ${deletedIds.length} 张素材`)
+      }
+      setReferenceNow(Date.now())
+    } catch {
+      setMessage("批量删除失败，请重试")
+    }
+  }
 
   const copyValue = async (value: string, label: string) => {
     try {
@@ -192,6 +257,15 @@ export default function AdminMediaClient({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {selectedCount > 0 ? (
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                className="rounded-xl border border-red-500/30 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"
+              >
+                删除已选 {selectedCount} 项
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -233,18 +307,61 @@ export default function AdminMediaClient({
         className="mb-4"
         compact
       />
+      <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-border/50 bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-muted-foreground">
+          {selectedCount > 0 ? `已选中 ${selectedCount} 张素材` : "可以先筛选，再批量选中可删除素材"}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleSelectAllVisible}
+            disabled={selectableFilteredAssets.length === 0}
+            className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {allSelectableVisibleSelected ? "取消全选可见项" : "全选可见项"}
+          </button>
+          {selectedCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setSelectedAssetIds([])}
+              className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+            >
+              清空选择
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       {filteredAssets.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filteredAssets.map((asset) => (
-            <div key={asset.id} className="rounded-2xl border border-border/50 bg-card p-3">
+            <div
+              key={asset.id}
+              className={`rounded-2xl border bg-card p-3 transition-colors ${
+                selectedAssetIds.includes(asset.id) ? "border-primary/50 ring-1 ring-primary/20" : "border-border/50"
+              }`}
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <label className={`inline-flex items-center gap-2 text-xs ${asset.deletable ? "cursor-pointer" : "text-muted-foreground"}`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedAssetIds.includes(asset.id)}
+                    disabled={!asset.deletable}
+                    onChange={() => toggleSelectedAsset(asset.id)}
+                  />
+                  {asset.deletable ? "加入批量删除" : "此素材不可删除"}
+                </label>
+                <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  {asset.storage === "blob" ? "Blob" : "本地"}
+                </span>
+              </div>
               <div className="overflow-hidden rounded-xl border border-border/40">
                 <img src={asset.url} alt={asset.name} className="h-52 w-full object-cover" />
               </div>
               <div className="mt-3 space-y-1">
                 <p className="truncate text-sm font-medium">{asset.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatSize(asset.size)} · {new Date(asset.updatedAt).toLocaleString("zh-CN")} · {asset.storage === "blob" ? "Blob" : "本地"}
+                  {formatSize(asset.size)} · {new Date(asset.updatedAt).toLocaleString("zh-CN")}
                 </p>
               </div>
               <div className="mt-3 flex items-center gap-2">

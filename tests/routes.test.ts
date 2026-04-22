@@ -180,6 +180,19 @@ test("admin media route validates authenticated upload and delete input", async 
   assert.equal(mixedUploadPayload.assets.length, 1)
   assert.equal(Array.isArray(mixedUploadPayload.failures), true)
   assert.equal(mixedUploadPayload.failures.length, 1)
+
+  const invalidBatchDeleteRequest = new NextRequest("https://champion.cc.cd/api/admin/media", {
+    method: "DELETE",
+    headers: {
+      cookie,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ ids: [] }),
+  })
+  const invalidBatchDeleteResponse = await adminMediaDelete(invalidBatchDeleteRequest)
+  const invalidBatchDeletePayload = await invalidBatchDeleteResponse.json()
+  assert.equal(invalidBatchDeleteResponse.status, 400)
+  assert.equal(invalidBatchDeletePayload.error, "缺少素材标识")
 })
 
 test("posts route rejects unauthenticated creation requests", async () => {
