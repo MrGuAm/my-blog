@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
 
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import SectionPageShell from "@/components/SectionPageShell"
 import {
@@ -27,11 +27,17 @@ export default function AdminMediaClient({
   initialWarning = null,
   initialCanUpload = true,
   brandName,
+  initialKeyword = "",
+  initialTimeFilter = "all",
+  initialSortBy = "newest",
 }: {
   initialAssets: MediaAsset[]
   initialWarning?: string | null
   initialCanUpload?: boolean
   brandName: string
+  initialKeyword?: string
+  initialTimeFilter?: "all" | "7d" | "30d"
+  initialSortBy?: MediaSortOption
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [assets, setAssets] = useState(initialAssets)
@@ -39,12 +45,30 @@ export default function AdminMediaClient({
   const [message, setMessage] = useState("")
   const [warning, setWarning] = useState(initialWarning)
   const [canUpload, setCanUpload] = useState(initialCanUpload)
-  const [keyword, setKeyword] = useState("")
-  const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
-  const [sortBy, setSortBy] = useState<MediaSortOption>("newest")
+  const [keyword, setKeyword] = useState(initialKeyword)
+  const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">(initialTimeFilter)
+  const [sortBy, setSortBy] = useState<MediaSortOption>(initialSortBy)
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
   const uploadHint = getMediaUploadHint()
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const nextParams = new URLSearchParams()
+    const normalizedKeyword = keyword.trim()
+    if (normalizedKeyword) nextParams.set("q", normalizedKeyword)
+    if (timeFilter !== "all") nextParams.set("time", timeFilter)
+    if (sortBy !== "newest") nextParams.set("sort", sortBy)
+
+    const currentNormalized = new URLSearchParams(window.location.search).toString()
+    const nextNormalized = nextParams.toString()
+
+    if (currentNormalized === nextNormalized) return
+
+    const nextUrl = nextNormalized ? `${window.location.pathname}?${nextNormalized}` : window.location.pathname
+    window.history.replaceState(null, "", nextUrl)
+  }, [keyword, sortBy, timeFilter])
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
