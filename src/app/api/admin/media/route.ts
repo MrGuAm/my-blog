@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateMediaUploadInput } from '@/lib/media-upload'
 import { isAuthenticatedRequest } from '@/lib/server/auth'
 import { canWriteMediaLibrary, deleteMediaFile, getMediaLibraryWarning, listMediaAssets, saveMediaFile } from '@/lib/server/media'
 
@@ -26,8 +27,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '请选择要上传的图片' }, { status: 400 })
   }
 
-  if (file.size > 4.5 * 1024 * 1024) {
-    return NextResponse.json({ error: '当前上传方式下图片大小不能超过 4.5MB' }, { status: 400 })
+  const validationError = validateMediaUploadInput(file)
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 })
   }
 
   try {

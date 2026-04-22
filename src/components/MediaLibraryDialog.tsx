@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint } from "@/lib/media-upload"
 
 interface MediaAsset {
   id: string
@@ -46,6 +47,7 @@ export default function MediaLibraryDialog({
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
+  const uploadHintText = uploadHint ?? getMediaUploadHint()
 
   const loadAssets = async () => {
     setIsLoading(true)
@@ -158,13 +160,13 @@ export default function MediaLibraryDialog({
           <div>
             <h2 className="text-xl font-black">媒体库</h2>
             <p className="text-sm text-muted-foreground">上传图片并在文章里复用。</p>
-            {uploadHint ? <p className="mt-1 text-xs text-muted-foreground">{uploadHint}</p> : null}
+            <p className="mt-1 text-xs text-muted-foreground">{uploadHintText}</p>
           </div>
           <div className="flex items-center gap-3">
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept={MEDIA_UPLOAD_ACCEPT}
               className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0]

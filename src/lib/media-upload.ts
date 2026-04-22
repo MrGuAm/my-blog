@@ -1,0 +1,40 @@
+export interface MediaUploadCandidate {
+  size: number
+  type: string
+}
+
+export const MEDIA_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
+export const MEDIA_UPLOAD_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+] as const
+export const MEDIA_UPLOAD_MIME_TYPE_SET = new Set<string>(MEDIA_UPLOAD_MIME_TYPES)
+export const MEDIA_UPLOAD_ACCEPT = MEDIA_UPLOAD_MIME_TYPES.join(",")
+export const MEDIA_UPLOAD_FORMATS_LABEL = "JPG、PNG、WebP、GIF、SVG"
+
+function formatUploadLimit(bytes: number) {
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
+
+export function getMediaUploadHint() {
+  return `支持 ${MEDIA_UPLOAD_FORMATS_LABEL}，单张图片最大 ${formatUploadLimit(MEDIA_UPLOAD_MAX_BYTES)}；JPG、PNG、WebP 会自动压缩为 WebP。`
+}
+
+export function validateMediaUploadInput(file: MediaUploadCandidate) {
+  if (!file.size) {
+    return "图片内容为空，请重新选择"
+  }
+
+  if (!MEDIA_UPLOAD_MIME_TYPE_SET.has(file.type)) {
+    return `当前只支持上传 ${MEDIA_UPLOAD_FORMATS_LABEL} 图片`
+  }
+
+  if (file.size > MEDIA_UPLOAD_MAX_BYTES) {
+    return `当前上传方式下图片大小不能超过 ${formatUploadLimit(MEDIA_UPLOAD_MAX_BYTES)}`
+  }
+
+  return null
+}

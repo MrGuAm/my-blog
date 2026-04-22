@@ -55,6 +55,26 @@ test("admin media routes can upload, list, and delete a file in an isolated work
   })
 })
 
+test("admin media routes reject unreadable image buffers in an isolated workspace", async () => {
+  await withTempWorkspace(async () => {
+    const mediaRoute = await importFresh<typeof import("../src/app/api/admin/media/route")>("src/app/api/admin/media/route.ts")
+    const cookie = buildSessionCookie(createSessionToken())
+    const formData = new FormData()
+    formData.append("file", new File([Buffer.from("not-a-real-png")], "broken.png", { type: "image/png" }))
+
+    const request = new NextRequest("https://champion.cc.cd/api/admin/media", {
+      method: "POST",
+      headers: { cookie },
+      body: formData,
+    })
+    const response = await mediaRoute.POST(request)
+    const payload = await response.json()
+
+    assert.equal(response.status, 400)
+    assert.match(payload.error, /无法解析/)
+  })
+})
+
 test("comment user registration route creates a user and session cookie in an isolated workspace", async () => {
   await withTempWorkspace(async () => {
     const registerRoute = await importFresh<typeof import("../src/app/api/user/register/route")>("src/app/api/user/register/route.ts")

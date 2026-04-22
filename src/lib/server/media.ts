@@ -3,6 +3,7 @@ import { del, list as listBlobs, put } from '@vercel/blob'
 import fs from 'fs'
 import path from 'path'
 import sharp from 'sharp'
+import { MEDIA_UPLOAD_MIME_TYPE_SET } from '@/lib/media-upload'
 import {
   deleteMediaAssetRecord,
   getMediaAssetRecordById,
@@ -105,11 +106,16 @@ async function prepareImageUpload(file: File) {
     }
   }
 
-  const optimizedBuffer = await sharp(sourceBuffer)
-    .rotate()
-    .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 82 })
-    .toBuffer()
+  let optimizedBuffer: Buffer
+  try {
+    optimizedBuffer = await sharp(sourceBuffer)
+      .rotate()
+      .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer()
+  } catch {
+    throw new Error('图片内容无法解析，请重新导出后再试')
+  }
 
   return {
     buffer: optimizedBuffer,
@@ -205,7 +211,7 @@ export async function listMediaAssets(): Promise<MediaAsset[]> {
 }
 
 export async function saveMediaFile(file: File) {
-  if (!allowedMimeTypes.has(file.type)) {
+  if (!MEDIA_UPLOAD_MIME_TYPE_SET.has(file.type)) {
     throw new Error('当前只支持上传常见图片格式')
   }
 

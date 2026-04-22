@@ -3,6 +3,7 @@
 
 import { useMemo, useRef, useState } from "react"
 import SectionPageShell from "@/components/SectionPageShell"
+import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint } from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
 
 function formatSize(size: number) {
@@ -31,6 +32,7 @@ export default function AdminMediaClient({
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
+  const uploadHint = getMediaUploadHint()
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
@@ -148,7 +150,7 @@ export default function AdminMediaClient({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept={MEDIA_UPLOAD_ACCEPT}
               className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0]
@@ -172,6 +174,7 @@ export default function AdminMediaClient({
               刷新
             </button>
           </div>
+          <p className="text-xs text-muted-foreground sm:basis-full sm:text-right">{uploadHint}</p>
         </>
       }
     >

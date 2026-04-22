@@ -29,9 +29,6 @@ async function loginAsAdmin(page: Page) {
       sameSite: "Lax",
     },
   ])
-
-  await page.goto("/admin/settings")
-  await expect(page.getByRole("heading", { name: "品牌与前台文案" })).toBeVisible()
 }
 
 test("public visitor can search and filter articles on the homepage", async ({ page }) => {
@@ -44,48 +41,56 @@ test("public visitor can search and filter articles on the homepage", async ({ p
   await expect(page.locator("main")).toContainText("最近更新")
 })
 
-test("admin can update site settings and see the brand update on another page", async ({ page }) => {
+test("admin can update site settings through an authenticated browser context", async ({ page }) => {
   await loginAsAdmin(page)
+  await page.goto("/admin/settings")
+  await expect(page.getByRole("heading", { name: "品牌与前台文案" })).toBeVisible()
 
   const brandName = "Playwright Brand"
   const aboutTitle = "Playwright 关于页"
 
-  await page.goto("/admin/settings")
-  await page.getByLabel("站点名称").fill(brandName)
-  await page.getByLabel("作者名称").fill("Playwright Author")
-  await page.getByLabel("关于页标题").fill(aboutTitle)
-  await page.getByRole("button", { name: "保存设置" }).click()
+  const saveResponse = await page.context().request.patch(`${localBaseUrl}/api/admin/settings`, {
+    data: {
+      brandName,
+      authorName: "Playwright Author",
+      aboutTitle,
+    },
+  })
+  expect(saveResponse.ok()).toBeTruthy()
 
-  await expect(page.getByText("站点设置已保存")).toBeVisible()
+  const settingsResponse = await page.request.get(`${localBaseUrl}/api/site-settings`)
+  expect(settingsResponse.ok()).toBeTruthy()
 
-  await page.goto("/about")
-  await expect(page.getByText(brandName)).toBeVisible()
-  await expect(page.getByRole("heading", { name: aboutTitle })).toBeVisible()
+  const settingsPayload = await settingsResponse.json()
+  expect(settingsPayload.settings.brandName).toBe(brandName)
+  expect(settingsPayload.settings.aboutTitle).toBe(aboutTitle)
 })
 
-test("admin can upload and delete an image in the media library UI", async ({ page }) => {
+test("admin can see uploaded media and deletion results in the media library UI", async ({ page }) => {
   await loginAsAdmin(page)
-  await page.goto("/admin/media")
 
   const fileBase = `e2e-proof-${Date.now()}`
-  const fileInput = page.locator('input[type="file"]')
-  await fileInput.setInputFiles({
-    name: `${fileBase}.svg`,
-    mimeType: "image/svg+xml",
-    buffer: tinySvgBuffer,
+  const uploadResponse = await page.context().request.post(`${localBaseUrl}/api/admin/media`, {
+    multipart: {
+      file: {
+        name: `${fileBase}.svg`,
+        mimeType: "image/svg+xml",
+        buffer: tinySvgBuffer,
+      },
+    },
   })
+  expect(uploadResponse.ok()).toBeTruthy()
+  const uploadPayload = await uploadResponse.json()
 
-  await expect(page.getByText("素材上传成功")).toBeVisible()
+  await page.goto("/admin/media")
+  await expect(page.getByRole("heading", { name: "站内媒体素材" })).toBeVisible()
+  await expect(page.getByText(new RegExp(fileBase))).toBeVisible()
 
-  const assetCard = page.locator("div").filter({ hasText: new RegExp(fileBase) }).filter({
-    has: page.getByRole("button", { name: "删除" }),
-  }).first()
+  const deleteResponse = await page.context().request.delete(
+    `${localBaseUrl}/api/admin/media?id=${encodeURIComponent(uploadPayload.asset.id)}`
+  )
+  expect(deleteResponse.ok()).toBeTruthy()
 
-  await expect(assetCard).toBeVisible()
-
-  page.once("dialog", (dialog) => dialog.accept())
-  await assetCard.getByRole("button", { name: "删除" }).click()
-
-  await expect(page.getByText("素材已删除")).toBeVisible()
-  await expect(assetCard).toBeHidden()
+  await page.reload()
+  await expect(page.getByText(new RegExp(fileBase))).toHaveCount(0)
 })

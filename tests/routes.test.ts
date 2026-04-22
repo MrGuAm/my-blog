@@ -140,6 +140,30 @@ test("admin media route validates authenticated upload and delete input", async 
   const deletePayload = await deleteResponse.json()
   assert.equal(deleteResponse.status, 400)
   assert.equal(deletePayload.error, "缺少素材标识")
+
+  const unsupportedUploadFormData = new FormData()
+  unsupportedUploadFormData.append("file", new File(["hello"], "note.txt", { type: "text/plain" }))
+  const unsupportedUploadRequest = new NextRequest("https://champion.cc.cd/api/admin/media", {
+    method: "POST",
+    headers: { cookie },
+    body: unsupportedUploadFormData,
+  })
+  const unsupportedUploadResponse = await adminMediaPost(unsupportedUploadRequest)
+  const unsupportedUploadPayload = await unsupportedUploadResponse.json()
+  assert.equal(unsupportedUploadResponse.status, 400)
+  assert.match(unsupportedUploadPayload.error, /JPG、PNG、WebP、GIF、SVG/)
+
+  const emptyUploadFormData = new FormData()
+  emptyUploadFormData.append("file", new File([], "empty.png", { type: "image/png" }))
+  const emptyUploadRequest = new NextRequest("https://champion.cc.cd/api/admin/media", {
+    method: "POST",
+    headers: { cookie },
+    body: emptyUploadFormData,
+  })
+  const emptyUploadResponse = await adminMediaPost(emptyUploadRequest)
+  const emptyUploadPayload = await emptyUploadResponse.json()
+  assert.equal(emptyUploadResponse.status, 400)
+  assert.equal(emptyUploadPayload.error, "图片内容为空，请重新选择")
 })
 
 test("posts route rejects unauthenticated creation requests", async () => {
