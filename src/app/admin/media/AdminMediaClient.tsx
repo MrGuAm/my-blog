@@ -2,8 +2,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import Link from "next/link"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
+import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import SectionPageShell from "@/components/SectionPageShell"
 import {
   buildMediaAssetBatchText,
@@ -17,7 +17,6 @@ import {
   type MediaUploadFailure,
 } from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
-import { getMediaUsageHref } from "@/lib/media-usage"
 
 function formatSize(size: number) {
   if (size < 1024) return `${size} B`
@@ -28,12 +27,6 @@ function formatSize(size: number) {
 function formatDimensions(width?: number | null, height?: number | null) {
   if (!width || !height) return null
   return `${width} × ${height}`
-}
-
-function formatUsageKind(kind: "cover" | "content" | "cover+content") {
-  if (kind === "cover") return "封面"
-  if (kind === "content") return "正文"
-  return "封面+正文"
 }
 
 export default function AdminMediaClient({
@@ -641,26 +634,7 @@ export default function AdminMediaClient({
                   {new Date(asset.updatedAt).toLocaleString("zh-CN")}
                   {typeof asset.usageCount === "number" ? ` · 使用于 ${asset.usageCount} 篇文章` : ""}
                 </p>
-                {asset.usagePosts && asset.usagePosts.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {asset.usagePosts.slice(0, 2).map((usage) => (
-                      <Link
-                        key={`${asset.id}-${usage.postId}-${usage.kind}`}
-                        href={getMediaUsageHref(usage)}
-                        className="rounded-full border border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                      >
-                        {usage.draft ? "草稿" : "文章"} · {formatUsageKind(usage.kind)} · {usage.postTitle}
-                      </Link>
-                    ))}
-                    {asset.usagePosts.length > 2 ? (
-                      <span className="rounded-full border border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
-                        另 {asset.usagePosts.length - 2} 篇
-                      </span>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="pt-1 text-[11px] text-muted-foreground">当前还没有文章引用这张图</p>
-                )}
+                <MediaUsageReferenceList assetId={asset.id} usagePosts={asset.usagePosts} />
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <button
