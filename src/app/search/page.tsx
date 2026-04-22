@@ -3,8 +3,8 @@ import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
 import { getAllPosts, getAllSeries, getAllTags } from "@/lib/posts"
-import { parseHomeQueryState } from "@/lib/home-query"
-import { filterPostsForListing, getPostSearchMatchScope, splitHighlightedText } from "@/lib/post-search"
+import { filterPostsForListing, getPostSearchMatchScope, sortSearchResults, splitHighlightedText } from "@/lib/post-search"
+import { buildSearchHref, parseSearchQueryState } from "@/lib/search-query"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
 
@@ -24,15 +24,6 @@ function renderHighlightedText(text: string, query: string) {
       <span key={`${text}-${index}`}>{part.text}</span>
     )
   )
-}
-
-function buildSearchHref(searchQuery: string, selectedTag: string | null, page: number) {
-  const params = new URLSearchParams()
-  if (searchQuery.trim()) params.set("q", searchQuery.trim())
-  if (selectedTag) params.set("tag", selectedTag)
-  if (page > 1) params.set("page", String(page))
-  const next = params.toString()
-  return next ? `/search?${next}` : "/search"
 }
 
 function getPopularTags(posts: Post[], tags: string[]) {
@@ -90,7 +81,17 @@ function SearchResultCard({ post, searchQuery }: { post: Post; searchQuery: stri
       </Link>
       <div className="mt-4 flex flex-wrap gap-2">
         {post.tags.map((tag) => (
-          <Link key={tag} href={buildSearchHref(searchQuery, tag, 1)} className="apple-pill hover:bg-white dark:hover:bg-white/12">
+          <Link
+            key={tag}
+            href={buildSearchHref({
+              searchQuery,
+              selectedTag: tag,
+              selectedCategory: null,
+              currentPage: 1,
+              sortBy: "default",
+            })}
+            className="apple-pill hover:bg-white dark:hover:bg-white/12"
+          >
             #{renderHighlightedText(tag, searchQuery)}
           </Link>
         ))}
@@ -102,7 +103,7 @@ function SearchResultCard({ post, searchQuery }: { post: Post; searchQuery: stri
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
   const [settings, state] = await Promise.all([
     getResolvedSeoSettings(),
-    parseHomeQueryState((await searchParams) || {}),
+    parseSearchQueryState((await searchParams) || {}),
   ])
 
   if (state.searchQuery) {
@@ -119,7 +120,7 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const state = parseHomeQueryState((await searchParams) || {})
+  const state = parseSearchQueryState((await searchParams) || {})
   const [posts, allTags, allSeries, siteSettings] = await Promise.all([
     getAllPosts({ includeDrafts: false, cached: true }),
     getAllTags(),
@@ -131,16 +132,19 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     includeDrafts: false,
     searchQuery: state.searchQuery,
     selectedTag: state.selectedTag,
+    selectedCategory: state.selectedCategory,
   })
+  const sortedPosts = sortSearchResults(filteredPosts, state.sortBy)
 
   const postsPerPage = 10
-  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / postsPerPage))
+  const totalPages = Math.max(1, Math.ceil(sortedPosts.length / postsPerPage))
   const safeCurrentPage = Math.min(state.currentPage, totalPages)
-  const paginatedPosts = filteredPosts.slice((safeCurrentPage - 1) * postsPerPage, safeCurrentPage * postsPerPage)
+  const paginatedPosts = sortedPosts.slice((safeCurrentPage - 1) * postsPerPage, safeCurrentPage * postsPerPage)
   const popularTags = getPopularTags(posts, allTags)
   const popularSeries = getPopularSeries(posts, allSeries)
   const featuredPosts = posts.filter((post) => post.featured).slice(0, 3)
-  const showSuggestions = !state.searchQuery || filteredPosts.length === 0
+  const allCategories = Array.from(new Set(posts.map((post) => post.category))).sort((left, right) => left.localeCompare(right, "zh-CN"))
+  const showSuggestions = !state.searchQuery || sortedPosts.length === 0
 
   return (
     <SectionPageShell
@@ -160,6 +164,27 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             placeholder="搜索文章、标签、系列或正文..."
             className="apple-input w-full sm:min-w-[20rem]"
           />
+          <select
+            name="category"
+            defaultValue={state.selectedCategory || ""}
+            className="apple-input w-full sm:w-[12rem]"
+          >
+            <option value="">全部分类</option>
+            {allCategories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+          <select
+            name="sort"
+            defaultValue={state.sortBy}
+            className="apple-input w-full sm:w-[11rem]"
+          >
+            <option value="default">默认排序</option>
+            <option value="newest">最新优先</option>
+            <option value="oldest">最早优先</option>
+          </select>
           {state.selectedTag ? <input type="hidden" name="tag" value={state.selectedTag} /> : null}
           <button type="submit" className="brand-solid-button whitespace-nowrap px-5 py-2.5">
             搜索
@@ -169,13 +194,35 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     >
       {state.searchQuery || state.selectedTag ? (
         <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <span>共找到 {filteredPosts.length} 篇结果</span>
+          <span>共找到 {sortedPosts.length} 篇结果</span>
           {state.searchQuery ? <span className="apple-pill">关键词：{state.searchQuery}</span> : null}
           {state.selectedTag ? (
             <>
               <span className="apple-pill">标签：#{state.selectedTag}</span>
-              <Link href={buildSearchHref(state.searchQuery, null, 1)} className="text-primary hover:underline">
+              <Link
+                href={buildSearchHref({
+                  ...state,
+                  selectedTag: null,
+                  currentPage: 1,
+                })}
+                className="text-primary hover:underline"
+              >
                 清除标签筛选
+              </Link>
+            </>
+          ) : null}
+          {state.selectedCategory ? (
+            <>
+              <span className="apple-pill">分类：{state.selectedCategory}</span>
+              <Link
+                href={buildSearchHref({
+                  ...state,
+                  selectedCategory: null,
+                  currentPage: 1,
+                })}
+                className="text-primary hover:underline"
+              >
+                清除分类筛选
               </Link>
             </>
           ) : null}
@@ -212,7 +259,17 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               <h3 className="text-base font-semibold">热门标签</h3>
               <div className="mt-4 flex flex-wrap gap-2">
                 {popularTags.map(({ tag, count }) => (
-                  <Link key={tag} href={buildSearchHref("", tag, 1)} className="apple-pill hover:bg-white dark:hover:bg-white/12">
+                  <Link
+                    key={tag}
+                    href={buildSearchHref({
+                      searchQuery: "",
+                      selectedTag: tag,
+                      selectedCategory: null,
+                      currentPage: 1,
+                      sortBy: "default",
+                    })}
+                    className="apple-pill hover:bg-white dark:hover:bg-white/12"
+                  >
                     #{tag} · {count}
                   </Link>
                 ))}
@@ -225,7 +282,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 {popularSeries.map(({ series, count }) => (
                   <Link
                     key={series}
-                    href={buildSearchHref(series, null, 1)}
+                    href={buildSearchHref({
+                      searchQuery: series,
+                      selectedTag: null,
+                      selectedCategory: null,
+                      currentPage: 1,
+                      sortBy: "default",
+                    })}
                     className="rounded-2xl border border-border/50 px-4 py-3 text-sm transition-colors hover:bg-accent"
                   >
                     <div className="font-medium">{series}</div>
@@ -241,7 +304,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 {featuredPosts.map((post) => (
                   <Link
                     key={post.id}
-                    href={buildSearchHref(post.title, null, 1)}
+                    href={buildSearchHref({
+                      searchQuery: post.title,
+                      selectedTag: null,
+                      selectedCategory: null,
+                      currentPage: 1,
+                      sortBy: "default",
+                    })}
                     className="block rounded-2xl border border-border/50 px-4 py-3 transition-colors hover:bg-accent"
                   >
                     <div className="font-medium">{post.title}</div>
@@ -257,7 +326,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {filteredPosts.length > postsPerPage ? (
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Link
-            href={buildSearchHref(state.searchQuery, state.selectedTag, Math.max(1, safeCurrentPage - 1))}
+            href={buildSearchHref({
+              ...state,
+              currentPage: Math.max(1, safeCurrentPage - 1),
+            })}
             aria-disabled={safeCurrentPage === 1}
             className={`rounded-xl border border-border/60 px-4 py-2 text-sm ${
               safeCurrentPage === 1 ? "pointer-events-none opacity-50" : "hover:bg-accent"
@@ -267,7 +339,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           </Link>
           <span className="text-sm text-muted-foreground">第 {safeCurrentPage} / {totalPages} 页</span>
           <Link
-            href={buildSearchHref(state.searchQuery, state.selectedTag, Math.min(totalPages, safeCurrentPage + 1))}
+            href={buildSearchHref({
+              ...state,
+              currentPage: Math.min(totalPages, safeCurrentPage + 1),
+            })}
             aria-disabled={safeCurrentPage === totalPages}
             className={`rounded-xl border border-border/60 px-4 py-2 text-sm ${
               safeCurrentPage === totalPages ? "pointer-events-none opacity-50" : "hover:bg-accent"

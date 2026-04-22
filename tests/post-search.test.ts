@@ -6,6 +6,7 @@ import {
   getPostSearchMatchScope,
   getPostSearchSuggestions,
   matchesPostSearch,
+  sortSearchResults,
   splitHighlightedText,
 } from "../src/lib/post-search"
 
@@ -57,6 +58,17 @@ test("filterPostsForListing respects drafts, tag, and search query", () => {
   assert.deepEqual(withDraft.map((post) => post.id), ["music-draft"])
 })
 
+test("filterPostsForListing respects category filters", () => {
+  const result = filterPostsForListing(posts, {
+    includeDrafts: true,
+    searchQuery: "",
+    selectedTag: null,
+    selectedCategory: "前端",
+  })
+
+  assert.deepEqual(result.map((post) => post.id), ["react-note"])
+})
+
 test("getPostSearchMatchScope reports which post fields matched", () => {
   const scope = getPostSearchMatchScope(posts[0], "useEffect")
 
@@ -90,4 +102,16 @@ test("getPostSearchSuggestions returns matching tags and series with starts-with
     { type: "tag", value: "React" },
     { type: "series", value: "React 深入" },
   ])
+})
+
+test("sortSearchResults supports newest and oldest ordering", () => {
+  assert.deepEqual(
+    sortSearchResults(posts, "newest").map((post) => post.id),
+    ["react-note", "music-draft"]
+  )
+
+  assert.deepEqual(
+    sortSearchResults(posts, "oldest").map((post) => post.id),
+    ["music-draft", "react-note"]
+  )
 })

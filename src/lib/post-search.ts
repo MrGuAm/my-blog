@@ -1,8 +1,10 @@
 import type { Post } from "@/lib/posts"
+import type { SearchSortOption } from "@/lib/search-query"
 
 export interface PostSearchState {
   searchQuery: string
   selectedTag: string | null
+  selectedCategory?: string | null
   includeDrafts: boolean
 }
 
@@ -147,6 +149,7 @@ export function sortPostsForDisplay(posts: Post[]) {
 
 export function filterPostsForListing(posts: Post[], state: PostSearchState) {
   const normalizedTag = state.selectedTag?.trim() || null
+  const normalizedCategory = state.selectedCategory?.trim() || null
 
   return sortPostsForDisplay(
     posts.filter((post) => {
@@ -158,7 +161,23 @@ export function filterPostsForListing(posts: Post[], state: PostSearchState) {
         return false
       }
 
+      if (normalizedCategory && post.category !== normalizedCategory) {
+        return false
+      }
+
       return matchesPostSearch(post, state.searchQuery)
     })
   )
+}
+
+export function sortSearchResults(posts: Post[], sortBy: SearchSortOption) {
+  if (sortBy === "newest") {
+    return [...posts].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
+  }
+
+  if (sortBy === "oldest") {
+    return [...posts].sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
+  }
+
+  return posts
 }
