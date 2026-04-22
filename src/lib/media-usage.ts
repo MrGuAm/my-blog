@@ -6,8 +6,24 @@ export interface MediaUsageAssetLike {
 
 export interface MediaUsagePostLike {
   id: string
+  title: string
+  slug?: string
+  draft?: boolean
   content: string
   coverImage?: string
+}
+
+export interface MediaUsageReference {
+  postId: string
+  postTitle: string
+  postSlug?: string
+  draft: boolean
+  kind: "cover" | "content" | "cover+content"
+}
+
+export interface MediaUsageDetails {
+  count: number
+  posts: MediaUsageReference[]
 }
 
 export function countMediaAssetUsage(
@@ -29,6 +45,41 @@ export function countMediaAssetUsage(
       }
     }
     usage.set(asset.id, count)
+  }
+
+  return usage
+}
+
+export function describeMediaAssetUsage(
+  assets: MediaUsageAssetLike[],
+  posts: MediaUsagePostLike[]
+) {
+  const usage = new Map<string, MediaUsageDetails>()
+
+  for (const asset of assets) {
+    const references: MediaUsageReference[] = []
+
+    for (const post of posts) {
+      const usesAsCover = Boolean(post.coverImage && post.coverImage === asset.url)
+      const usesInContent =
+        post.content.includes(asset.url) ||
+        Boolean(asset.pathname && post.content.includes(asset.pathname))
+
+      if (!usesAsCover && !usesInContent) continue
+
+      references.push({
+        postId: post.id,
+        postTitle: post.title,
+        postSlug: post.slug,
+        draft: Boolean(post.draft),
+        kind: usesAsCover && usesInContent ? "cover+content" : usesAsCover ? "cover" : "content",
+      })
+    }
+
+    usage.set(asset.id, {
+      count: references.length,
+      posts: references,
+    })
   }
 
   return usage

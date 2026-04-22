@@ -9,7 +9,7 @@ import {
   sortMediaAssets,
   validateMediaUploadInput,
 } from "../src/lib/media-upload"
-import { countMediaAssetUsage } from "../src/lib/media-usage"
+import { countMediaAssetUsage, describeMediaAssetUsage } from "../src/lib/media-usage"
 
 test("validateMediaUploadInput rejects empty, oversized, and unsupported files", () => {
   assert.equal(validateMediaUploadInput({ size: 0, type: "image/png" }), "图片内容为空，请重新选择")
@@ -125,4 +125,37 @@ test("countMediaAssetUsage tracks cover and content references per post", () => 
   assert.equal(usage.get("cover"), 1)
   assert.equal(usage.get("inline"), 2)
   assert.equal(usage.get("unused"), 0)
+})
+
+test("describeMediaAssetUsage preserves reference details and usage kinds", () => {
+  const assets = [
+    { id: "hero", url: "https://example.com/hero.webp", pathname: "hero.webp" },
+    { id: "inline", url: "https://example.com/inline.webp", pathname: "inline.webp" },
+  ]
+  const posts = [
+    {
+      id: "post-a",
+      title: "第一篇",
+      slug: "first-post",
+      draft: false,
+      coverImage: "https://example.com/hero.webp",
+      content: '<p><img src="inline.webp" /></p>',
+    },
+    {
+      id: "post-b",
+      title: "第二篇",
+      slug: "second-post",
+      draft: true,
+      coverImage: "https://example.com/hero.webp",
+      content: '<p><img src="https://example.com/hero.webp" /></p>',
+    },
+  ]
+
+  const usage = describeMediaAssetUsage(assets, posts)
+  assert.equal(usage.get("hero")?.count, 2)
+  assert.equal(usage.get("hero")?.posts[0]?.kind, "cover")
+  assert.equal(usage.get("hero")?.posts[1]?.kind, "cover+content")
+  assert.equal(usage.get("hero")?.posts[1]?.draft, true)
+  assert.equal(usage.get("inline")?.count, 1)
+  assert.equal(usage.get("inline")?.posts[0]?.kind, "content")
 })
