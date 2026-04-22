@@ -8,6 +8,12 @@ export interface MediaUploadFailure {
   reason: string
 }
 
+export interface ClipboardMediaItemLike {
+  kind: string
+  type: string
+  getAsFile: () => File | null
+}
+
 export const MEDIA_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
 export const MEDIA_UPLOAD_MIME_TYPES = [
   "image/jpeg",
@@ -71,4 +77,17 @@ export function formatMediaUploadBatchMessage({
   }
 
   return `上传失败：${failureSummary}${failureSuffix}`
+}
+
+export function extractClipboardMediaFiles(items: Iterable<ClipboardMediaItemLike>) {
+  const files: File[] = []
+  for (const item of items) {
+    if (item.kind !== "file") continue
+    if (!MEDIA_UPLOAD_MIME_TYPE_SET.has(item.type)) continue
+    const file = item.getAsFile()
+    if (file) {
+      files.push(file)
+    }
+  }
+  return files
 }

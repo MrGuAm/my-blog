@@ -1,6 +1,11 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { formatMediaUploadBatchMessage, getMediaUploadHint, validateMediaUploadInput } from "../src/lib/media-upload"
+import {
+  extractClipboardMediaFiles,
+  formatMediaUploadBatchMessage,
+  getMediaUploadHint,
+  validateMediaUploadInput,
+} from "../src/lib/media-upload"
 
 test("validateMediaUploadInput rejects empty, oversized, and unsupported files", () => {
   assert.equal(validateMediaUploadInput({ size: 0, type: "image/png" }), "图片内容为空，请重新选择")
@@ -27,4 +32,30 @@ test("formatMediaUploadBatchMessage summarizes single and batch uploads", () => 
     }),
     /已上传 2 张，1 张失败/
   )
+})
+
+test("extractClipboardMediaFiles keeps supported image files only", () => {
+  const pngFile = new File(["ok"], "clip.png", { type: "image/png" })
+  const textFile = new File(["note"], "note.txt", { type: "text/plain" })
+
+  const files = extractClipboardMediaFiles([
+    {
+      kind: "file",
+      type: "image/png",
+      getAsFile: () => pngFile,
+    },
+    {
+      kind: "file",
+      type: "text/plain",
+      getAsFile: () => textFile,
+    },
+    {
+      kind: "string",
+      type: "text/plain",
+      getAsFile: () => null,
+    },
+  ])
+
+  assert.equal(files.length, 1)
+  assert.equal(files[0]?.name, "clip.png")
 })

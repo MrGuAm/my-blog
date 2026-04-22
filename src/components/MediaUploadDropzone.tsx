@@ -1,7 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
-import { MEDIA_UPLOAD_ACCEPT } from "@/lib/media-upload"
+import { useEffect, useRef, useState } from "react"
+import { extractClipboardMediaFiles, MEDIA_UPLOAD_ACCEPT } from "@/lib/media-upload"
 
 export default function MediaUploadDropzone({
   canUpload,
@@ -21,18 +21,46 @@ export default function MediaUploadDropzone({
   multiple?: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
   const handleFiles = (files?: FileList | null) => {
     onSelectFiles(Array.from(files ?? []))
   }
 
+  useEffect(() => {
+    if (!canUpload) return
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const activeElement = document.activeElement as HTMLElement | null
+      if (activeElement) {
+        const tagName = activeElement.tagName.toLowerCase()
+        const isTypingField =
+          tagName === "input" ||
+          tagName === "textarea" ||
+          tagName === "select" ||
+          activeElement.isContentEditable
+        if (isTypingField) return
+      }
+
+      const files = extractClipboardMediaFiles(event.clipboardData?.items ?? [])
+      if (files.length === 0) return
+      event.preventDefault()
+      onSelectFiles(files)
+    }
+
+    window.addEventListener("paste", handlePaste)
+    return () => window.removeEventListener("paste", handlePaste)
+  }, [canUpload, onSelectFiles])
+
   return (
     <div
+      ref={containerRef}
       role="button"
       tabIndex={canUpload ? 0 : -1}
       onClick={() => {
         if (!canUpload) return
+        containerRef.current?.focus()
         inputRef.current?.click()
       }}
       onKeyDown={(event) => {
@@ -84,7 +112,7 @@ export default function MediaUploadDropzone({
       />
       <div className="flex h-full flex-col justify-center gap-2">
         <p className="text-sm font-medium text-foreground">
-          {!canUpload ? "请先配置 Blob 后再上传" : isUploading ? "图片上传中..." : "拖拽图片到这里，或点击选择文件"}
+          {!canUpload ? "请先配置 Blob 后再上传" : isUploading ? "图片上传中..." : "拖拽、粘贴图片到这里，或点击选择文件"}
         </p>
         <p className="text-xs leading-5 text-muted-foreground">{hint}</p>
       </div>
