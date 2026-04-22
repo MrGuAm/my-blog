@@ -22,6 +22,11 @@ function formatSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function formatDimensions(width?: number | null, height?: number | null) {
+  if (!width || !height) return null
+  return `${width} × ${height}`
+}
+
 export default function AdminMediaClient({
   initialAssets,
   initialWarning = null,
@@ -515,7 +520,10 @@ export default function AdminMediaClient({
               <div className="mt-3 space-y-1">
                 <p className="truncate text-sm font-medium">{asset.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatSize(asset.size)} · {new Date(asset.updatedAt).toLocaleString("zh-CN")}
+                  {formatSize(asset.size)}
+                  {formatDimensions(asset.width, asset.height) ? ` · ${formatDimensions(asset.width, asset.height)}` : ""}
+                  {" · "}
+                  {new Date(asset.updatedAt).toLocaleString("zh-CN")}
                 </p>
               </div>
               <div className="mt-3 flex items-center gap-2">

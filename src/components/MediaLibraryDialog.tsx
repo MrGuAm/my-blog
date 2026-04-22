@@ -12,18 +12,7 @@ import {
   type MediaSortOption,
   type MediaUploadFailure,
 } from "@/lib/media-upload"
-
-interface MediaAsset {
-  id: string
-  name: string
-  pathname: string
-  url: string
-  size: number
-  contentType: string
-  updatedAt: string
-  storage: "local" | "blob"
-  deletable: boolean
-}
+import type { MediaAsset } from "@/lib/server/media"
 
 interface MediaLibraryDialogProps {
   isOpen: boolean
@@ -37,6 +26,11 @@ function formatSize(size: number) {
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatDimensions(width?: number | null, height?: number | null) {
+  if (!width || !height) return null
+  return `${width} × ${height}`
 }
 
 export default function MediaLibraryDialog({
@@ -352,7 +346,10 @@ export default function MediaLibraryDialog({
                   <div className="mt-3 space-y-1">
                     <p className="truncate text-sm font-medium">{asset.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatSize(asset.size)} · {new Date(asset.updatedAt).toLocaleString("zh-CN")} · {asset.storage === "blob" ? "Blob" : "本地"}
+                      {formatSize(asset.size)}
+                      {formatDimensions(asset.width, asset.height) ? ` · ${formatDimensions(asset.width, asset.height)}` : ""}
+                      {" · "}
+                      {new Date(asset.updatedAt).toLocaleString("zh-CN")} · {asset.storage === "blob" ? "Blob" : "本地"}
                     </p>
                   </div>
                   <div className="mt-3 flex items-center gap-2">

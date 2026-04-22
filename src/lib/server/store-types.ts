@@ -119,6 +119,8 @@ export interface MediaAssetRow {
   storage: string
   content_type: string
   size: number
+  width?: number | null
+  height?: number | null
   uploaded_at: string
   updated_at: string
 }
@@ -131,6 +133,8 @@ export interface MediaAssetRecord {
   storage: 'blob' | 'local'
   contentType: string
   size: number
+  width?: number | null
+  height?: number | null
   uploadedAt: string
   updatedAt: string
 }
@@ -257,6 +261,8 @@ export function rowToMediaAsset(row: MediaAssetRow): MediaAssetRecord {
     storage: row.storage === 'local' ? 'local' : 'blob',
     contentType: row.content_type,
     size: row.size,
+    width: typeof row.width === 'number' ? row.width : null,
+    height: typeof row.height === 'number' ? row.height : null,
     uploadedAt: row.uploaded_at,
     updatedAt: row.updated_at,
   }

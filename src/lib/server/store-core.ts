@@ -425,6 +425,8 @@ export function getDb() {
           storage TEXT NOT NULL,
           content_type TEXT NOT NULL,
           size INTEGER NOT NULL DEFAULT 0,
+          width INTEGER,
+          height INTEGER,
           uploaded_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         );
@@ -469,6 +471,11 @@ export function getDb() {
         CREATE INDEX IF NOT EXISTS idx_rate_limit_buckets_scope_updated_at
           ON rate_limit_buckets(scope, updated_at DESC);
       `)
+    })
+
+    runSqliteMigration(db, '015-media-asset-dimensions', () => {
+      ensureSqliteColumn(db, 'media_assets', 'width', 'INTEGER')
+      ensureSqliteColumn(db, 'media_assets', 'height', 'INTEGER')
     })
 
     global.__championBlogDb = db
@@ -649,6 +656,8 @@ async function ensureRemoteSchema() {
         storage TEXT NOT NULL,
         content_type TEXT NOT NULL,
         size INTEGER NOT NULL DEFAULT 0,
+        width INTEGER,
+        height INTEGER,
         uploaded_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -692,6 +701,11 @@ async function ensureRemoteSchema() {
       )
     `
     await sql`CREATE INDEX IF NOT EXISTS idx_rate_limit_buckets_scope_updated_at ON rate_limit_buckets(scope, updated_at DESC)`
+  })
+
+  await runRemoteMigration('015-media-asset-dimensions', async () => {
+    await sql`ALTER TABLE media_assets ADD COLUMN IF NOT EXISTS width INTEGER`
+    await sql`ALTER TABLE media_assets ADD COLUMN IF NOT EXISTS height INTEGER`
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>

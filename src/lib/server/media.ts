@@ -19,6 +19,8 @@ export interface MediaAsset {
   pathname: string
   url: string
   size: number
+  width?: number | null
+  height?: number | null
   contentType: string
   updatedAt: string
   storage: 'local' | 'blob'
@@ -99,10 +101,13 @@ async function prepareImageUpload(file: File) {
     if (!extension) {
       throw new Error('当前只支持上传常见图片格式')
     }
+    const metadata = await getImageDimensions(sourceBuffer)
     return {
       buffer: sourceBuffer,
       contentType: file.type,
       extension,
+      width: metadata.width,
+      height: metadata.height,
     }
   }
 
@@ -116,22 +121,43 @@ async function prepareImageUpload(file: File) {
   } catch {
     throw new Error('图片内容无法解析，请重新导出后再试')
   }
+  const optimizedMetadata = await getImageDimensions(optimizedBuffer)
 
   return {
     buffer: optimizedBuffer,
     contentType: 'image/webp',
     extension: '.webp',
+    width: optimizedMetadata.width,
+    height: optimizedMetadata.height,
   }
 }
 
-function toLocalAsset(fileName: string, stats: fs.Stats, contentType = 'image/*'): MediaAsset {
+async function getImageDimensions(source: Buffer | string) {
+  try {
+    const metadata = await sharp(source, { animated: true }).metadata()
+    return {
+      width: typeof metadata.width === 'number' ? metadata.width : null,
+      height: typeof metadata.height === 'number' ? metadata.height : null,
+    }
+  } catch {
+    return { width: null, height: null }
+  }
+}
+
+function toLocalAsset(
+  fileName: string,
+  stats: fs.Stats,
+  options?: { contentType?: string; width?: number | null; height?: number | null }
+): MediaAsset {
   return {
     id: fileName,
     name: createAssetName(fileName),
     pathname: fileName,
     url: `/uploads/${encodeURIComponent(fileName)}`,
     size: stats.size,
-    contentType,
+    width: options?.width ?? null,
+    height: options?.height ?? null,
+    contentType: options?.contentType || 'image/*',
     updatedAt: stats.mtime.toISOString(),
     storage: 'local',
     deletable: canWriteLocalMediaLibrary(),
@@ -145,15 +171,19 @@ async function listStaticMediaAssets(): Promise<MediaAsset[]> {
     return []
   }
 
-  return fs
-    .readdirSync(mediaDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => {
-      const absolutePath = getLocalMediaPath(entry.name)
-      const stats = fs.statSync(absolutePath)
-      return toLocalAsset(entry.name, stats)
-    })
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  const assets = await Promise.all(
+    fs
+      .readdirSync(mediaDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map(async (entry) => {
+        const absolutePath = getLocalMediaPath(entry.name)
+        const stats = fs.statSync(absolutePath)
+        const dimensions = await getImageDimensions(absolutePath)
+        return toLocalAsset(entry.name, stats, dimensions)
+      })
+  )
+
+  return assets.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 }
 
 function toStoredAsset(record: Awaited<ReturnType<typeof listMediaAssetRecords>>[number]): MediaAsset {
@@ -163,6 +193,8 @@ function toStoredAsset(record: Awaited<ReturnType<typeof listMediaAssetRecords>>
     pathname: record.pathname,
     url: record.url,
     size: record.size,
+    width: record.width ?? null,
+    height: record.height ?? null,
     contentType: record.contentType,
     updatedAt: record.updatedAt,
     storage: record.storage,
@@ -185,6 +217,8 @@ async function listBlobMediaAssets(): Promise<MediaAsset[]> {
     pathname: blob.pathname,
     url: blob.url,
     size: blob.size,
+    width: null,
+    height: null,
     contentType: 'image/*',
     updatedAt: blob.uploadedAt.toISOString(),
     storage: 'blob',
@@ -235,6 +269,8 @@ export async function saveMediaFile(file: File) {
       storage: 'blob' as const,
       contentType: blob.contentType || prepared.contentType,
       size: prepared.buffer.byteLength,
+      width: prepared.width ?? null,
+      height: prepared.height ?? null,
       uploadedAt,
       updatedAt: uploadedAt,
     }
@@ -264,6 +300,8 @@ export async function saveMediaFile(file: File) {
     pathname: fileName,
     url: `/uploads/${encodeURIComponent(fileName)}`,
     size: stats.size,
+    width: prepared.width ?? null,
+    height: prepared.height ?? null,
     contentType: prepared.contentType,
     updatedAt: stats.mtime.toISOString(),
     storage: 'local',

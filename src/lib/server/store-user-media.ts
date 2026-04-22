@@ -260,7 +260,7 @@ export async function listMediaAssetRecords() {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+      SELECT id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at
       FROM media_assets
       ORDER BY updated_at DESC
     `) as MediaAssetRow[]
@@ -268,7 +268,7 @@ export async function listMediaAssetRecords() {
   }
 
   const rows = getDb().prepare(`
-    SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+    SELECT id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at
     FROM media_assets
     ORDER BY updated_at DESC
   `).all() as MediaAssetRow[]
@@ -281,7 +281,7 @@ export async function getMediaAssetRecordById(id: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+      SELECT id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at
       FROM media_assets
       WHERE id = ${id}
       LIMIT 1
@@ -290,7 +290,7 @@ export async function getMediaAssetRecordById(id: string) {
   }
 
   const row = getDb().prepare(`
-    SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+    SELECT id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at
     FROM media_assets
     WHERE id = ?
     LIMIT 1
@@ -304,7 +304,7 @@ export async function getMediaAssetRecordByName(name: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+      SELECT id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at
       FROM media_assets
       WHERE name = ${name}
       LIMIT 1
@@ -313,7 +313,7 @@ export async function getMediaAssetRecordByName(name: string) {
   }
 
   const row = getDb().prepare(`
-    SELECT id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+    SELECT id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at
     FROM media_assets
     WHERE name = ?
     LIMIT 1
@@ -327,8 +327,8 @@ export async function upsertMediaAssetRecord(input: MediaAssetRecord) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     const rows = (await sql`
-      INSERT INTO media_assets (id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at)
-      VALUES (${input.id}, ${input.name}, ${input.pathname}, ${input.url}, ${input.storage}, ${input.contentType}, ${input.size}, ${input.uploadedAt}, ${input.updatedAt})
+      INSERT INTO media_assets (id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at)
+      VALUES (${input.id}, ${input.name}, ${input.pathname}, ${input.url}, ${input.storage}, ${input.contentType}, ${input.size}, ${input.width ?? null}, ${input.height ?? null}, ${input.uploadedAt}, ${input.updatedAt})
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         pathname = EXCLUDED.pathname,
@@ -336,16 +336,18 @@ export async function upsertMediaAssetRecord(input: MediaAssetRecord) {
         storage = EXCLUDED.storage,
         content_type = EXCLUDED.content_type,
         size = EXCLUDED.size,
+        width = EXCLUDED.width,
+        height = EXCLUDED.height,
         uploaded_at = EXCLUDED.uploaded_at,
         updated_at = EXCLUDED.updated_at
-      RETURNING id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at
+      RETURNING id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at
     `) as MediaAssetRow[]
     return rowToMediaAsset(rows[0])
   }
 
   getDb().prepare(`
-    INSERT INTO media_assets (id, name, pathname, url, storage, content_type, size, uploaded_at, updated_at)
-    VALUES (@id, @name, @pathname, @url, @storage, @content_type, @size, @uploaded_at, @updated_at)
+    INSERT INTO media_assets (id, name, pathname, url, storage, content_type, size, width, height, uploaded_at, updated_at)
+    VALUES (@id, @name, @pathname, @url, @storage, @content_type, @size, @width, @height, @uploaded_at, @updated_at)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       pathname = excluded.pathname,
@@ -353,6 +355,8 @@ export async function upsertMediaAssetRecord(input: MediaAssetRecord) {
       storage = excluded.storage,
       content_type = excluded.content_type,
       size = excluded.size,
+      width = excluded.width,
+      height = excluded.height,
       uploaded_at = excluded.uploaded_at,
       updated_at = excluded.updated_at
   `).run({
@@ -363,6 +367,8 @@ export async function upsertMediaAssetRecord(input: MediaAssetRecord) {
     storage: input.storage,
     content_type: input.contentType,
     size: input.size,
+    width: input.width ?? null,
+    height: input.height ?? null,
     uploaded_at: input.uploadedAt,
     updated_at: input.updatedAt,
   })

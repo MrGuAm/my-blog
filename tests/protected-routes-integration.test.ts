@@ -34,6 +34,8 @@ test("admin media routes can upload, list, and delete a file in an isolated work
     assert.equal(createResponse.status, 201)
     assert.equal(created.asset.storage, "local")
     assert.match(created.asset.url, /\/uploads\//)
+    assert.equal(created.asset.width, 2)
+    assert.equal(created.asset.height, 2)
 
     const listRequest = new NextRequest("https://champion.cc.cd/api/admin/media", {
       headers: { cookie },
@@ -88,6 +90,8 @@ test("admin media routes can batch upload files in one request", async () => {
     assert.equal(response.status, 201)
     assert.equal(Array.isArray(payload.assets), true)
     assert.equal(payload.assets.length, 2)
+    assert.equal(payload.assets[0].width, 2)
+    assert.equal(payload.assets[0].height, 2)
     assert.equal(Array.isArray(payload.failures), true)
     assert.equal(payload.failures.length, 0)
   })
