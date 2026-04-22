@@ -3,7 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
-export const repoRoot = "/Users/guanchengbin/.openclaw/workspace/my-blog"
+export const repoRoot = path.resolve(process.cwd())
 
 export function resetStoreGlobals() {
   const target = globalThis as Record<string, unknown>
