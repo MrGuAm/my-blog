@@ -1,11 +1,10 @@
 "use client"
-/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import MediaAssetCard from "@/components/MediaAssetCard"
 import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
 import MediaFiltersBar from "@/components/MediaFiltersBar"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
-import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import {
   getMediaFormatFilter,
   getMediaOrientation,
@@ -27,17 +26,6 @@ interface MediaLibraryDialogProps {
   onSelect: (url: string) => void
   autoSelectUpload?: boolean
   uploadHint?: string
-}
-
-function formatSize(size: number) {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function formatDimensions(width?: number | null, height?: number | null) {
-  if (!width || !height) return null
-  return `${width} × ${height}`
 }
 
 export default function MediaLibraryDialog({
@@ -340,30 +328,15 @@ export default function MediaLibraryDialog({
           ) : filteredAssets.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {filteredAssets.map((asset) => (
-                <div key={asset.id} className="rounded-2xl border border-border/50 bg-background/60 p-3">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewAsset(asset)}
-                    className="block w-full overflow-hidden rounded-xl border border-border/40"
-                  >
-                    <img src={asset.url} alt={asset.name} className="h-44 w-full object-cover" />
-                  </button>
-                  <div className="mt-3 space-y-1">
-                    <p className="truncate text-sm font-medium">{asset.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatSize(asset.size)}
-                      {formatDimensions(asset.width, asset.height) ? ` · ${formatDimensions(asset.width, asset.height)}` : ""}
-                      {" · "}
-                      {new Date(asset.updatedAt).toLocaleString("zh-CN")} · {asset.storage === "blob" ? "Blob" : "本地"}
-                      {typeof asset.usageCount === "number" ? ` · 使用于 ${asset.usageCount} 篇文章` : ""}
-                    </p>
-                    <MediaUsageReferenceList
-                      assetId={asset.id}
-                      usagePosts={asset.usagePosts}
-                      openInNewTab
-                    />
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
+                <MediaAssetCard
+                  key={asset.id}
+                  asset={asset}
+                  onPreview={() => setPreviewAsset(asset)}
+                  openUsageInNewTab
+                  className="rounded-2xl border border-border/50 bg-background/60 p-3"
+                  imageClassName="h-44 w-full object-cover"
+                  actions={
+                    <>
                     <button
                       type="button"
                       onClick={() => setPreviewAsset(asset)}
@@ -405,8 +378,9 @@ export default function MediaLibraryDialog({
                     >
                       {(asset.usageCount ?? 0) > 0 ? "使用中" : "删除"}
                     </button>
-                  </div>
-                </div>
+                    </>
+                  }
+                />
               ))}
             </div>
           ) : assets.length > 0 ? (

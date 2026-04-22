@@ -1,13 +1,12 @@
 "use client"
-/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import MediaAssetCard from "@/components/MediaAssetCard"
 import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
 import MediaFiltersBar from "@/components/MediaFiltersBar"
 import MediaSelectionToolbar from "@/components/MediaSelectionToolbar"
 import MediaSummaryCards from "@/components/MediaSummaryCards"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
-import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import SectionPageShell from "@/components/SectionPageShell"
 import {
   buildMediaAssetCsv,
@@ -26,17 +25,6 @@ import {
 import { buildMediaQueryString } from "@/lib/media-query"
 import type { MediaAsset } from "@/lib/server/media"
 import { getMediaUsageScope } from "@/lib/media-usage"
-
-function formatSize(size: number) {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function formatDimensions(width?: number | null, height?: number | null) {
-  if (!width || !height) return null
-  return `${width} × ${height}`
-}
 
 function formatCsvUsageScope(scope: "unused" | "cover" | "content" | "mixed") {
   if (scope === "cover") return "封面相关"
@@ -754,13 +742,16 @@ export default function AdminMediaClient({
       {visibleAssets.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visibleAssets.map((asset) => (
-            <div
+            <MediaAssetCard
               key={asset.id}
+              asset={asset}
+              onPreview={() => setPreviewAsset(asset)}
+              openUsageInNewTab={false}
               className={`rounded-2xl border bg-card p-3 transition-colors ${
                 selectedAssetIds.includes(asset.id) ? "border-primary/50 ring-1 ring-primary/20" : "border-border/50"
               }`}
-            >
-              <div className="mb-3 flex items-center justify-between gap-3">
+              topBar={
+                <div className="flex items-center justify-between gap-3">
                 <label className="inline-flex cursor-pointer items-center gap-2 text-xs">
                   <input
                     type="checkbox"
@@ -772,26 +763,10 @@ export default function AdminMediaClient({
                 <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                   {asset.storage === "blob" ? "Blob" : "本地"}
                 </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPreviewAsset(asset)}
-                className="block w-full overflow-hidden rounded-xl border border-border/40"
-              >
-                <img src={asset.url} alt={asset.name} className="h-52 w-full object-cover" />
-              </button>
-              <div className="mt-3 space-y-1">
-                <p className="truncate text-sm font-medium">{asset.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatSize(asset.size)}
-                  {formatDimensions(asset.width, asset.height) ? ` · ${formatDimensions(asset.width, asset.height)}` : ""}
-                  {" · "}
-                  {new Date(asset.updatedAt).toLocaleString("zh-CN")}
-                  {typeof asset.usageCount === "number" ? ` · 使用于 ${asset.usageCount} 篇文章` : ""}
-                </p>
-                <MediaUsageReferenceList assetId={asset.id} usagePosts={asset.usagePosts} />
-              </div>
-              <div className="mt-3 flex items-center gap-2">
+                </div>
+              }
+              actions={
+                <>
                 <button
                   type="button"
                   onClick={() => setPreviewAsset(asset)}
@@ -830,8 +805,9 @@ export default function AdminMediaClient({
                 >
                   {(asset.usageCount ?? 0) > 0 ? "使用中" : "删除"}
                 </button>
-              </div>
-            </div>
+                </>
+              }
+            />
           ))}
         </div>
       ) : filteredAssets.length > 0 ? (
