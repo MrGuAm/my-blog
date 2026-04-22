@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import MediaAssetCard from "@/components/MediaAssetCard"
+import MediaAdminHeaderActions from "@/components/MediaAdminHeaderActions"
 import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
-import MediaFiltersBar from "@/components/MediaFiltersBar"
 import MediaSelectionToolbar from "@/components/MediaSelectionToolbar"
 import MediaSummaryCards from "@/components/MediaSummaryCards"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
@@ -527,158 +527,66 @@ export default function AdminMediaClient({
       title="站内媒体素材"
       description="集中管理文章中要复用的图片素材。"
       headerActions={
-        <>
-          <MediaFiltersBar
-            keyword={keyword}
-            onKeywordChange={(value) => {
-              setKeyword(value)
-              setCurrentPage(1)
-            }}
-            timeFilter={timeFilter}
-            onTimeFilterChange={(value) => {
-              setTimeFilter(value)
-              setCurrentPage(1)
-            }}
-            storageFilter={storageFilter}
-            onStorageFilterChange={(value) => {
-              setStorageFilter(value)
-              setCurrentPage(1)
-            }}
-            formatFilter={formatFilter}
-            onFormatFilterChange={(value) => {
-              setFormatFilter(value)
-              setCurrentPage(1)
-            }}
-            orientationFilter={orientationFilter}
-            onOrientationFilterChange={(value) => {
-              setOrientationFilter(value)
-              setCurrentPage(1)
-            }}
-            usageFilter={usageFilter}
-            onUsageFilterChange={(value) => {
-              setUsageFilter(value)
-              setCurrentPage(1)
-            }}
-            usageKindFilter={usageKindFilter}
-            onUsageKindFilterChange={(value) => {
-              setUsageKindFilter(value)
-              setCurrentPage(1)
-            }}
-            sortBy={sortBy}
-            onSortByChange={(value) => {
-              setSortBy(value)
-              setCurrentPage(1)
-            }}
-            showReset={hasActiveFilters}
-            onReset={resetFilters}
-          />
-          <div className="flex items-center gap-3">
-            {selectedCount > 0 ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleCopySelected("url", "个素材链接")}
-                  className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
-                >
-                  复制已选链接
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCopySelected("markdown", "个 Markdown")}
-                  className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
-                >
-                  复制已选 Markdown
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCopySelected("html", "个 HTML 片段")}
-                  className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
-                >
-                  复制已选 HTML
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExportSelectedCsv}
-                  className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
-                >
-                  导出已选 CSV
-                </button>
-              </>
-            ) : null}
-            {deletableSelectedCount > 0 ? (
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                className="rounded-xl border border-red-500/30 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"
-              >
-                删除可删 {deletableSelectedCount} 项
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!canUpload}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {!canUpload ? "请先配置 Blob" : isUploading ? "上传中..." : "上传图片"}
-            </button>
-            <button
-              type="button"
-              onClick={refreshAssets}
-              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
-            >
-              刷新
-            </button>
-            <button
-              type="button"
-              onClick={handleCopyCurrentViewLink}
-              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
-            >
-              复制当前视图链接
-            </button>
-            <button
-              type="button"
-              onClick={() => handleCopyFiltered("url", "素材链接")}
-              disabled={filteredAssets.length === 0}
-              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              复制筛选素材链接
-            </button>
-            <button
-              type="button"
-              onClick={() => handleCopyFiltered("markdown", "个 Markdown")}
-              disabled={filteredAssets.length === 0}
-              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              复制筛选 Markdown
-            </button>
-            <button
-              type="button"
-              onClick={() => handleCopyFiltered("html", "个 HTML 片段")}
-              disabled={filteredAssets.length === 0}
-              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              复制筛选 HTML
-            </button>
-            <button
-              type="button"
-              onClick={handleExportFilteredCsv}
-              disabled={filteredAssets.length === 0}
-              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              导出筛选结果 CSV
-            </button>
-            <button
-              type="button"
-              onClick={handleReindexUsage}
-              disabled={isReindexing}
-              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isReindexing ? "重建中..." : "重建引用索引"}
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground sm:basis-full sm:text-right">{uploadHint}</p>
-        </>
+        <MediaAdminHeaderActions
+          keyword={keyword}
+          onKeywordChange={(value) => {
+            setKeyword(value)
+            setCurrentPage(1)
+          }}
+          timeFilter={timeFilter}
+          onTimeFilterChange={(value) => {
+            setTimeFilter(value)
+            setCurrentPage(1)
+          }}
+          storageFilter={storageFilter}
+          onStorageFilterChange={(value) => {
+            setStorageFilter(value)
+            setCurrentPage(1)
+          }}
+          formatFilter={formatFilter}
+          onFormatFilterChange={(value) => {
+            setFormatFilter(value)
+            setCurrentPage(1)
+          }}
+          orientationFilter={orientationFilter}
+          onOrientationFilterChange={(value) => {
+            setOrientationFilter(value)
+            setCurrentPage(1)
+          }}
+          usageFilter={usageFilter}
+          onUsageFilterChange={(value) => {
+            setUsageFilter(value)
+            setCurrentPage(1)
+          }}
+          usageKindFilter={usageKindFilter}
+          onUsageKindFilterChange={(value) => {
+            setUsageKindFilter(value)
+            setCurrentPage(1)
+          }}
+          sortBy={sortBy}
+          onSortByChange={(value) => {
+            setSortBy(value)
+            setCurrentPage(1)
+          }}
+          showReset={hasActiveFilters}
+          onReset={resetFilters}
+          selectedCount={selectedCount}
+          deletableSelectedCount={deletableSelectedCount}
+          filteredCount={filteredAssets.length}
+          canUpload={canUpload}
+          isUploading={isUploading}
+          isReindexing={isReindexing}
+          uploadHint={uploadHint}
+          onCopySelected={handleCopySelected}
+          onExportSelectedCsv={handleExportSelectedCsv}
+          onDeleteSelected={handleDeleteSelected}
+          onOpenUploadPicker={() => fileInputRef.current?.click()}
+          onRefresh={refreshAssets}
+          onCopyCurrentViewLink={handleCopyCurrentViewLink}
+          onCopyFiltered={handleCopyFiltered}
+          onExportFilteredCsv={handleExportFilteredCsv}
+          onReindexUsage={handleReindexUsage}
+        />
       }
     >
       {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
