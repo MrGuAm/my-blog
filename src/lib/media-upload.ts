@@ -19,6 +19,15 @@ export interface MediaExportAssetLike {
   url: string
 }
 
+export interface MediaCsvAssetLike extends MediaExportAssetLike {
+  size: number
+  storage?: string
+  width?: number | null
+  height?: number | null
+  usageCount?: number
+  updatedAt?: string
+}
+
 export interface MediaSortableAssetLike extends MediaExportAssetLike {
   size: number
   updatedAt: string
@@ -128,6 +137,33 @@ export function buildMediaAssetBatchText(
   }
 
   return assets.map((asset) => `<img src="${asset.url}" alt="${asset.name}" />`).join("\n")
+}
+
+function escapeCsvCell(value: string) {
+  const normalized = value.replaceAll('"', '""')
+  return /[",\n]/.test(normalized) ? `"${normalized}"` : normalized
+}
+
+function formatCsvDimensions(width?: number | null, height?: number | null) {
+  if (!width || !height) return ""
+  return `${width}x${height}`
+}
+
+export function buildMediaAssetCsv(assets: MediaCsvAssetLike[]) {
+  const header = ["name", "url", "size", "dimensions", "storage", "usageCount", "updatedAt"]
+  const rows = assets.map((asset) => [
+    asset.name,
+    asset.url,
+    String(asset.size),
+    formatCsvDimensions(asset.width, asset.height),
+    asset.storage || "",
+    String(asset.usageCount ?? 0),
+    asset.updatedAt || "",
+  ])
+
+  return [header, ...rows]
+    .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
+    .join("\n")
 }
 
 export function sortMediaAssets<T extends MediaSortableAssetLike>(assets: T[], sortBy: MediaSortOption) {

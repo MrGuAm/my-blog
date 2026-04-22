@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {
+  buildMediaAssetCsv,
   buildMediaAssetBatchText,
   extractClipboardMediaFiles,
   formatMediaUploadBatchMessage,
@@ -77,6 +78,27 @@ test("buildMediaAssetBatchText renders selected assets for url, markdown, and ht
   )
   assert.match(buildMediaAssetBatchText(assets, "markdown"), /!\[封面图\]\(https:\/\/example.com\/a.webp\)/)
   assert.match(buildMediaAssetBatchText(assets, "html"), /<img src="https:\/\/example.com\/b.webp" alt="插图" \/>/)
+})
+
+test("buildMediaAssetCsv exports a stable csv table for selected assets", () => {
+  const csv = buildMediaAssetCsv([
+    {
+      name: '封面图 "A"',
+      url: "https://example.com/a.webp",
+      size: 1024,
+      width: 1600,
+      height: 900,
+      storage: "blob",
+      usageCount: 2,
+      updatedAt: "2026-04-22T10:00:00.000Z",
+    },
+  ])
+
+  assert.match(csv, /^name,url,size,dimensions,storage,usageCount,updatedAt/m)
+  assert.match(csv, /"封面图 ""A"""/)
+  assert.match(csv, /1600x900/)
+  assert.match(csv, /blob/)
+  assert.match(csv, /2026-04-22T10:00:00.000Z/)
 })
 
 test("sortMediaAssets supports time, size, and name ordering", () => {

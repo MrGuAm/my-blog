@@ -7,6 +7,7 @@ import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import SectionPageShell from "@/components/SectionPageShell"
 import {
+  buildMediaAssetCsv,
   buildMediaAssetBatchText,
   getMediaFormatFilter,
   getMediaOrientation,
@@ -333,6 +334,22 @@ export default function AdminMediaClient({
     }
   }
 
+  const handleExportSelectedCsv = () => {
+    if (selectedAssets.length === 0 || typeof window === "undefined") return
+
+    const csv = buildMediaAssetCsv(selectedAssets)
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+    const url = window.URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = `media-selection-${Date.now()}.csv`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    window.URL.revokeObjectURL(url)
+    setMessage(`已导出 ${selectedAssets.length} 项素材 CSV`)
+  }
+
   const handleDeleteSelected = async () => {
     if (deletableSelectedAssets.length === 0) return
     if (!confirm(`确定删除已选中的 ${deletableSelectedAssets.length} 张素材吗？`)) return
@@ -552,6 +569,13 @@ export default function AdminMediaClient({
                   className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
                 >
                   复制已选 HTML
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportSelectedCsv}
+                  className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
+                >
+                  导出已选 CSV
                 </button>
               </>
             ) : null}
