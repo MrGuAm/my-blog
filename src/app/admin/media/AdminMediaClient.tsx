@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import MediaAssetCard from "@/components/MediaAssetCard"
 import MediaAdminHeaderActions from "@/components/MediaAdminHeaderActions"
 import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
+import MediaCollectionEmptyState from "@/components/MediaCollectionEmptyState"
+import MediaPaginationControls from "@/components/MediaPaginationControls"
 import MediaSelectionToolbar from "@/components/MediaSelectionToolbar"
 import MediaSummaryCards from "@/components/MediaSummaryCards"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
@@ -719,41 +721,18 @@ export default function AdminMediaClient({
           ))}
         </div>
       ) : filteredAssets.length > 0 ? (
-        <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
-          当前页没有素材，试试切换页码。
-        </div>
+        <MediaCollectionEmptyState message="当前页没有素材，试试切换页码。" />
       ) : assets.length > 0 ? (
-        <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
-          当前筛选条件下没有素材，换个关键词或时间范围试试。
-        </div>
+        <MediaCollectionEmptyState message="当前筛选条件下没有素材，换个关键词或时间范围试试。" />
       ) : (
-        <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
-          还没有任何素材，先上传一张图片试试。
-        </div>
+        <MediaCollectionEmptyState message="还没有任何素材，先上传一张图片试试。" />
       )}
-      {filteredAssets.length > assetsPerPage ? (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-            disabled={safeCurrentPage === 1}
-            className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            上一页
-          </button>
-          <span className="text-sm text-muted-foreground">
-            第 {safeCurrentPage} / {totalPages} 页
-          </span>
-          <button
-            type="button"
-            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-            disabled={safeCurrentPage === totalPages}
-            className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            下一页
-          </button>
-        </div>
-      ) : null}
+      <MediaPaginationControls
+        currentPage={safeCurrentPage}
+        totalPages={totalPages}
+        onPrevious={() => setCurrentPage((page) => Math.max(1, page - 1))}
+        onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+      />
       <MediaAssetPreviewDialog
         key={previewAsset?.id || "media-preview"}
         asset={previewAsset}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import MediaAssetCard from "@/components/MediaAssetCard"
 import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
+import MediaCollectionEmptyState from "@/components/MediaCollectionEmptyState"
 import MediaFiltersBar from "@/components/MediaFiltersBar"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import {
@@ -384,13 +385,15 @@ export default function MediaLibraryDialog({
               ))}
             </div>
           ) : assets.length > 0 ? (
-            <div className="rounded-2xl border border-border/50 bg-background/60 p-8 text-center text-muted-foreground">
-              当前筛选条件下没有素材，换个关键词或时间范围试试。
-            </div>
+            <MediaCollectionEmptyState
+              message="当前筛选条件下没有素材，换个关键词或时间范围试试。"
+              className="rounded-2xl border border-border/50 bg-background/60 p-8 text-center text-muted-foreground"
+            />
           ) : (
-            <div className="rounded-2xl border border-border/50 bg-background/60 p-8 text-center text-muted-foreground">
-              媒体库还是空的，先上传一张图片试试。
-            </div>
+            <MediaCollectionEmptyState
+              message="媒体库还是空的，先上传一张图片试试。"
+              className="rounded-2xl border border-border/50 bg-background/60 p-8 text-center text-muted-foreground"
+            />
           )}
         </div>
         <MediaAssetPreviewDialog
