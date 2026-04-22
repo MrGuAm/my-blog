@@ -3,7 +3,7 @@
 
 import { useState, useEffect, type ReactNode } from "react"
 import Link from "next/link"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Post } from "@/lib/posts"
 import { PaletteHeroTrio } from "@/components/PaletteCharacters"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
@@ -221,8 +221,6 @@ export default function HomeClient({
   nextPath = null,
 }: HomeClientProps) {
   const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
   const {
     playlist,
     isPlaying,
@@ -323,6 +321,10 @@ export default function HomeClient({
   const playModeLabel = playMode === "loop" ? "列表循环" : playMode === "repeat-one" ? "单曲循环" : "随机播放"
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
     const nextParams = new URLSearchParams()
     const normalizedQuery = searchQuery.trim()
 
@@ -331,7 +333,7 @@ export default function HomeClient({
     if (safeCurrentPage > 1) nextParams.set("page", String(safeCurrentPage))
     if (effectiveShowDrafts) nextParams.set("drafts", "1")
 
-    const currentParams = new URLSearchParams(searchParams.toString())
+    const currentParams = new URLSearchParams(window.location.search)
     currentParams.delete("login")
     currentParams.delete("next")
 
@@ -342,9 +344,9 @@ export default function HomeClient({
       return
     }
 
-    const nextUrl = nextNormalized ? `${pathname}?${nextNormalized}` : pathname
-    router.replace(nextUrl, { scroll: false })
-  }, [effectiveShowDrafts, pathname, router, safeCurrentPage, searchParams, searchQuery, selectedTag])
+    const nextUrl = nextNormalized ? `${window.location.pathname}?${nextNormalized}` : window.location.pathname
+    window.history.replaceState(null, "", nextUrl)
+  }, [effectiveShowDrafts, safeCurrentPage, searchQuery, selectedTag])
 
   return (
     <div className="min-h-screen text-foreground">

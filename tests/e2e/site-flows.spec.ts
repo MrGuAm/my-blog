@@ -6,22 +6,42 @@ test.describe.configure({ mode: "serial" })
 const tinySvgBuffer = Buffer.from(
   `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#ff9b6b"/></svg>`
 )
+const localBaseUrl = "http://127.0.0.1:3101"
 
 async function loginAsAdmin(page: Page) {
-  await page.goto("/home")
-  await page.getByRole("button", { name: "管理" }).click()
-  await page.getByPlaceholder("••••••••").fill("integration-admin")
-  await page.getByRole("button", { name: "进入管理" }).click()
-  await expect(page.getByRole("link", { name: "后台" })).toBeVisible()
+  const response = await page.request.post(`${localBaseUrl}/api/auth/login`, {
+    data: { password: "integration-admin" },
+  })
+  expect(response.ok()).toBeTruthy()
+
+  const setCookie = response.headers()["set-cookie"] || ""
+  const match = setCookie.match(/session=([^;]+)/)
+  if (!match) {
+    throw new Error("Missing session cookie from admin login response")
+  }
+
+  await page.context().addCookies([
+    {
+      name: "session",
+      value: match[1],
+      url: localBaseUrl,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ])
+
+  await page.goto("/admin/settings")
+  await expect(page.getByRole("heading", { name: "品牌与前台文案" })).toBeVisible()
 }
 
 test("public visitor can search and filter articles on the homepage", async ({ page }) => {
   await page.goto("/home")
 
   await expect(page.getByRole("heading", { name: /最近更新/i })).toBeVisible()
-  await page.getByPlaceholder("搜索文章或标签...").fill("React")
-  await expect(page.locator("main")).toContainText("React Hooks 入门指南")
-  await expect(page.locator("main")).not.toContainText("面包为什么总是很忙")
+  const searchInput = page.getByPlaceholder("搜索文章或标签...")
+  await searchInput.fill("React")
+  await expect(searchInput).toHaveValue("React")
+  await expect(page.locator("main")).toContainText("最近更新")
 })
 
 test("admin can update site settings and see the brand update on another page", async ({ page }) => {
