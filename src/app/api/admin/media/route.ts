@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateMediaUploadInput } from '@/lib/media-upload'
+import { validateMediaUploadInput, type MediaUploadFailure } from '@/lib/media-upload'
 import { isAuthenticatedRequest } from '@/lib/server/auth'
 import { canWriteMediaLibrary, deleteMediaFile, getMediaLibraryWarning, listMediaAssets, saveMediaFile } from '@/lib/server/media'
 
@@ -21,20 +21,52 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData()
-  const file = formData.get('file')
+  const files = formData.getAll('file').filter((value): value is File => value instanceof File)
 
-  if (!(file instanceof File)) {
+  if (files.length === 0) {
     return NextResponse.json({ error: '请选择要上传的图片' }, { status: 400 })
   }
 
-  const validationError = validateMediaUploadInput(file)
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 })
-  }
-
   try {
-    const asset = await saveMediaFile(file)
-    return NextResponse.json({ asset }, { status: 201 })
+    const assets = []
+    const failures: MediaUploadFailure[] = []
+
+    for (const file of files) {
+      const validationError = validateMediaUploadInput(file)
+      if (validationError) {
+        failures.push({ name: file.name || '未命名文件', reason: validationError })
+        continue
+      }
+
+      try {
+        const asset = await saveMediaFile(file)
+        assets.push(asset)
+      } catch (error) {
+        failures.push({
+          name: file.name || '未命名文件',
+          reason: error instanceof Error ? error.message : '上传失败',
+        })
+      }
+    }
+
+    if (assets.length === 0) {
+      return NextResponse.json(
+        {
+          error: failures[0]?.reason || '上传失败',
+          failures,
+        },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        asset: assets[0] ?? null,
+        assets,
+        failures,
+      },
+      { status: 201 }
+    )
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : '上传失败' }, { status: 400 })
   }

@@ -110,29 +110,46 @@ export default function MediaLibraryDialog({
     setIsUploading(true)
     setMessage("")
     try {
-      const uploadedAssets: MediaAsset[] = []
-      const failures: MediaUploadFailure[] = []
-
+      const localFailures: MediaUploadFailure[] = []
+      const validFiles: File[] = []
       for (const file of files) {
         const validationError = validateMediaUploadInput(file)
         if (validationError) {
-          failures.push({ name: file.name || "未命名文件", reason: validationError })
+          localFailures.push({ name: file.name || "未命名文件", reason: validationError })
           continue
         }
+        validFiles.push(file)
+      }
 
+      const uploadedAssets: MediaAsset[] = []
+      const remoteFailures: MediaUploadFailure[] = []
+
+      if (validFiles.length > 0) {
         const formData = new FormData()
-        formData.append("file", file)
+        for (const file of validFiles) {
+          formData.append("file", file)
+        }
+
         const response = await fetch("/api/admin/media", {
           method: "POST",
           body: formData,
         })
         const data = await response.json()
         if (!response.ok) {
-          failures.push({ name: file.name || "未命名文件", reason: data.error || "上传失败" })
-          continue
+          if (Array.isArray(data.failures) && data.failures.length > 0) {
+            remoteFailures.push(...data.failures)
+          } else {
+            remoteFailures.push({ name: "本次上传", reason: data.error || "上传失败" })
+          }
+        } else {
+          uploadedAssets.push(...(Array.isArray(data.assets) ? data.assets : data.asset ? [data.asset] : []))
+          if (Array.isArray(data.failures)) {
+            remoteFailures.push(...data.failures)
+          }
         }
-        uploadedAssets.push(data.asset)
       }
+
+      const failures = [...localFailures, ...remoteFailures]
 
       if (uploadedAssets.length > 0) {
         setAssets((current) => [

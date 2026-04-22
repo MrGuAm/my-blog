@@ -164,6 +164,22 @@ test("admin media route validates authenticated upload and delete input", async 
   const emptyUploadPayload = await emptyUploadResponse.json()
   assert.equal(emptyUploadResponse.status, 400)
   assert.equal(emptyUploadPayload.error, "图片内容为空，请重新选择")
+
+  const mixedUploadFormData = new FormData()
+  mixedUploadFormData.append("file", new File(["hello"], "note.txt", { type: "text/plain" }))
+  mixedUploadFormData.append("file", new File(["<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"], "ok.svg", { type: "image/svg+xml" }))
+  const mixedUploadRequest = new NextRequest("https://champion.cc.cd/api/admin/media", {
+    method: "POST",
+    headers: { cookie },
+    body: mixedUploadFormData,
+  })
+  const mixedUploadResponse = await adminMediaPost(mixedUploadRequest)
+  const mixedUploadPayload = await mixedUploadResponse.json()
+  assert.equal(mixedUploadResponse.status, 201)
+  assert.equal(Array.isArray(mixedUploadPayload.assets), true)
+  assert.equal(mixedUploadPayload.assets.length, 1)
+  assert.equal(Array.isArray(mixedUploadPayload.failures), true)
+  assert.equal(mixedUploadPayload.failures.length, 1)
 })
 
 test("posts route rejects unauthenticated creation requests", async () => {

@@ -55,6 +55,41 @@ test("admin media routes can upload, list, and delete a file in an isolated work
   })
 })
 
+test("admin media routes can batch upload files in one request", async () => {
+  await withTempWorkspace(async () => {
+    const mediaRoute = await importFresh<typeof import("../src/app/api/admin/media/route")>("src/app/api/admin/media/route.ts")
+    const tinyPngBuffer = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: { r: 24, g: 64, b: 160 },
+      },
+    })
+      .png()
+      .toBuffer()
+
+    const cookie = buildSessionCookie(createSessionToken())
+    const formData = new FormData()
+    formData.append("file", new File([tinyPngBuffer], "proof-a.png", { type: "image/png" }))
+    formData.append("file", new File([tinyPngBuffer], "proof-b.png", { type: "image/png" }))
+
+    const request = new NextRequest("https://champion.cc.cd/api/admin/media", {
+      method: "POST",
+      headers: { cookie },
+      body: formData,
+    })
+    const response = await mediaRoute.POST(request)
+    const payload = await response.json()
+
+    assert.equal(response.status, 201)
+    assert.equal(Array.isArray(payload.assets), true)
+    assert.equal(payload.assets.length, 2)
+    assert.equal(Array.isArray(payload.failures), true)
+    assert.equal(payload.failures.length, 0)
+  })
+})
+
 test("admin media routes reject unreadable image buffers in an isolated workspace", async () => {
   await withTempWorkspace(async () => {
     const mediaRoute = await importFresh<typeof import("../src/app/api/admin/media/route")>("src/app/api/admin/media/route.ts")
