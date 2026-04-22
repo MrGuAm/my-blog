@@ -478,6 +478,19 @@ export function getDb() {
       ensureSqliteColumn(db, 'media_assets', 'height', 'INTEGER')
     })
 
+    runSqliteMigration(db, '016-post-media-references', () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS post_media_references (
+          post_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          usage_kind TEXT NOT NULL,
+          PRIMARY KEY (post_id, asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_post_media_references_asset_id
+          ON post_media_references(asset_id);
+      `)
+    })
+
     global.__championBlogDb = db
   }
 
@@ -706,6 +719,18 @@ async function ensureRemoteSchema() {
   await runRemoteMigration('015-media-asset-dimensions', async () => {
     await sql`ALTER TABLE media_assets ADD COLUMN IF NOT EXISTS width INTEGER`
     await sql`ALTER TABLE media_assets ADD COLUMN IF NOT EXISTS height INTEGER`
+  })
+
+  await runRemoteMigration('016-post-media-references', async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS post_media_references (
+        post_id TEXT NOT NULL,
+        asset_id TEXT NOT NULL,
+        usage_kind TEXT NOT NULL,
+        PRIMARY KEY (post_id, asset_id)
+      )
+    `
+    await sql`CREATE INDEX IF NOT EXISTS idx_post_media_references_asset_id ON post_media_references(asset_id)`
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>

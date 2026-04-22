@@ -11,7 +11,9 @@ import {
   getMediaAssetRecordById,
   getMediaAssetRecordByName,
   isRemoteDatabaseEnabled,
+  listPostMediaReferenceDetails,
   listMediaAssetRecords,
+  syncAllPostMediaReferences,
   upsertMediaAssetRecord,
 } from '@/lib/server/store'
 
@@ -232,15 +234,10 @@ async function listBlobMediaAssets(): Promise<MediaAsset[]> {
 
 export async function listMediaAssets(): Promise<MediaAsset[]> {
   const staticAssets = await listStaticMediaAssets()
+  const posts = await listPosts({ includeDrafts: true })
 
   if (!isBlobMediaLibraryEnabled()) {
-    const posts = await listPosts({ includeDrafts: true })
-    const usage = describeMediaAssetUsage(staticAssets, posts)
-    return staticAssets.map((asset) => ({
-      ...asset,
-      usageCount: usage.get(asset.id)?.count ?? 0,
-      usagePosts: usage.get(asset.id)?.posts ?? [],
-    }))
+    return attachUsageDetails(staticAssets, posts)
   }
 
   const storedAssets = await listBlobMediaAssets()
@@ -252,12 +249,44 @@ export async function listMediaAssets(): Promise<MediaAsset[]> {
   ]
 
   const sortedAssets = merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-  const posts = await listPosts({ includeDrafts: true })
-  const usage = describeMediaAssetUsage(sortedAssets, posts)
-  return sortedAssets.map((asset) => ({
+  return attachUsageDetails(sortedAssets, posts)
+}
+
+async function attachUsageDetails(assets: MediaAsset[], posts: Awaited<ReturnType<typeof listPosts>>) {
+  let references = await listPostMediaReferenceDetails()
+
+  if (assets.length > 0 && posts.length > 0 && references.length === 0) {
+    await syncAllPostMediaReferences(posts)
+    references = await listPostMediaReferenceDetails()
+  }
+
+  if (references.length === 0) {
+    const usage = describeMediaAssetUsage(assets, posts)
+    return assets.map((asset) => ({
+      ...asset,
+      usageCount: usage.get(asset.id)?.count ?? 0,
+      usagePosts: usage.get(asset.id)?.posts ?? [],
+    }))
+  }
+
+  const usageMap = new Map<string, { count: number; posts: MediaUsageReference[] }>()
+  for (const reference of references) {
+    const current = usageMap.get(reference.asset_id) || { count: 0, posts: [] }
+    current.posts.push({
+      postId: reference.post_id,
+      postTitle: reference.post_title,
+      postSlug: reference.post_slug || undefined,
+      draft: Boolean(reference.draft),
+      kind: reference.usage_kind,
+    })
+    current.count += 1
+    usageMap.set(reference.asset_id, current)
+  }
+
+  return assets.map((asset) => ({
     ...asset,
-    usageCount: usage.get(asset.id)?.count ?? 0,
-    usagePosts: usage.get(asset.id)?.posts ?? [],
+    usageCount: usageMap.get(asset.id)?.count ?? 0,
+    usagePosts: usageMap.get(asset.id)?.posts ?? [],
   }))
 }
 

@@ -23,6 +23,13 @@ export {
 } from './store-posts'
 
 export {
+  deletePostMediaReferences,
+  listPostMediaReferenceDetails,
+  syncAllPostMediaReferences,
+  syncPostMediaReferences,
+} from './store-media-references'
+
+export {
   createUser,
   deleteMediaAssetRecord,
   deleteUserAccount,

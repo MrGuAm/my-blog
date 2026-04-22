@@ -10,6 +10,7 @@ import {
   normalizeTags,
   slugify,
 } from './store-core'
+import { deletePostMediaReferences, syncPostMediaReferences } from './store-media-references'
 import { rowToPost, rowToPostVersion, type PostRow, type PostVersionRecord, type PostVersionRow } from './store-types'
 
 export async function listPosts(options?: { includeDrafts?: boolean }) {
@@ -219,6 +220,7 @@ export async function createPost(input: {
       VALUES (${post.id}, ${post.slug || post.id}, ${post.title}, ${post.excerpt}, ${post.date}, ${post.category}, ${JSON.stringify(post.tags)}, ${post.content}, ${post.coverImage || ''}, ${post.bgmSrc || ''}, ${post.pinned ? 1 : 0}, ${post.featured ? 1 : 0}, ${post.draft ? 1 : 0}, ${post.series || ''}, ${normalizeSeriesOrder(post.seriesOrder)}, ${post.views || 0}, ${post.updatedAt || now})
     `
     await savePostVersion(post.id, post, '初始版本')
+    await syncPostMediaReferences(post)
     return post
   }
 
@@ -240,6 +242,7 @@ export async function createPost(input: {
   })
 
   await savePostVersion(post.id, post, '初始版本')
+  await syncPostMediaReferences(post)
   return post
 }
 
@@ -299,6 +302,7 @@ export async function updatePost(
           updated_at = ${next.updatedAt || new Date().toISOString()}
       WHERE id = ${id}
     `
+    await syncPostMediaReferences(next)
     return next
   }
 
@@ -338,6 +342,7 @@ export async function updatePost(
     updated_at: next.updatedAt || new Date().toISOString(),
   })
 
+  await syncPostMediaReferences(next)
   return next
 }
 
@@ -348,6 +353,7 @@ export async function deletePost(id: string) {
   if (isRemoteDatabaseEnabled()) {
     const sql = getSql()
     await sql`DELETE FROM comments WHERE post_id = ${id}`
+    await deletePostMediaReferences(id)
     await sql`DELETE FROM posts WHERE id = ${id}`
     return true
   }
@@ -355,6 +361,7 @@ export async function deletePost(id: string) {
   const db = getDb()
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM comments WHERE post_id = ?').run(id)
+    db.prepare('DELETE FROM post_media_references WHERE post_id = ?').run(id)
     db.prepare('DELETE FROM posts WHERE id = ?').run(id)
   })
   tx()
