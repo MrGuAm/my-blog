@@ -4,6 +4,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
 import MediaFiltersBar from "@/components/MediaFiltersBar"
+import MediaSelectionToolbar from "@/components/MediaSelectionToolbar"
+import MediaSummaryCards from "@/components/MediaSummaryCards"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import SectionPageShell from "@/components/SectionPageShell"
@@ -34,14 +36,6 @@ function formatSize(size: number) {
 function formatDimensions(width?: number | null, height?: number | null) {
   if (!width || !height) return null
   return `${width} × ${height}`
-}
-
-function summaryFilterButtonClass(active: boolean) {
-  return `rounded-full px-2.5 py-1 text-[11px] transition-colors ${
-    active
-      ? "bg-primary text-primary-foreground"
-      : "border border-border/60 text-muted-foreground hover:bg-accent"
-  }`
 }
 
 function formatCsvUsageScope(scope: "unused" | "cover" | "content" | "mixed") {
@@ -720,157 +714,42 @@ export default function AdminMediaClient({
         className="mb-4"
         compact
       />
-      <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-border/50 bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-muted-foreground">
-          {selectedCount > 0
-            ? `已选中 ${selectedCount} 张素材${deletableSelectedCount < selectedCount ? `，其中 ${deletableSelectedCount} 张可删除` : ""}`
-            : `筛选结果共 ${filteredAssets.length} 张素材，当前第 ${safeCurrentPage} / ${totalPages} 页`}
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleToggleSelectAllVisible}
-            disabled={visibleAssets.length === 0}
-            className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {allSelectableVisibleSelected ? "取消全选可见项" : "全选可见项"}
-          </button>
-          <button
-            type="button"
-            onClick={handleInvertVisibleSelection}
-            disabled={visibleAssets.length === 0}
-            className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            反选可见项
-          </button>
-          <button
-            type="button"
-            onClick={handleSelectVisibleUnused}
-            disabled={visibleUnusedAssetIds.length === 0}
-            className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            选中未使用可见项
-          </button>
-          <button
-            type="button"
-            onClick={handleSelectVisibleUsed}
-            disabled={visibleUsedAssetIds.length === 0}
-            className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            选中使用中可见项
-          </button>
-          {selectedCount > 0 ? (
-            <button
-              type="button"
-              onClick={() => setSelectedAssetIds([])}
-              className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
-            >
-              清空选择
-            </button>
-          ) : null}
-        </div>
-      </div>
+      <MediaSelectionToolbar
+        selectedCount={selectedCount}
+        deletableSelectedCount={deletableSelectedCount}
+        filteredCount={filteredAssets.length}
+        currentPage={safeCurrentPage}
+        totalPages={totalPages}
+        visibleCount={visibleAssets.length}
+        visibleUnusedCount={visibleUnusedAssetIds.length}
+        visibleUsedCount={visibleUsedAssetIds.length}
+        allSelectableVisibleSelected={allSelectableVisibleSelected}
+        onToggleSelectAllVisible={handleToggleSelectAllVisible}
+        onInvertVisibleSelection={handleInvertVisibleSelection}
+        onSelectVisibleUnused={handleSelectVisibleUnused}
+        onSelectVisibleUsed={handleSelectVisibleUsed}
+        onClearSelection={() => setSelectedAssetIds([])}
+      />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">素材总数</p>
-          <p className="mt-2 text-2xl font-semibold">{filteredAssets.length}</p>
-          <p className="mt-1 text-xs text-muted-foreground">当前筛选结果</p>
-        </div>
-        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">来源分布</p>
-          <p className="mt-2 text-2xl font-semibold">{filteredSummary.blobCount} / {filteredSummary.localCount}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setStorageFilter("blob")
-                setCurrentPage(1)
-              }}
-              className={summaryFilterButtonClass(storageFilter === "blob")}
-            >
-              Blob
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setStorageFilter("local")
-                setCurrentPage(1)
-              }}
-              className={summaryFilterButtonClass(storageFilter === "local")}
-            >
-              本地
-            </button>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">形态分布</p>
-          <p className="mt-2 text-2xl font-semibold">{filteredSummary.landscapeCount} / {filteredSummary.portraitCount} / {filteredSummary.squareCount}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setOrientationFilter("landscape")
-                setCurrentPage(1)
-              }}
-              className={summaryFilterButtonClass(orientationFilter === "landscape")}
-            >
-              横图
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOrientationFilter("portrait")
-                setCurrentPage(1)
-              }}
-              className={summaryFilterButtonClass(orientationFilter === "portrait")}
-            >
-              竖图
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOrientationFilter("square")
-                setCurrentPage(1)
-              }}
-              className={summaryFilterButtonClass(orientationFilter === "square")}
-            >
-              方图
-            </button>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">使用情况</p>
-          <p className="mt-2 text-2xl font-semibold">{filteredSummary.usedCount} / {filteredSummary.unusedCount}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setUsageFilter("used")
-                setCurrentPage(1)
-              }}
-              className={summaryFilterButtonClass(usageFilter === "used")}
-            >
-              使用中
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setUsageFilter("unused")
-                setCurrentPage(1)
-              }}
-              className={summaryFilterButtonClass(usageFilter === "unused")}
-            >
-              未使用
-            </button>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">总体积</p>
-          <p className="mt-2 text-2xl font-semibold">{formatSize(filteredSummary.totalSize)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">当前筛选结果</p>
-        </div>
-      </div>
+      <MediaSummaryCards
+        filteredCount={filteredAssets.length}
+        summary={filteredSummary}
+        storageFilter={storageFilter}
+        orientationFilter={orientationFilter}
+        usageFilter={usageFilter}
+        onStorageFilterChange={(value) => {
+          setStorageFilter(value)
+          setCurrentPage(1)
+        }}
+        onOrientationFilterChange={(value) => {
+          setOrientationFilter(value)
+          setCurrentPage(1)
+        }}
+        onUsageFilterChange={(value) => {
+          setUsageFilter(value)
+          setCurrentPage(1)
+        }}
+      />
 
       {visibleAssets.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
