@@ -21,6 +21,7 @@ import {
   type MediaSortOption,
   type MediaUploadFailure,
 } from "@/lib/media-upload"
+import { buildMediaQueryString } from "@/lib/media-query"
 import type { MediaAsset } from "@/lib/server/media"
 import { getMediaUsageScope } from "@/lib/media-usage"
 
@@ -104,20 +105,18 @@ export default function AdminMediaClient({
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    const nextParams = new URLSearchParams()
-    const normalizedKeyword = keyword.trim()
-    if (normalizedKeyword) nextParams.set("q", normalizedKeyword)
-    if (timeFilter !== "all") nextParams.set("time", timeFilter)
-    if (storageFilter !== "all") nextParams.set("storage", storageFilter)
-    if (formatFilter !== "all") nextParams.set("format", formatFilter)
-    if (orientationFilter !== "all") nextParams.set("orientation", orientationFilter)
-    if (usageFilter !== "all") nextParams.set("usage", usageFilter)
-    if (usageKindFilter !== "all") nextParams.set("kind", usageKindFilter)
-    if (sortBy !== "newest") nextParams.set("sort", sortBy)
-    if (currentPage > 1) nextParams.set("page", String(currentPage))
-
     const currentNormalized = new URLSearchParams(window.location.search).toString()
-    const nextNormalized = nextParams.toString()
+    const nextNormalized = buildMediaQueryString({
+      keyword,
+      timeFilter,
+      storageFilter,
+      formatFilter,
+      orientationFilter,
+      usageFilter,
+      usageKindFilter,
+      sortBy,
+      currentPage,
+    })
 
     if (currentNormalized === nextNormalized) return
 
@@ -393,6 +392,28 @@ export default function AdminMediaClient({
     }
   }
 
+  const handleCopyCurrentViewLink = async () => {
+    if (typeof window === "undefined") return
+    try {
+      const query = buildMediaQueryString({
+        keyword,
+        timeFilter,
+        storageFilter,
+        formatFilter,
+        orientationFilter,
+        usageFilter,
+        usageKindFilter,
+        sortBy,
+        currentPage,
+      })
+      const nextUrl = query ? `${window.location.origin}/admin/media?${query}` : `${window.location.origin}/admin/media`
+      await navigator.clipboard.writeText(nextUrl)
+      setMessage("当前筛选视图链接已复制")
+    } catch {
+      setMessage("复制失败，请重试")
+    }
+  }
+
   const handleExportSelectedCsv = () => {
     if (selectedAssets.length === 0 || typeof window === "undefined") return
 
@@ -628,11 +649,18 @@ export default function AdminMediaClient({
             </button>
             <button
               type="button"
+              onClick={handleCopyCurrentViewLink}
+              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
+            >
+              复制当前视图链接
+            </button>
+            <button
+              type="button"
               onClick={() => handleCopyFiltered("url", "素材链接")}
               disabled={filteredAssets.length === 0}
               className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
             >
-              复制筛选链接
+              复制筛选素材链接
             </button>
             <button
               type="button"

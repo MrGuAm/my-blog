@@ -38,6 +38,23 @@ function normalizePage(value?: string | string[]) {
   return Number.isFinite(next) && next > 0 ? Math.floor(next) : 1
 }
 
+export function buildMediaQueryString(state: MediaQueryState) {
+  const params = new URLSearchParams()
+  const normalizedKeyword = state.keyword.trim()
+
+  if (normalizedKeyword) params.set("q", normalizedKeyword)
+  if (state.timeFilter !== "all") params.set("time", state.timeFilter)
+  if (state.storageFilter !== "all") params.set("storage", state.storageFilter)
+  if (state.formatFilter !== "all") params.set("format", state.formatFilter)
+  if (state.orientationFilter !== "all") params.set("orientation", state.orientationFilter)
+  if (state.usageFilter !== "all") params.set("usage", state.usageFilter)
+  if (state.usageKindFilter !== "all") params.set("kind", state.usageKindFilter)
+  if (state.sortBy !== "newest") params.set("sort", state.sortBy)
+  if (state.currentPage > 1) params.set("page", String(state.currentPage))
+
+  return params.toString()
+}
+
 export function parseMediaQueryState(params?: Record<string, string | string[] | undefined>): MediaQueryState {
   const source = params || {}
   const keyword = getSingleParam(source.q)?.trim() || ""
