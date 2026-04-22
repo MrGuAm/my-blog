@@ -4,6 +4,7 @@ import {
   buildMediaAssetBatchText,
   extractClipboardMediaFiles,
   formatMediaUploadBatchMessage,
+  getMediaOrientation,
   getMediaUploadHint,
   sortMediaAssets,
   validateMediaUploadInput,
@@ -89,4 +90,11 @@ test("sortMediaAssets supports time, size, and name ordering", () => {
   assert.deepEqual(sortMediaAssets(assets, "smallest").map((asset) => asset.name), ["a-file", "c-file", "b-file"])
   assert.deepEqual(sortMediaAssets(assets, "name-asc").map((asset) => asset.name), ["a-file", "b-file", "c-file"])
   assert.deepEqual(sortMediaAssets(assets, "name-desc").map((asset) => asset.name), ["c-file", "b-file", "a-file"])
+})
+
+test("getMediaOrientation classifies landscape, portrait, square, and unknown assets", () => {
+  assert.equal(getMediaOrientation(1600, 900), "landscape")
+  assert.equal(getMediaOrientation(900, 1600), "portrait")
+  assert.equal(getMediaOrientation(1080, 1080), "square")
+  assert.equal(getMediaOrientation(null, 1080), "unknown")
 })

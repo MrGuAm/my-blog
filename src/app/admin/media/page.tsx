@@ -36,6 +36,7 @@ export default async function AdminMediaPage({ searchParams }: AdminMediaPagePro
       initialKeyword={state.keyword}
       initialTimeFilter={state.timeFilter}
       initialStorageFilter={state.storageFilter}
+      initialOrientationFilter={state.orientationFilter}
       initialSortBy={state.sortBy}
       initialPage={state.currentPage}
     />

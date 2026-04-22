@@ -25,6 +25,7 @@ export interface MediaSortableAssetLike extends MediaExportAssetLike {
 }
 
 export type MediaSortOption = "newest" | "oldest" | "largest" | "smallest" | "name-asc" | "name-desc"
+export type MediaOrientation = "landscape" | "portrait" | "square" | "unknown"
 
 export const MEDIA_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
 export const MEDIA_UPLOAD_MIME_TYPES = [
@@ -137,4 +138,10 @@ export function sortMediaAssets<T extends MediaSortableAssetLike>(assets: T[], s
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
     }
   })
+}
+
+export function getMediaOrientation(width?: number | null, height?: number | null): MediaOrientation {
+  if (!width || !height) return "unknown"
+  if (width === height) return "square"
+  return width > height ? "landscape" : "portrait"
 }

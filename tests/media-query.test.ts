@@ -7,6 +7,7 @@ test("parseMediaQueryState normalizes media admin query params", () => {
     q: "  cover  ",
     time: "7d",
     storage: "blob",
+    orientation: "portrait",
     sort: "largest",
     page: "3",
   })
@@ -14,6 +15,7 @@ test("parseMediaQueryState normalizes media admin query params", () => {
   assert.equal(state.keyword, "cover")
   assert.equal(state.timeFilter, "7d")
   assert.equal(state.storageFilter, "blob")
+  assert.equal(state.orientationFilter, "portrait")
   assert.equal(state.sortBy, "largest")
   assert.equal(state.currentPage, 3)
 })
@@ -28,6 +30,7 @@ test("parseMediaQueryState falls back to safe defaults", () => {
   assert.equal(state.keyword, "")
   assert.equal(state.timeFilter, "all")
   assert.equal(state.storageFilter, "all")
+  assert.equal(state.orientationFilter, "all")
   assert.equal(state.sortBy, "newest")
   assert.equal(state.currentPage, 1)
 })

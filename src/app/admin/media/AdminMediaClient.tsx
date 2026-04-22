@@ -6,11 +6,13 @@ import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import SectionPageShell from "@/components/SectionPageShell"
 import {
   buildMediaAssetBatchText,
+  getMediaOrientation,
   MEDIA_UPLOAD_ACCEPT,
   formatMediaUploadBatchMessage,
   getMediaUploadHint,
   sortMediaAssets,
   validateMediaUploadInput,
+  type MediaOrientation,
   type MediaSortOption,
   type MediaUploadFailure,
 } from "@/lib/media-upload"
@@ -35,6 +37,7 @@ export default function AdminMediaClient({
   initialKeyword = "",
   initialTimeFilter = "all",
   initialStorageFilter = "all",
+  initialOrientationFilter = "all",
   initialSortBy = "newest",
   initialPage = 1,
 }: {
@@ -45,6 +48,7 @@ export default function AdminMediaClient({
   initialKeyword?: string
   initialTimeFilter?: "all" | "7d" | "30d"
   initialStorageFilter?: "all" | "blob" | "local"
+  initialOrientationFilter?: "all" | "landscape" | "portrait" | "square"
   initialSortBy?: MediaSortOption
   initialPage?: number
 }) {
@@ -58,6 +62,7 @@ export default function AdminMediaClient({
   const [keyword, setKeyword] = useState(initialKeyword)
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">(initialTimeFilter)
   const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">(initialStorageFilter)
+  const [orientationFilter, setOrientationFilter] = useState<"all" | "landscape" | "portrait" | "square">(initialOrientationFilter)
   const [sortBy, setSortBy] = useState<MediaSortOption>(initialSortBy)
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
@@ -72,6 +77,7 @@ export default function AdminMediaClient({
     if (normalizedKeyword) nextParams.set("q", normalizedKeyword)
     if (timeFilter !== "all") nextParams.set("time", timeFilter)
     if (storageFilter !== "all") nextParams.set("storage", storageFilter)
+    if (orientationFilter !== "all") nextParams.set("orientation", orientationFilter)
     if (sortBy !== "newest") nextParams.set("sort", sortBy)
     if (currentPage > 1) nextParams.set("page", String(currentPage))
 
@@ -82,7 +88,7 @@ export default function AdminMediaClient({
 
     const nextUrl = nextNormalized ? `${window.location.pathname}?${nextNormalized}` : window.location.pathname
     window.history.replaceState(null, "", nextUrl)
-  }, [currentPage, keyword, sortBy, storageFilter, timeFilter])
+  }, [currentPage, keyword, orientationFilter, sortBy, storageFilter, timeFilter])
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
@@ -189,18 +195,39 @@ export default function AdminMediaClient({
         return false
       }
 
+      const orientation = getMediaOrientation(asset.width, asset.height)
+      if (orientationFilter !== "all" && orientation !== orientationFilter) {
+        return false
+      }
+
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, keyword, referenceNow, sortBy, storageFilter, timeFilter])
+  }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter])
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetsPerPage))
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
   const visibleAssets = filteredAssets.slice(
     (safeCurrentPage - 1) * assetsPerPage,
     safeCurrentPage * assetsPerPage
   )
+  const filteredSummary = useMemo(() => {
+    const totalSize = filteredAssets.reduce((sum, asset) => sum + asset.size, 0)
+    const blobCount = filteredAssets.filter((asset) => asset.storage === "blob").length
+    const localCount = filteredAssets.filter((asset) => asset.storage === "local").length
+    const landscapeCount = filteredAssets.filter((asset) => getMediaOrientation(asset.width, asset.height) === "landscape").length
+    const portraitCount = filteredAssets.filter((asset) => getMediaOrientation(asset.width, asset.height) === "portrait").length
+    const squareCount = filteredAssets.filter((asset) => getMediaOrientation(asset.width, asset.height) === "square").length
+    return {
+      totalSize,
+      blobCount,
+      localCount,
+      landscapeCount,
+      portraitCount,
+      squareCount,
+    }
+  }, [filteredAssets])
 
   const selectedAssets = useMemo(
     () => assets.filter((asset) => selectedAssetIds.includes(asset.id)),
@@ -216,6 +243,7 @@ export default function AdminMediaClient({
     keyword.trim().length > 0 ||
     timeFilter !== "all" ||
     storageFilter !== "all" ||
+    orientationFilter !== "all" ||
     sortBy !== "newest" ||
     safeCurrentPage > 1
   const allSelectableVisibleSelected =
@@ -307,6 +335,7 @@ export default function AdminMediaClient({
     setKeyword("")
     setTimeFilter("all")
     setStorageFilter("all")
+    setOrientationFilter("all")
     setSortBy("newest")
     setCurrentPage(1)
   }
@@ -363,6 +392,19 @@ export default function AdminMediaClient({
               <option value="all">全部来源</option>
               <option value="blob">仅 Blob</option>
               <option value="local">仅本地</option>
+            </select>
+            <select
+              value={orientationFilter}
+              onChange={(event) => {
+                setOrientationFilter(event.target.value as "all" | "landscape" | "portrait" | "square")
+                setCurrentPage(1)
+              }}
+              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
+            >
+              <option value="all">全部形态</option>
+              <option value="landscape">横图</option>
+              <option value="portrait">竖图</option>
+              <option value="square">方图</option>
             </select>
             <select
               value={sortBy}
@@ -489,6 +531,29 @@ export default function AdminMediaClient({
               清空选择
             </button>
           ) : null}
+        </div>
+      </div>
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">素材总数</p>
+          <p className="mt-2 text-2xl font-semibold">{filteredAssets.length}</p>
+          <p className="mt-1 text-xs text-muted-foreground">当前筛选结果</p>
+        </div>
+        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">来源分布</p>
+          <p className="mt-2 text-2xl font-semibold">{filteredSummary.blobCount} / {filteredSummary.localCount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Blob / 本地</p>
+        </div>
+        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">形态分布</p>
+          <p className="mt-2 text-2xl font-semibold">{filteredSummary.landscapeCount} / {filteredSummary.portraitCount} / {filteredSummary.squareCount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">横图 / 竖图 / 方图</p>
+        </div>
+        <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">总体积</p>
+          <p className="mt-2 text-2xl font-semibold">{formatSize(filteredSummary.totalSize)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">当前筛选结果</p>
         </div>
       </div>
 

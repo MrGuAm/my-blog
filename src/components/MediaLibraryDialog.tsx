@@ -4,11 +4,13 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import {
+  getMediaOrientation,
   MEDIA_UPLOAD_ACCEPT,
   formatMediaUploadBatchMessage,
   getMediaUploadHint,
   sortMediaAssets,
   validateMediaUploadInput,
+  type MediaOrientation,
   type MediaSortOption,
   type MediaUploadFailure,
 } from "@/lib/media-upload"
@@ -50,6 +52,7 @@ export default function MediaLibraryDialog({
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
   const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">("all")
+  const [orientationFilter, setOrientationFilter] = useState<"all" | "landscape" | "portrait" | "square">("all")
   const [sortBy, setSortBy] = useState<MediaSortOption>("newest")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const uploadHintText = uploadHint ?? getMediaUploadHint()
@@ -90,16 +93,22 @@ export default function MediaLibraryDialog({
         return false
       }
 
+      const orientation = getMediaOrientation(asset.width, asset.height)
+      if (orientationFilter !== "all" && orientation !== orientationFilter) {
+        return false
+      }
+
       if (timeFilter === "all") return true
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, keyword, referenceNow, sortBy, storageFilter, timeFilter])
+  }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter])
   const hasActiveFilters =
     keyword.trim().length > 0 ||
     timeFilter !== "all" ||
     storageFilter !== "all" ||
+    orientationFilter !== "all" ||
     sortBy !== "newest"
 
   if (!isOpen) return null
@@ -117,6 +126,7 @@ export default function MediaLibraryDialog({
     setKeyword("")
     setTimeFilter("all")
     setStorageFilter("all")
+    setOrientationFilter("all")
     setSortBy("newest")
   }
 
@@ -303,6 +313,16 @@ export default function MediaLibraryDialog({
               <option value="all">全部来源</option>
               <option value="blob">仅 Blob</option>
               <option value="local">仅本地</option>
+            </select>
+            <select
+              value={orientationFilter}
+              onChange={(event) => setOrientationFilter(event.target.value as "all" | "landscape" | "portrait" | "square")}
+              className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
+            >
+              <option value="all">全部形态</option>
+              <option value="landscape">横图</option>
+              <option value="portrait">竖图</option>
+              <option value="square">方图</option>
             </select>
             <select
               value={sortBy}
