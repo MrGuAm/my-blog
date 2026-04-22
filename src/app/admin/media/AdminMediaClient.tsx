@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useRef, useState } from "react"
+import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import SectionPageShell from "@/components/SectionPageShell"
 import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint, validateMediaUploadInput } from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
@@ -185,6 +186,14 @@ export default function AdminMediaClient({
     >
       {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
       {warning ? <p className="mb-4 text-sm text-amber-600">{warning}</p> : null}
+      <MediaUploadDropzone
+        canUpload={canUpload}
+        isUploading={isUploading}
+        hint={uploadHint}
+        onSelectFile={handleUpload}
+        className="mb-4"
+        compact
+      />
 
       {filteredAssets.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint, validateMediaUploadInput } from "@/lib/media-upload"
 
 interface MediaAsset {
@@ -185,7 +186,7 @@ export default function MediaLibraryDialog({
               disabled={!canUpload}
               className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {!canUpload ? "请先配置 Blob" : isUploading ? "上传中..." : "上传图片"}
+              {!canUpload ? "请先配置 Blob" : isUploading ? "上传中..." : "更多上传方式"}
             </button>
             <button
               type="button"
@@ -201,6 +202,13 @@ export default function MediaLibraryDialog({
         {warning && <p className="px-6 pt-3 text-sm text-amber-600">{warning}</p>}
 
         <div className="overflow-y-auto px-6 py-5">
+          <MediaUploadDropzone
+            canUpload={canUpload}
+            isUploading={isUploading}
+            hint={uploadHintText}
+            onSelectFile={handleUpload}
+            className="mb-5"
+          />
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <input
               type="text"
