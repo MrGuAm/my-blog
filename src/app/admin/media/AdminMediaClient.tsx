@@ -765,6 +765,8 @@ export default function AdminMediaClient({
         hasPrevious={previewIndex > 0}
         hasNext={previewIndex >= 0 && previewIndex < visibleAssets.length - 1}
         positionLabel={previewIndex >= 0 ? `${previewIndex + 1} / ${visibleAssets.length}` : undefined}
+        thumbnailAssets={visibleAssets}
+        onJumpToAsset={(asset) => setPreviewAsset(asset)}
       />
     </SectionPageShell>
   )

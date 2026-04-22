@@ -478,6 +478,8 @@ export default function MediaLibraryDialog({
           hasPrevious={previewIndex > 0}
           hasNext={previewIndex >= 0 && previewIndex < filteredAssets.length - 1}
           positionLabel={previewIndex >= 0 ? `${previewIndex + 1} / ${filteredAssets.length}` : undefined}
+          thumbnailAssets={filteredAssets}
+          onJumpToAsset={(asset) => setPreviewAsset(asset)}
         />
       </div>
     </div>

@@ -27,6 +27,8 @@ export default function MediaAssetPreviewDialog({
   hasPrevious = false,
   hasNext = false,
   positionLabel,
+  thumbnailAssets = [],
+  onJumpToAsset,
 }: {
   asset: MediaAsset | null
   isOpen: boolean
@@ -38,6 +40,8 @@ export default function MediaAssetPreviewDialog({
   hasPrevious?: boolean
   hasNext?: boolean
   positionLabel?: string
+  thumbnailAssets?: MediaAsset[]
+  onJumpToAsset?: ((asset: MediaAsset) => void) | null
 }) {
   useEffect(() => {
     if (!isOpen) return
@@ -131,6 +135,31 @@ export default function MediaAssetPreviewDialog({
             <div className="flex min-h-[20rem] items-center justify-center overflow-hidden rounded-[1.5rem] border border-border/50 bg-card">
               <img src={asset.url} alt={asset.name} className="max-h-[68vh] w-full object-contain" />
             </div>
+            {thumbnailAssets.length > 1 ? (
+              <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+                {thumbnailAssets.map((thumbnail) => {
+                  const isCurrent = thumbnail.id === asset.id
+                  return (
+                    <button
+                      key={thumbnail.id}
+                      type="button"
+                      onClick={() => onJumpToAsset?.(thumbnail)}
+                      className={`shrink-0 overflow-hidden rounded-xl border transition-colors ${
+                        isCurrent
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "border-border/50 hover:border-primary/50"
+                      }`}
+                    >
+                      <img
+                        src={thumbnail.url}
+                        alt={thumbnail.name}
+                        className="h-16 w-16 object-cover"
+                      />
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-4 p-6">
