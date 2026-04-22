@@ -302,6 +302,7 @@ export default function MediaLibraryDialog({
               type="text"
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
+              aria-label="搜索素材名称"
               placeholder="搜索素材名称"
               className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm sm:max-w-xs"
             />
@@ -325,6 +326,7 @@ export default function MediaLibraryDialog({
             </div>
             <select
               value={storageFilter}
+              aria-label="媒体来源筛选"
               onChange={(event) => setStorageFilter(event.target.value as "all" | "blob" | "local")}
               className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
             >
@@ -334,6 +336,7 @@ export default function MediaLibraryDialog({
             </select>
             <select
               value={orientationFilter}
+              aria-label="媒体形态筛选"
               onChange={(event) => setOrientationFilter(event.target.value as "all" | "landscape" | "portrait" | "square")}
               className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
             >
@@ -344,6 +347,7 @@ export default function MediaLibraryDialog({
             </select>
             <select
               value={usageFilter}
+              aria-label="媒体使用筛选"
               onChange={(event) => setUsageFilter(event.target.value as "all" | "used" | "unused")}
               className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
             >
@@ -353,6 +357,7 @@ export default function MediaLibraryDialog({
             </select>
             <select
               value={sortBy}
+              aria-label="媒体排序"
               onChange={(event) => setSortBy(event.target.value as MediaSortOption)}
               className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
             >

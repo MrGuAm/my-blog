@@ -383,6 +383,7 @@ export default function AdminMediaClient({
                 setKeyword(event.target.value)
                 setCurrentPage(1)
               }}
+              aria-label="搜索素材名称"
               placeholder="搜索素材名称"
               className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm sm:w-64"
             />
@@ -409,6 +410,7 @@ export default function AdminMediaClient({
             </div>
             <select
               value={storageFilter}
+              aria-label="媒体来源筛选"
               onChange={(event) => {
                 setStorageFilter(event.target.value as "all" | "blob" | "local")
                 setCurrentPage(1)
@@ -421,6 +423,7 @@ export default function AdminMediaClient({
             </select>
             <select
               value={orientationFilter}
+              aria-label="媒体形态筛选"
               onChange={(event) => {
                 setOrientationFilter(event.target.value as "all" | "landscape" | "portrait" | "square")
                 setCurrentPage(1)
@@ -434,6 +437,7 @@ export default function AdminMediaClient({
             </select>
             <select
               value={usageFilter}
+              aria-label="媒体使用筛选"
               onChange={(event) => {
                 setUsageFilter(event.target.value as "all" | "used" | "unused")
                 setCurrentPage(1)
@@ -446,6 +450,7 @@ export default function AdminMediaClient({
             </select>
             <select
               value={sortBy}
+              aria-label="媒体排序"
               onChange={(event) => {
                 setSortBy(event.target.value as MediaSortOption)
                 setCurrentPage(1)
