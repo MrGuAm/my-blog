@@ -84,6 +84,99 @@ test("comment user registration route creates a user and session cookie in an is
   })
 })
 
+test("comment user login route rate-limits repeated failed attempts in an isolated workspace", async () => {
+  await withTempWorkspace(async () => {
+    const registerRoute = await importFresh<typeof import("../src/app/api/user/register/route")>("src/app/api/user/register/route.ts")
+    const loginRoute = await importFresh<typeof import("../src/app/api/user/login/route")>("src/app/api/user/login/route.ts")
+
+    await registerRoute.POST(
+      new NextRequest("https://champion.cc.cd/api/user/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          username: "limited_user",
+          displayName: "受限用户",
+          password: "12345678",
+        }),
+      })
+    )
+
+    for (let index = 0; index < 5; index += 1) {
+      const request = new NextRequest("https://champion.cc.cd/api/user/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-real-ip": "198.51.100.21",
+        },
+        body: JSON.stringify({
+          username: "limited_user",
+          password: "wrong-password",
+        }),
+      })
+      const response = await loginRoute.POST(request)
+      assert.equal(response.status, 401)
+    }
+
+    const blockedRequest = new NextRequest("https://champion.cc.cd/api/user/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-real-ip": "198.51.100.21",
+      },
+      body: JSON.stringify({
+        username: "limited_user",
+        password: "wrong-password",
+      }),
+    })
+    const blockedResponse = await loginRoute.POST(blockedRequest)
+    const blockedPayload = await blockedResponse.json()
+
+    assert.equal(blockedResponse.status, 429)
+    assert.match(blockedPayload.error, /登录尝试过于频繁/)
+  })
+})
+
+test("comment user registration route rate-limits repeated attempts in an isolated workspace", async () => {
+  await withTempWorkspace(async () => {
+    const registerRoute = await importFresh<typeof import("../src/app/api/user/register/route")>("src/app/api/user/register/route.ts")
+
+    for (let index = 0; index < 4; index += 1) {
+      const request = new NextRequest("https://champion.cc.cd/api/user/register", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-real-ip": "198.51.100.22",
+        },
+        body: JSON.stringify({
+          username: `register_user_${index}`,
+          displayName: `注册用户${index}`,
+          password: "12345678",
+        }),
+      })
+      const response = await registerRoute.POST(request)
+      assert.equal(response.status, 200)
+    }
+
+    const blockedRequest = new NextRequest("https://champion.cc.cd/api/user/register", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-real-ip": "198.51.100.22",
+      },
+      body: JSON.stringify({
+        username: "register_u5",
+        displayName: "注册用户5",
+        password: "12345678",
+      }),
+    })
+    const blockedResponse = await registerRoute.POST(blockedRequest)
+    const blockedPayload = await blockedResponse.json()
+
+    assert.equal(blockedResponse.status, 429)
+    assert.match(blockedPayload.error, /注册尝试过于频繁/)
+  })
+})
+
 test("admin login route rate-limits repeated failed attempts in an isolated workspace", async () => {
   await withTempWorkspace(async () => {
     const loginRoute = await importFresh<typeof import("../src/app/api/auth/login/route")>("src/app/api/auth/login/route.ts")
