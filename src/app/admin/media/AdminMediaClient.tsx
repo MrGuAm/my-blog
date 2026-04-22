@@ -361,6 +361,22 @@ export default function AdminMediaClient({
     setMessage(`已导出 ${selectedAssets.length} 项素材 CSV`)
   }
 
+  const handleExportFilteredCsv = () => {
+    if (filteredAssets.length === 0 || typeof window === "undefined") return
+
+    const csv = buildMediaAssetCsv(filteredAssets)
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+    const url = window.URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = `media-filtered-${Date.now()}.csv`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    window.URL.revokeObjectURL(url)
+    setMessage(`已导出当前筛选结果，共 ${filteredAssets.length} 项素材`)
+  }
+
   const handleDeleteSelected = async () => {
     if (deletableSelectedAssets.length === 0) return
     if (!confirm(`确定删除已选中的 ${deletableSelectedAssets.length} 张素材吗？`)) return
@@ -628,6 +644,14 @@ export default function AdminMediaClient({
               className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
             >
               刷新
+            </button>
+            <button
+              type="button"
+              onClick={handleExportFilteredCsv}
+              disabled={filteredAssets.length === 0}
+              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              导出筛选结果 CSV
             </button>
             <button
               type="button"
