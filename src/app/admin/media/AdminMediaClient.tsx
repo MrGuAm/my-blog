@@ -447,6 +447,8 @@ export default function AdminMediaClient({
               <option value="oldest">最旧优先</option>
               <option value="largest">文件最大</option>
               <option value="smallest">文件最小</option>
+              <option value="most-used">引用最多</option>
+              <option value="least-used">引用最少</option>
               <option value="name-asc">名称 A-Z</option>
               <option value="name-desc">名称 Z-A</option>
             </select>

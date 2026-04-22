@@ -19,6 +19,8 @@ const MEDIA_SORT_OPTIONS = new Set<MediaSortOption>([
   "oldest",
   "largest",
   "smallest",
+  "most-used",
+  "least-used",
   "name-asc",
   "name-desc",
 ])

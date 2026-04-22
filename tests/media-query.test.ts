@@ -9,7 +9,7 @@ test("parseMediaQueryState normalizes media admin query params", () => {
     storage: "blob",
     orientation: "portrait",
     usage: "unused",
-    sort: "largest",
+    sort: "most-used",
     page: "3",
   })
 
@@ -18,7 +18,7 @@ test("parseMediaQueryState normalizes media admin query params", () => {
   assert.equal(state.storageFilter, "blob")
   assert.equal(state.orientationFilter, "portrait")
   assert.equal(state.usageFilter, "unused")
-  assert.equal(state.sortBy, "largest")
+  assert.equal(state.sortBy, "most-used")
   assert.equal(state.currentPage, 3)
 })
 

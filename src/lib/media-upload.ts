@@ -22,9 +22,18 @@ export interface MediaExportAssetLike {
 export interface MediaSortableAssetLike extends MediaExportAssetLike {
   size: number
   updatedAt: string
+  usageCount?: number
 }
 
-export type MediaSortOption = "newest" | "oldest" | "largest" | "smallest" | "name-asc" | "name-desc"
+export type MediaSortOption =
+  | "newest"
+  | "oldest"
+  | "largest"
+  | "smallest"
+  | "most-used"
+  | "least-used"
+  | "name-asc"
+  | "name-desc"
 export type MediaOrientation = "landscape" | "portrait" | "square" | "unknown"
 
 export const MEDIA_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
@@ -129,6 +138,10 @@ export function sortMediaAssets<T extends MediaSortableAssetLike>(assets: T[], s
         return right.size - left.size
       case "smallest":
         return left.size - right.size
+      case "most-used":
+        return (right.usageCount ?? 0) - (left.usageCount ?? 0)
+      case "least-used":
+        return (left.usageCount ?? 0) - (right.usageCount ?? 0)
       case "name-asc":
         return left.name.localeCompare(right.name, "zh-CN")
       case "name-desc":

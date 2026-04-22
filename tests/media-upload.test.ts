@@ -80,15 +80,17 @@ test("buildMediaAssetBatchText renders selected assets for url, markdown, and ht
 
 test("sortMediaAssets supports time, size, and name ordering", () => {
   const assets = [
-    { name: "b-file", url: "/b", size: 300, updatedAt: "2026-04-20T10:00:00.000Z" },
-    { name: "a-file", url: "/a", size: 100, updatedAt: "2026-04-22T10:00:00.000Z" },
-    { name: "c-file", url: "/c", size: 200, updatedAt: "2026-04-21T10:00:00.000Z" },
+    { name: "b-file", url: "/b", size: 300, updatedAt: "2026-04-20T10:00:00.000Z", usageCount: 3 },
+    { name: "a-file", url: "/a", size: 100, updatedAt: "2026-04-22T10:00:00.000Z", usageCount: 1 },
+    { name: "c-file", url: "/c", size: 200, updatedAt: "2026-04-21T10:00:00.000Z", usageCount: 0 },
   ]
 
   assert.deepEqual(sortMediaAssets(assets, "newest").map((asset) => asset.name), ["a-file", "c-file", "b-file"])
   assert.deepEqual(sortMediaAssets(assets, "oldest").map((asset) => asset.name), ["b-file", "c-file", "a-file"])
   assert.deepEqual(sortMediaAssets(assets, "largest").map((asset) => asset.name), ["b-file", "c-file", "a-file"])
   assert.deepEqual(sortMediaAssets(assets, "smallest").map((asset) => asset.name), ["a-file", "c-file", "b-file"])
+  assert.deepEqual(sortMediaAssets(assets, "most-used").map((asset) => asset.name), ["b-file", "a-file", "c-file"])
+  assert.deepEqual(sortMediaAssets(assets, "least-used").map((asset) => asset.name), ["c-file", "a-file", "b-file"])
   assert.deepEqual(sortMediaAssets(assets, "name-asc").map((asset) => asset.name), ["a-file", "b-file", "c-file"])
   assert.deepEqual(sortMediaAssets(assets, "name-desc").map((asset) => asset.name), ["c-file", "b-file", "a-file"])
 })
