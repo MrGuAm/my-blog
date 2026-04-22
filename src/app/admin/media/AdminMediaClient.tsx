@@ -4,7 +4,13 @@
 import { useMemo, useRef, useState } from "react"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import SectionPageShell from "@/components/SectionPageShell"
-import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint, validateMediaUploadInput } from "@/lib/media-upload"
+import {
+  MEDIA_UPLOAD_ACCEPT,
+  formatMediaUploadBatchMessage,
+  getMediaUploadHint,
+  validateMediaUploadInput,
+  type MediaUploadFailure,
+} from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
 
 function formatSize(size: number) {
@@ -44,26 +50,42 @@ export default function AdminMediaClient({
     setReferenceNow(Date.now())
   }
 
-  const handleUpload = async (file?: File | null) => {
-    if (!file || !canUpload) return
-    const validationError = validateMediaUploadInput(file)
-    if (validationError) {
-      setMessage(validationError)
-      return
-    }
+  const handleUploads = async (files: File[] = []) => {
+    if (!files.length || !canUpload) return
     setIsUploading(true)
     setMessage("")
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      const response = await fetch("/api/admin/media", { method: "POST", body: formData })
-      const data = await response.json()
-      if (!response.ok) {
-        setMessage(data.error || "上传失败")
-        return
+      const uploadedAssets: MediaAsset[] = []
+      const failures: MediaUploadFailure[] = []
+
+      for (const file of files) {
+        const validationError = validateMediaUploadInput(file)
+        if (validationError) {
+          failures.push({ name: file.name || "未命名文件", reason: validationError })
+          continue
+        }
+
+        const formData = new FormData()
+        formData.append("file", file)
+        const response = await fetch("/api/admin/media", { method: "POST", body: formData })
+        const data = await response.json()
+        if (!response.ok) {
+          failures.push({ name: file.name || "未命名文件", reason: data.error || "上传失败" })
+          continue
+        }
+        uploadedAssets.push(data.asset)
       }
-      setAssets((current) => [data.asset, ...current.filter((item) => item.id !== data.asset.id)])
-      setMessage("素材上传成功")
+
+      if (uploadedAssets.length > 0) {
+        setAssets((current) => [
+          ...uploadedAssets,
+          ...current.filter((item) => !uploadedAssets.some((asset) => asset.id === item.id)),
+        ])
+      }
+
+      if (uploadedAssets.length > 0 || failures.length > 0) {
+        setMessage(formatMediaUploadBatchMessage({ successCount: uploadedAssets.length, failures }))
+      }
       setReferenceNow(Date.now())
     } catch {
       setMessage("上传失败，请重试")
@@ -153,17 +175,6 @@ export default function AdminMediaClient({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={MEDIA_UPLOAD_ACCEPT}
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                handleUpload(file)
-                event.target.value = ""
-              }}
-            />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -186,11 +197,22 @@ export default function AdminMediaClient({
     >
       {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
       {warning ? <p className="mb-4 text-sm text-amber-600">{warning}</p> : null}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={MEDIA_UPLOAD_ACCEPT}
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          handleUploads(Array.from(event.target.files ?? []))
+          event.target.value = ""
+        }}
+      />
       <MediaUploadDropzone
         canUpload={canUpload}
         isUploading={isUploading}
         hint={uploadHint}
-        onSelectFile={handleUpload}
+        onSelectFiles={handleUploads}
         className="mb-4"
         compact
       />

@@ -3,7 +3,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
-import { MEDIA_UPLOAD_ACCEPT, getMediaUploadHint, validateMediaUploadInput } from "@/lib/media-upload"
+import {
+  MEDIA_UPLOAD_ACCEPT,
+  formatMediaUploadBatchMessage,
+  getMediaUploadHint,
+  validateMediaUploadInput,
+  type MediaUploadFailure,
+} from "@/lib/media-upload"
 
 interface MediaAsset {
   id: string
@@ -99,35 +105,57 @@ export default function MediaLibraryDialog({
     }
   }
 
-  const handleUpload = async (file?: File | null) => {
-    if (!file || !canUpload) return
-    const validationError = validateMediaUploadInput(file)
-    if (validationError) {
-      setMessage(validationError)
-      return
-    }
+  const handleUploads = async (files: File[] = []) => {
+    if (!files.length || !canUpload) return
     setIsUploading(true)
     setMessage("")
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      const response = await fetch("/api/admin/media", {
-        method: "POST",
-        body: formData,
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        setMessage(data.error || "上传失败")
-        return
+      const uploadedAssets: MediaAsset[] = []
+      const failures: MediaUploadFailure[] = []
+
+      for (const file of files) {
+        const validationError = validateMediaUploadInput(file)
+        if (validationError) {
+          failures.push({ name: file.name || "未命名文件", reason: validationError })
+          continue
+        }
+
+        const formData = new FormData()
+        formData.append("file", file)
+        const response = await fetch("/api/admin/media", {
+          method: "POST",
+          body: formData,
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          failures.push({ name: file.name || "未命名文件", reason: data.error || "上传失败" })
+          continue
+        }
+        uploadedAssets.push(data.asset)
       }
-      setAssets((current) => [data.asset, ...current.filter((item) => item.id !== data.asset.id)])
-      if (autoSelectUpload && data.asset?.url) {
-        onSelect(data.asset.url)
-        setMessage("图片已上传并自动选用")
+
+      if (uploadedAssets.length > 0) {
+        setAssets((current) => [
+          ...uploadedAssets,
+          ...current.filter((item) => !uploadedAssets.some((asset) => asset.id === item.id)),
+        ])
+      }
+
+      if (autoSelectUpload && uploadedAssets.length === 1 && failures.length === 0) {
+        onSelect(uploadedAssets[0].url)
         onClose()
         return
       }
-      setMessage("图片已上传到媒体库")
+
+      if (uploadedAssets.length > 0 || failures.length > 0) {
+        setMessage(
+          formatMediaUploadBatchMessage({
+            successCount: uploadedAssets.length,
+            failures,
+            autoSelected: false,
+          })
+        )
+      }
       setReferenceNow(Date.now())
     } catch {
       setMessage("上传失败，请重试")
@@ -173,10 +201,10 @@ export default function MediaLibraryDialog({
               ref={fileInputRef}
               type="file"
               accept={MEDIA_UPLOAD_ACCEPT}
+              multiple
               className="hidden"
               onChange={(event) => {
-                const file = event.target.files?.[0]
-                handleUpload(file)
+                handleUploads(Array.from(event.target.files ?? []))
                 event.target.value = ""
               }}
             />
@@ -206,7 +234,7 @@ export default function MediaLibraryDialog({
             canUpload={canUpload}
             isUploading={isUploading}
             hint={uploadHintText}
-            onSelectFile={handleUpload}
+            onSelectFiles={handleUploads}
             className="mb-5"
           />
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

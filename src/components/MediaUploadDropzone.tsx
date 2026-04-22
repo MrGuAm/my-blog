@@ -7,22 +7,24 @@ export default function MediaUploadDropzone({
   canUpload,
   isUploading,
   hint,
-  onSelectFile,
+  onSelectFiles,
   className = "",
   compact = false,
+  multiple = true,
 }: {
   canUpload: boolean
   isUploading: boolean
   hint: string
-  onSelectFile: (file?: File | null) => void
+  onSelectFiles: (files: File[]) => void
   className?: string
   compact?: boolean
+  multiple?: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
   const handleFiles = (files?: FileList | null) => {
-    onSelectFile(files?.[0])
+    onSelectFiles(Array.from(files ?? []))
   }
 
   return (
@@ -73,6 +75,7 @@ export default function MediaUploadDropzone({
         ref={inputRef}
         type="file"
         accept={MEDIA_UPLOAD_ACCEPT}
+        multiple={multiple}
         className="hidden"
         onChange={(event) => {
           handleFiles(event.target.files)

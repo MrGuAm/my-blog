@@ -3,6 +3,11 @@ export interface MediaUploadCandidate {
   type: string
 }
 
+export interface MediaUploadFailure {
+  name: string
+  reason: string
+}
+
 export const MEDIA_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
 export const MEDIA_UPLOAD_MIME_TYPES = [
   "image/jpeg",
@@ -37,4 +42,33 @@ export function validateMediaUploadInput(file: MediaUploadCandidate) {
   }
 
   return null
+}
+
+export function formatMediaUploadBatchMessage({
+  successCount,
+  failures,
+  autoSelected = false,
+}: {
+  successCount: number
+  failures: MediaUploadFailure[]
+  autoSelected?: boolean
+}) {
+  if (successCount > 0 && failures.length === 0) {
+    if (autoSelected && successCount === 1) {
+      return "图片已上传并自动选用"
+    }
+    return successCount === 1 ? "素材上传成功" : `已上传 ${successCount} 张素材`
+  }
+
+  const failureSummary = failures
+    .slice(0, 2)
+    .map((failure) => `${failure.name}（${failure.reason}）`)
+    .join("；")
+  const failureSuffix = failures.length > 2 ? "；其余文件也上传失败" : ""
+
+  if (successCount > 0) {
+    return `已上传 ${successCount} 张，${failures.length} 张失败：${failureSummary}${failureSuffix}`
+  }
+
+  return `上传失败：${failureSummary}${failureSuffix}`
 }
