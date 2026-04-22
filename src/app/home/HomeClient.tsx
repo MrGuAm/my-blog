@@ -355,8 +355,8 @@ export default function HomeClient({
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <SiteBrand label={siteSettings.brandName} className="text-foreground" />
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <div className="relative w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 lg:gap-3">
+              <div className="relative min-w-0 w-full sm:w-auto">
                 <input
                   type="text"
                   placeholder="搜索文章或标签..."
@@ -365,7 +365,7 @@ export default function HomeClient({
                     setSearchQuery(e.target.value)
                     setCurrentPage(1)
                   }}
-                  className="apple-input w-full pl-9 pr-9 sm:w-56"
+                  className="apple-input w-full pl-9 pr-9 sm:w-48 lg:w-40 xl:w-56"
                 />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">🔍</span>
                 {(searchQuery || selectedTag) && (
@@ -382,7 +382,7 @@ export default function HomeClient({
                   #{selectedTag}
                 </span>
               )}
-              <span className="text-xs text-muted-foreground hidden lg:inline">
+              <span className="text-xs text-muted-foreground hidden xl:inline">
                 共 {filteredPosts.length} 篇
               </span>
               <PrimaryNavLinks
@@ -397,9 +397,10 @@ export default function HomeClient({
                     setShowDrafts(!showDrafts)
                     setCurrentPage(1)
                   }}
-                  className={`apple-button-secondary px-3 py-1.5 ${effectiveShowDrafts ? "bg-white text-foreground dark:bg-white/12" : ""}`}
+                  className={`apple-button-secondary min-w-[4.8rem] px-3 py-1.5 ${effectiveShowDrafts ? "bg-white text-foreground dark:bg-white/12" : ""}`}
                 >
-                  {effectiveShowDrafts ? '隐藏草稿' : '显示草稿'}
+                  <span className="xl:hidden">{effectiveShowDrafts ? "草稿开" : "草稿关"}</span>
+                  <span className="hidden xl:inline">{effectiveShowDrafts ? '隐藏草稿' : '显示草稿'}</span>
                 </button>
               ) : null}
             </div>

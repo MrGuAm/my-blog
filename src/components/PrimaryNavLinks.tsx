@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import { useSiteSettings } from "@/hooks/useSiteSettings"
@@ -46,6 +46,8 @@ export default function PrimaryNavLinks({
 }: PrimaryNavLinksProps) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isDesktopAdminMenuOpen, setIsDesktopAdminMenuOpen] = useState(false)
+  const desktopAdminMenuRef = useRef<HTMLDivElement | null>(null)
   const { isAuthenticated, logout } = useAuthStatus()
   const siteSettings = useSiteSettings()
   const loginModalOpen = isLoginModalOpen || (loginRequested && !isAuthenticated)
@@ -62,7 +64,31 @@ export default function PrimaryNavLinks({
     { href: "/admin/settings", label: "设置", key: "settings" as NavKey },
   ]
   const tagItem = active === "tags" ? [{ href: "/tags", label: "全部标签", key: "tags" as NavKey }] : []
-  const navItems = [...baseItems, ...tagItem, ...(isAuthenticated ? authItems : [])]
+  const desktopPrimaryItems = [...baseItems, ...tagItem]
+  const mobileNavItems = [...baseItems, ...tagItem, ...(isAuthenticated ? authItems : [])]
+
+  useEffect(() => {
+    if (!isDesktopAdminMenuOpen) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!desktopAdminMenuRef.current?.contains(event.target as Node)) {
+        setIsDesktopAdminMenuOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsDesktopAdminMenuOpen(false)
+      }
+    }
+
+    window.addEventListener("mousedown", handlePointerDown)
+    window.addEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown)
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [isDesktopAdminMenuOpen])
 
   const handleClose = () => {
     setIsLoginModalOpen(false)
@@ -81,30 +107,78 @@ export default function PrimaryNavLinks({
 
   const handleOpenLogin = () => {
     setIsMobileMenuOpen(false)
+    setIsDesktopAdminMenuOpen(false)
     setIsLoginModalOpen(true)
   }
 
   const handleLogout = async () => {
     setIsMobileMenuOpen(false)
+    setIsDesktopAdminMenuOpen(false)
     await logout()
   }
 
   return (
     <>
-      <div className="hidden items-center gap-4 md:flex lg:gap-6">
-        {navItems.map((item) => (
+      <div className="hidden items-center gap-4 md:flex lg:gap-5">
+        {desktopPrimaryItems.map((item) => (
           <Link key={item.href} href={item.href} className={desktopNavClass(active === item.key)}>
             {item.label}
           </Link>
         ))}
         {isAuthenticated ? (
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-sm font-medium text-red-500 transition-colors hover:text-red-600"
-          >
-            退出
-          </button>
+          <>
+            <div className="hidden items-center gap-4 xl:flex">
+              {authItems.map((item) => (
+                <Link key={item.href} href={item.href} className={desktopNavClass(active === item.key)}>
+                  {item.label}
+                </Link>
+              ))}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-sm font-medium text-red-500 transition-colors hover:text-red-600"
+              >
+                退出
+              </button>
+            </div>
+
+            <div ref={desktopAdminMenuRef} className="relative xl:hidden">
+              <button
+                type="button"
+                onClick={() => setIsDesktopAdminMenuOpen((current) => !current)}
+                className="apple-button-secondary px-3 py-1.5"
+                aria-expanded={isDesktopAdminMenuOpen}
+                aria-haspopup="menu"
+              >
+                管理台
+              </button>
+              {isDesktopAdminMenuOpen ? (
+                <div className="apple-panel absolute right-0 top-full z-30 mt-3 w-44 rounded-3xl p-3 shadow-2xl">
+                  <div className="grid gap-1.5">
+                    {authItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsDesktopAdminMenuOpen(false)}
+                        className={`rounded-2xl px-3 py-2 text-sm font-medium transition-colors ${
+                          active === item.key ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="rounded-2xl px-3 py-2 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-500/8"
+                    >
+                      退出
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </>
         ) : (
           <button
             type="button"
@@ -147,7 +221,7 @@ export default function PrimaryNavLinks({
               </button>
             </div>
             <div className="grid gap-2">
-              {navItems.map((item) => (
+              {mobileNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
