@@ -4,6 +4,7 @@
 import { useState, useEffect, useMemo, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import HighlightedText from "@/components/HighlightedText"
 import { Post } from "@/lib/posts"
 import { PaletteHeroTrio } from "@/components/PaletteCharacters"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
@@ -12,7 +13,7 @@ import SiteFooter from "@/components/SiteFooter"
 import MarqueeText from "@/components/music/MarqueeText"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
-import { filterPostsForListing, getPostSearchMatchScope, getPostSearchSuggestions, splitHighlightedText } from "@/lib/post-search"
+import { filterPostsForListing, getPostSearchMatchScope, getPostSearchSuggestions } from "@/lib/post-search"
 import type { SiteSettings } from "@/lib/site-settings"
 
 interface HomeClientProps {
@@ -66,18 +67,6 @@ function SidebarSection({ title, children }: { title: string; children: ReactNod
   )
 }
 
-function renderHighlightedText(text: string, searchQuery: string) {
-  return splitHighlightedText(text, searchQuery).map((part, index) =>
-    part.match ? (
-      <mark key={`${text}-${index}`} className="rounded bg-[#ffe1b3]/80 px-1 text-foreground">
-        {part.text}
-      </mark>
-    ) : (
-      <span key={`${text}-${index}`}>{part.text}</span>
-    )
-  )
-}
-
 function FeaturedStoryCard({
   post,
   isAuthenticated,
@@ -115,17 +104,17 @@ function FeaturedStoryCard({
         <span className="text-xs text-muted-foreground">{post.date}</span>
         {post.series ? (
           <span className="apple-pill">
-            系列：{renderHighlightedText(post.series, searchQuery)}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
+            系列：<HighlightedText text={post.series} query={searchQuery} />{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
           </span>
         ) : null}
         {showContentMatch ? (
           <span className="apple-pill">正文命中</span>
         ) : null}
       </div>
-      <h3 className="text-xl font-semibold tracking-[-0.04em] text-foreground">{renderHighlightedText(post.title, searchQuery)}</h3>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">{renderHighlightedText(post.excerpt, searchQuery)}</p>
+      <h3 className="text-xl font-semibold tracking-[-0.04em] text-foreground"><HighlightedText text={post.title} query={searchQuery} /></h3>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground"><HighlightedText text={post.excerpt} query={searchQuery} /></p>
       <div className="mt-5 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{renderHighlightedText(post.category, searchQuery)}</span>
+        <span className="text-muted-foreground"><HighlightedText text={post.category} query={searchQuery} /></span>
         <span className="font-medium text-foreground/80">进入阅读 →</span>
       </div>
     </Link>
@@ -166,7 +155,7 @@ function PostCard({
       )}
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
         <span className="apple-pill">
-          {renderHighlightedText(post.category, searchQuery)}
+          <HighlightedText text={post.category} query={searchQuery} />
         </span>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{post.date}</span>
@@ -208,7 +197,7 @@ function PostCard({
             onClick={(event) => event.stopPropagation()}
             className="apple-pill hover:bg-white dark:hover:bg-white/12"
           >
-            系列：{renderHighlightedText(post.series, searchQuery)}{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
+            系列：<HighlightedText text={post.series} query={searchQuery} />{post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
           </Link>
         ) : null}
         {showContentMatch ? (
@@ -221,16 +210,16 @@ function PostCard({
               onClick={(e) => { e.stopPropagation(); onTagClick(tag); }}
               className="apple-pill hover:bg-white dark:hover:bg-white/12"
             >
-              #{renderHighlightedText(tag, searchQuery)}
+              #<HighlightedText text={tag} query={searchQuery} />
             </button>
           ))}
         </div>
       </div>
       <Link href={postHref} className="block">
         <h2 className="text-[1.9rem] font-semibold tracking-[-0.05em] text-foreground transition-colors group-hover:text-foreground/80">
-          {renderHighlightedText(post.title, searchQuery)}
+          <HighlightedText text={post.title} query={searchQuery} />
         </h2>
-        <p className="mt-3 text-[15px] leading-7 text-muted-foreground">{renderHighlightedText(post.excerpt, searchQuery)}</p>
+        <p className="mt-3 text-[15px] leading-7 text-muted-foreground"><HighlightedText text={post.excerpt} query={searchQuery} /></p>
         <div className="mt-6 flex items-center justify-between">
           <span className="text-sm font-medium text-foreground/80">
             {post.draft ? "继续编辑" : "继续阅读"}
@@ -453,7 +442,7 @@ export default function HomeClient({
                         >
                           <span className="truncate">
                             {suggestion.type === "tag" ? "#" : "系列："}
-                            {renderHighlightedText(suggestion.value, searchQuery)}
+                            <HighlightedText text={suggestion.value} query={searchQuery} />
                           </span>
                           <span className="ml-3 shrink-0 text-[11px] text-muted-foreground">
                             {suggestion.type === "tag" ? "标签" : "系列"}
@@ -470,7 +459,7 @@ export default function HomeClient({
                         className="flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-accent"
                       >
                         <span className="truncate">
-                          在搜索页查看 “{renderHighlightedText(normalizedSearchQuery, searchQuery)}”
+                          在搜索页查看 “<HighlightedText text={normalizedSearchQuery} query={searchQuery} />”
                         </span>
                         <span className="ml-3 shrink-0 text-[11px] text-muted-foreground">
                           全部结果

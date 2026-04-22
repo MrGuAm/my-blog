@@ -1,9 +1,11 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import HighlightedText from "@/components/HighlightedText"
+import PostSearchResultCard from "@/components/PostSearchResultCard"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
 import { getAllPosts, getAllSeries, getAllTags } from "@/lib/posts"
-import { filterPostsForListing, getPostSearchMatchScope, sortSearchResults, splitHighlightedText } from "@/lib/post-search"
+import { filterPostsForListing, sortSearchResults } from "@/lib/post-search"
 import { buildSearchHref, parseSearchQueryState } from "@/lib/search-query"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
@@ -12,18 +14,6 @@ export const revalidate = 300
 
 interface SearchPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
-}
-
-function renderHighlightedText(text: string, query: string) {
-  return splitHighlightedText(text, query).map((part, index) =>
-    part.match ? (
-      <mark key={`${text}-${index}`} className="rounded bg-[#ffe1b3]/80 px-1 text-foreground">
-        {part.text}
-      </mark>
-    ) : (
-      <span key={`${text}-${index}`}>{part.text}</span>
-    )
-  )
 }
 
 function getPopularTags(posts: Post[], tags: string[]) {
@@ -44,60 +34,6 @@ function getPopularSeries(posts: Post[], series: string[]) {
     }))
     .sort((left, right) => right.count - left.count || left.series.localeCompare(right.series, "zh-CN"))
     .slice(0, 4)
-}
-
-function SearchResultCard({ post, searchQuery }: { post: Post; searchQuery: string }) {
-  const postHref = `/posts/${post.slug || post.id}`
-  const matchScope = getPostSearchMatchScope(post, searchQuery)
-  const showContentMatch =
-    Boolean(searchQuery.trim()) &&
-    matchScope.content &&
-    !matchScope.title &&
-    !matchScope.excerpt &&
-    !matchScope.category &&
-    !matchScope.series &&
-    !matchScope.tags
-
-  return (
-    <article className="rounded-[1.75rem] border border-border/50 bg-card p-5 transition-colors hover:bg-accent/20">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="apple-pill">{renderHighlightedText(post.category, searchQuery)}</span>
-        <span className="text-xs text-muted-foreground">{post.date}</span>
-        {post.series ? (
-          <Link href={`/series/${encodeURIComponent(post.series)}`} className="apple-pill">
-            系列：{renderHighlightedText(post.series, searchQuery)}
-            {post.seriesOrder ? ` · 第 ${post.seriesOrder} 篇` : ""}
-          </Link>
-        ) : null}
-        {showContentMatch ? <span className="apple-pill">正文命中</span> : null}
-      </div>
-      <Link href={postHref} className="block">
-        <h2 className="text-2xl font-semibold tracking-[-0.04em] text-foreground">
-          {renderHighlightedText(post.title, searchQuery)}
-        </h2>
-        <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          {renderHighlightedText(post.excerpt, searchQuery)}
-        </p>
-      </Link>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {post.tags.map((tag) => (
-          <Link
-            key={tag}
-            href={buildSearchHref({
-              searchQuery,
-              selectedTag: tag,
-              selectedCategory: null,
-              currentPage: 1,
-              sortBy: "default",
-            })}
-            className="apple-pill hover:bg-white dark:hover:bg-white/12"
-          >
-            #{renderHighlightedText(tag, searchQuery)}
-          </Link>
-        ))}
-      </div>
-    </article>
-  )
 }
 
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
@@ -195,10 +131,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {state.searchQuery || state.selectedTag ? (
         <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>共找到 {sortedPosts.length} 篇结果</span>
-          {state.searchQuery ? <span className="apple-pill">关键词：{state.searchQuery}</span> : null}
+          {state.searchQuery ? <span className="apple-pill">关键词：<HighlightedText text={state.searchQuery} query={state.searchQuery} /></span> : null}
           {state.selectedTag ? (
             <>
-              <span className="apple-pill">标签：#{state.selectedTag}</span>
+              <span className="apple-pill">标签：#<HighlightedText text={state.selectedTag} query={state.searchQuery} /></span>
               <Link
                 href={buildSearchHref({
                   ...state,
@@ -213,7 +149,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           ) : null}
           {state.selectedCategory ? (
             <>
-              <span className="apple-pill">分类：{state.selectedCategory}</span>
+              <span className="apple-pill">分类：<HighlightedText text={state.selectedCategory} query={state.searchQuery} /></span>
               <Link
                 href={buildSearchHref({
                   ...state,
@@ -237,7 +173,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         paginatedPosts.length > 0 ? (
           <div className="space-y-4">
             {paginatedPosts.map((post) => (
-              <SearchResultCard key={post.id} post={post} searchQuery={state.searchQuery} />
+              <PostSearchResultCard
+                key={post.id}
+                post={post}
+                searchQuery={state.searchQuery}
+                getTagHref={(tag) =>
+                  buildSearchHref({
+                    ...state,
+                    selectedTag: tag,
+                    currentPage: 1,
+                  })
+                }
+              />
             ))}
           </div>
         ) : (
