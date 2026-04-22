@@ -9,7 +9,9 @@ import {
   MEDIA_UPLOAD_ACCEPT,
   formatMediaUploadBatchMessage,
   getMediaUploadHint,
+  sortMediaAssets,
   validateMediaUploadInput,
+  type MediaSortOption,
   type MediaUploadFailure,
 } from "@/lib/media-upload"
 import type { MediaAsset } from "@/lib/server/media"
@@ -39,6 +41,7 @@ export default function AdminMediaClient({
   const [canUpload, setCanUpload] = useState(initialCanUpload)
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
+  const [sortBy, setSortBy] = useState<MediaSortOption>("newest")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
   const uploadHint = getMediaUploadHint()
@@ -139,7 +142,7 @@ export default function AdminMediaClient({
 
   const filteredAssets = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase()
-    return assets.filter((asset) => {
+    const nextAssets = assets.filter((asset) => {
       if (normalizedKeyword && !asset.name.toLowerCase().includes(normalizedKeyword)) {
         return false
       }
@@ -148,7 +151,8 @@ export default function AdminMediaClient({
       const days = timeFilter === "7d" ? 7 : 30
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
-  }, [assets, keyword, referenceNow, timeFilter])
+    return sortMediaAssets(nextAssets, sortBy)
+  }, [assets, keyword, referenceNow, sortBy, timeFilter])
 
   const selectedAssets = useMemo(
     () => assets.filter((asset) => selectedAssetIds.includes(asset.id)),
@@ -274,6 +278,18 @@ export default function AdminMediaClient({
                 </button>
               ))}
             </div>
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as MediaSortOption)}
+              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
+            >
+              <option value="newest">最新优先</option>
+              <option value="oldest">最旧优先</option>
+              <option value="largest">文件最大</option>
+              <option value="smallest">文件最小</option>
+              <option value="name-asc">名称 A-Z</option>
+              <option value="name-desc">名称 Z-A</option>
+            </select>
           </div>
           <div className="flex items-center gap-3">
             {selectedCount > 0 ? (

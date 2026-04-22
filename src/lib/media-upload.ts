@@ -19,6 +19,13 @@ export interface MediaExportAssetLike {
   url: string
 }
 
+export interface MediaSortableAssetLike extends MediaExportAssetLike {
+  size: number
+  updatedAt: string
+}
+
+export type MediaSortOption = "newest" | "oldest" | "largest" | "smallest" | "name-asc" | "name-desc"
+
 export const MEDIA_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
 export const MEDIA_UPLOAD_MIME_TYPES = [
   "image/jpeg",
@@ -110,4 +117,24 @@ export function buildMediaAssetBatchText(
   }
 
   return assets.map((asset) => `<img src="${asset.url}" alt="${asset.name}" />`).join("\n")
+}
+
+export function sortMediaAssets<T extends MediaSortableAssetLike>(assets: T[], sortBy: MediaSortOption) {
+  return [...assets].sort((left, right) => {
+    switch (sortBy) {
+      case "oldest":
+        return new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime()
+      case "largest":
+        return right.size - left.size
+      case "smallest":
+        return left.size - right.size
+      case "name-asc":
+        return left.name.localeCompare(right.name, "zh-CN")
+      case "name-desc":
+        return right.name.localeCompare(left.name, "zh-CN")
+      case "newest":
+      default:
+        return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+    }
+  })
 }
