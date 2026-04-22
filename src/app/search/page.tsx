@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
-import { getAllPosts } from "@/lib/posts"
+import { getAllPosts, getAllSeries, getAllTags } from "@/lib/posts"
 import { parseHomeQueryState } from "@/lib/home-query"
 import { filterPostsForListing, getPostSearchMatchScope, splitHighlightedText } from "@/lib/post-search"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
@@ -33,6 +33,26 @@ function buildSearchHref(searchQuery: string, selectedTag: string | null, page: 
   if (page > 1) params.set("page", String(page))
   const next = params.toString()
   return next ? `/search?${next}` : "/search"
+}
+
+function getPopularTags(posts: Post[], tags: string[]) {
+  return [...tags]
+    .map((tag) => ({
+      tag,
+      count: posts.filter((post) => post.tags.includes(tag)).length,
+    }))
+    .sort((left, right) => right.count - left.count || left.tag.localeCompare(right.tag, "zh-CN"))
+    .slice(0, 6)
+}
+
+function getPopularSeries(posts: Post[], series: string[]) {
+  return [...series]
+    .map((seriesName) => ({
+      series: seriesName,
+      count: posts.filter((post) => post.series === seriesName).length,
+    }))
+    .sort((left, right) => right.count - left.count || left.series.localeCompare(right.series, "zh-CN"))
+    .slice(0, 4)
 }
 
 function SearchResultCard({ post, searchQuery }: { post: Post; searchQuery: string }) {
@@ -100,8 +120,10 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const state = parseHomeQueryState((await searchParams) || {})
-  const [posts, siteSettings] = await Promise.all([
+  const [posts, allTags, allSeries, siteSettings] = await Promise.all([
     getAllPosts({ includeDrafts: false, cached: true }),
+    getAllTags(),
+    getAllSeries(),
     getSiteSettings(),
   ])
 
@@ -115,6 +137,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const totalPages = Math.max(1, Math.ceil(filteredPosts.length / postsPerPage))
   const safeCurrentPage = Math.min(state.currentPage, totalPages)
   const paginatedPosts = filteredPosts.slice((safeCurrentPage - 1) * postsPerPage, safeCurrentPage * postsPerPage)
+  const popularTags = getPopularTags(posts, allTags)
+  const popularSeries = getPopularSeries(posts, allSeries)
+  const featuredPosts = posts.filter((post) => post.featured).slice(0, 3)
+  const showSuggestions = !state.searchQuery || filteredPosts.length === 0
 
   return (
     <SectionPageShell
@@ -172,6 +198,60 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             没有找到匹配的文章，试试换个关键词或标签。
           </div>
         )
+      ) : null}
+
+      {showSuggestions ? (
+        <section className="mt-8 space-y-5">
+          <div>
+            <p className="section-kicker">Suggested Searches</p>
+            <h2 className="section-title mt-2">猜你想搜</h2>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-[1.75rem] border border-border/50 bg-card p-5">
+              <h3 className="text-base font-semibold">热门标签</h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {popularTags.map(({ tag, count }) => (
+                  <Link key={tag} href={buildSearchHref("", tag, 1)} className="apple-pill hover:bg-white dark:hover:bg-white/12">
+                    #{tag} · {count}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[1.75rem] border border-border/50 bg-card p-5">
+              <h3 className="text-base font-semibold">热门系列</h3>
+              <div className="mt-4 flex flex-col gap-2">
+                {popularSeries.map(({ series, count }) => (
+                  <Link
+                    key={series}
+                    href={buildSearchHref(series, null, 1)}
+                    className="rounded-2xl border border-border/50 px-4 py-3 text-sm transition-colors hover:bg-accent"
+                  >
+                    <div className="font-medium">{series}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{count} 篇内容</div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[1.75rem] border border-border/50 bg-card p-5">
+              <h3 className="text-base font-semibold">精选内容</h3>
+              <div className="mt-4 space-y-3">
+                {featuredPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={buildSearchHref(post.title, null, 1)}
+                    className="block rounded-2xl border border-border/50 px-4 py-3 transition-colors hover:bg-accent"
+                  >
+                    <div className="font-medium">{post.title}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{post.category} · {post.date}</div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       ) : null}
 
       {filteredPosts.length > postsPerPage ? (
