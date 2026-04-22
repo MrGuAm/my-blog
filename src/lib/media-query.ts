@@ -1,9 +1,10 @@
-import type { MediaSortOption } from "@/lib/media-upload"
+import type { MediaFormatFilter, MediaSortOption } from "@/lib/media-upload"
 
 export interface MediaQueryState {
   keyword: string
   timeFilter: "all" | "7d" | "30d"
   storageFilter: "all" | "blob" | "local"
+  formatFilter: MediaFormatFilter
   orientationFilter: "all" | "landscape" | "portrait" | "square"
   usageFilter: "all" | "used" | "unused"
   sortBy: MediaSortOption
@@ -12,6 +13,7 @@ export interface MediaQueryState {
 
 const MEDIA_TIME_FILTERS = new Set<MediaQueryState["timeFilter"]>(["all", "7d", "30d"])
 const MEDIA_STORAGE_FILTERS = new Set<MediaQueryState["storageFilter"]>(["all", "blob", "local"])
+const MEDIA_FORMAT_FILTERS = new Set<MediaQueryState["formatFilter"]>(["all", "webp", "svg", "gif", "png", "jpeg", "other"])
 const MEDIA_ORIENTATION_FILTERS = new Set<MediaQueryState["orientationFilter"]>(["all", "landscape", "portrait", "square"])
 const MEDIA_USAGE_FILTERS = new Set<MediaQueryState["usageFilter"]>(["all", "used", "unused"])
 const MEDIA_SORT_OPTIONS = new Set<MediaSortOption>([
@@ -39,6 +41,7 @@ export function parseMediaQueryState(params?: Record<string, string | string[] |
   const keyword = getSingleParam(source.q)?.trim() || ""
   const timeParam = getSingleParam(source.time)?.trim() || "all"
   const storageParam = getSingleParam(source.storage)?.trim() || "all"
+  const formatParam = getSingleParam(source.format)?.trim() || "all"
   const orientationParam = getSingleParam(source.orientation)?.trim() || "all"
   const usageParam = getSingleParam(source.usage)?.trim() || "all"
   const sortParam = getSingleParam(source.sort)?.trim() || "newest"
@@ -50,6 +53,9 @@ export function parseMediaQueryState(params?: Record<string, string | string[] |
       : "all",
     storageFilter: MEDIA_STORAGE_FILTERS.has(storageParam as MediaQueryState["storageFilter"])
       ? (storageParam as MediaQueryState["storageFilter"])
+      : "all",
+    formatFilter: MEDIA_FORMAT_FILTERS.has(formatParam as MediaQueryState["formatFilter"])
+      ? (formatParam as MediaQueryState["formatFilter"])
       : "all",
     orientationFilter: MEDIA_ORIENTATION_FILTERS.has(orientationParam as MediaQueryState["orientationFilter"])
       ? (orientationParam as MediaQueryState["orientationFilter"])

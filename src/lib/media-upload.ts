@@ -35,6 +35,7 @@ export type MediaSortOption =
   | "name-asc"
   | "name-desc"
 export type MediaOrientation = "landscape" | "portrait" | "square" | "unknown"
+export type MediaFormatFilter = "all" | "webp" | "svg" | "gif" | "png" | "jpeg" | "other"
 
 export const MEDIA_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
 export const MEDIA_UPLOAD_MIME_TYPES = [
@@ -157,4 +158,21 @@ export function getMediaOrientation(width?: number | null, height?: number | nul
   if (!width || !height) return "unknown"
   if (width === height) return "square"
   return width > height ? "landscape" : "portrait"
+}
+
+export function getMediaFormatFilter(contentType?: string | null): Exclude<MediaFormatFilter, "all"> {
+  switch (contentType) {
+    case "image/webp":
+      return "webp"
+    case "image/svg+xml":
+      return "svg"
+    case "image/gif":
+      return "gif"
+    case "image/png":
+      return "png"
+    case "image/jpeg":
+      return "jpeg"
+    default:
+      return "other"
+  }
 }

@@ -4,6 +4,7 @@ import {
   buildMediaAssetBatchText,
   extractClipboardMediaFiles,
   formatMediaUploadBatchMessage,
+  getMediaFormatFilter,
   getMediaOrientation,
   getMediaUploadHint,
   sortMediaAssets,
@@ -100,6 +101,15 @@ test("getMediaOrientation classifies landscape, portrait, square, and unknown as
   assert.equal(getMediaOrientation(900, 1600), "portrait")
   assert.equal(getMediaOrientation(1080, 1080), "square")
   assert.equal(getMediaOrientation(null, 1080), "unknown")
+})
+
+test("getMediaFormatFilter groups common image formats", () => {
+  assert.equal(getMediaFormatFilter("image/webp"), "webp")
+  assert.equal(getMediaFormatFilter("image/svg+xml"), "svg")
+  assert.equal(getMediaFormatFilter("image/gif"), "gif")
+  assert.equal(getMediaFormatFilter("image/png"), "png")
+  assert.equal(getMediaFormatFilter("image/jpeg"), "jpeg")
+  assert.equal(getMediaFormatFilter("application/octet-stream"), "other")
 })
 
 test("countMediaAssetUsage tracks cover and content references per post", () => {

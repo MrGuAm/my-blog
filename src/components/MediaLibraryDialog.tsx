@@ -6,12 +6,14 @@ import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import {
+  getMediaFormatFilter,
   getMediaOrientation,
   MEDIA_UPLOAD_ACCEPT,
   formatMediaUploadBatchMessage,
   getMediaUploadHint,
   sortMediaAssets,
   validateMediaUploadInput,
+  type MediaFormatFilter,
   type MediaSortOption,
   type MediaUploadFailure,
 } from "@/lib/media-upload"
@@ -53,6 +55,7 @@ export default function MediaLibraryDialog({
   const [keyword, setKeyword] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all")
   const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">("all")
+  const [formatFilter, setFormatFilter] = useState<MediaFormatFilter>("all")
   const [orientationFilter, setOrientationFilter] = useState<"all" | "landscape" | "portrait" | "square">("all")
   const [usageFilter, setUsageFilter] = useState<"all" | "used" | "unused">("all")
   const [sortBy, setSortBy] = useState<MediaSortOption>("newest")
@@ -96,6 +99,10 @@ export default function MediaLibraryDialog({
         return false
       }
 
+      if (formatFilter !== "all" && getMediaFormatFilter(asset.contentType) !== formatFilter) {
+        return false
+      }
+
       const orientation = getMediaOrientation(asset.width, asset.height)
       if (orientationFilter !== "all" && orientation !== orientationFilter) {
         return false
@@ -114,12 +121,13 @@ export default function MediaLibraryDialog({
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
+  }, [assets, formatFilter, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
   const previewIndex = previewAsset ? filteredAssets.findIndex((asset) => asset.id === previewAsset.id) : -1
   const hasActiveFilters =
     keyword.trim().length > 0 ||
     timeFilter !== "all" ||
     storageFilter !== "all" ||
+    formatFilter !== "all" ||
     orientationFilter !== "all" ||
     usageFilter !== "all" ||
     sortBy !== "newest"
@@ -139,6 +147,7 @@ export default function MediaLibraryDialog({
     setKeyword("")
     setTimeFilter("all")
     setStorageFilter("all")
+    setFormatFilter("all")
     setOrientationFilter("all")
     setUsageFilter("all")
     setSortBy("newest")
@@ -329,6 +338,20 @@ export default function MediaLibraryDialog({
               <option value="all">全部来源</option>
               <option value="blob">仅 Blob</option>
               <option value="local">仅本地</option>
+            </select>
+            <select
+              value={formatFilter}
+              aria-label="媒体格式筛选"
+              onChange={(event) => setFormatFilter(event.target.value as MediaFormatFilter)}
+              className="rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
+            >
+              <option value="all">全部格式</option>
+              <option value="webp">WebP</option>
+              <option value="svg">SVG</option>
+              <option value="gif">GIF</option>
+              <option value="png">PNG</option>
+              <option value="jpeg">JPEG</option>
+              <option value="other">其他</option>
             </select>
             <select
               value={orientationFilter}

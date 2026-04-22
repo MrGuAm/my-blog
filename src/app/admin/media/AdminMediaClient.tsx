@@ -8,12 +8,14 @@ import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import SectionPageShell from "@/components/SectionPageShell"
 import {
   buildMediaAssetBatchText,
+  getMediaFormatFilter,
   getMediaOrientation,
   MEDIA_UPLOAD_ACCEPT,
   formatMediaUploadBatchMessage,
   getMediaUploadHint,
   sortMediaAssets,
   validateMediaUploadInput,
+  type MediaFormatFilter,
   type MediaSortOption,
   type MediaUploadFailure,
 } from "@/lib/media-upload"
@@ -46,6 +48,7 @@ export default function AdminMediaClient({
   initialKeyword = "",
   initialTimeFilter = "all",
   initialStorageFilter = "all",
+  initialFormatFilter = "all",
   initialOrientationFilter = "all",
   initialUsageFilter = "all",
   initialSortBy = "newest",
@@ -58,6 +61,7 @@ export default function AdminMediaClient({
   initialKeyword?: string
   initialTimeFilter?: "all" | "7d" | "30d"
   initialStorageFilter?: "all" | "blob" | "local"
+  initialFormatFilter?: MediaFormatFilter
   initialOrientationFilter?: "all" | "landscape" | "portrait" | "square"
   initialUsageFilter?: "all" | "used" | "unused"
   initialSortBy?: MediaSortOption
@@ -74,6 +78,7 @@ export default function AdminMediaClient({
   const [keyword, setKeyword] = useState(initialKeyword)
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">(initialTimeFilter)
   const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">(initialStorageFilter)
+  const [formatFilter, setFormatFilter] = useState<MediaFormatFilter>(initialFormatFilter)
   const [orientationFilter, setOrientationFilter] = useState<"all" | "landscape" | "portrait" | "square">(initialOrientationFilter)
   const [usageFilter, setUsageFilter] = useState<"all" | "used" | "unused">(initialUsageFilter)
   const [sortBy, setSortBy] = useState<MediaSortOption>(initialSortBy)
@@ -91,6 +96,7 @@ export default function AdminMediaClient({
     if (normalizedKeyword) nextParams.set("q", normalizedKeyword)
     if (timeFilter !== "all") nextParams.set("time", timeFilter)
     if (storageFilter !== "all") nextParams.set("storage", storageFilter)
+    if (formatFilter !== "all") nextParams.set("format", formatFilter)
     if (orientationFilter !== "all") nextParams.set("orientation", orientationFilter)
     if (usageFilter !== "all") nextParams.set("usage", usageFilter)
     if (sortBy !== "newest") nextParams.set("sort", sortBy)
@@ -103,7 +109,7 @@ export default function AdminMediaClient({
 
     const nextUrl = nextNormalized ? `${window.location.pathname}?${nextNormalized}` : window.location.pathname
     window.history.replaceState(null, "", nextUrl)
-  }, [currentPage, keyword, orientationFilter, sortBy, storageFilter, timeFilter, usageFilter])
+  }, [currentPage, formatFilter, keyword, orientationFilter, sortBy, storageFilter, timeFilter, usageFilter])
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
@@ -210,6 +216,10 @@ export default function AdminMediaClient({
         return false
       }
 
+      if (formatFilter !== "all" && getMediaFormatFilter(asset.contentType) !== formatFilter) {
+        return false
+      }
+
       const orientation = getMediaOrientation(asset.width, asset.height)
       if (orientationFilter !== "all" && orientation !== orientationFilter) {
         return false
@@ -228,7 +238,7 @@ export default function AdminMediaClient({
       return referenceNow - new Date(asset.updatedAt).getTime() <= days * 24 * 60 * 60 * 1000
     })
     return sortMediaAssets(nextAssets, sortBy)
-  }, [assets, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
+  }, [assets, formatFilter, keyword, orientationFilter, referenceNow, sortBy, storageFilter, timeFilter, usageFilter])
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetsPerPage))
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
   const visibleAssets = filteredAssets.slice(
@@ -271,6 +281,7 @@ export default function AdminMediaClient({
     keyword.trim().length > 0 ||
     timeFilter !== "all" ||
     storageFilter !== "all" ||
+    formatFilter !== "all" ||
     orientationFilter !== "all" ||
     usageFilter !== "all" ||
     sortBy !== "newest" ||
@@ -393,6 +404,7 @@ export default function AdminMediaClient({
     setKeyword("")
     setTimeFilter("all")
     setStorageFilter("all")
+    setFormatFilter("all")
     setOrientationFilter("all")
     setUsageFilter("all")
     setSortBy("newest")
@@ -453,6 +465,23 @@ export default function AdminMediaClient({
               <option value="all">全部来源</option>
               <option value="blob">仅 Blob</option>
               <option value="local">仅本地</option>
+            </select>
+            <select
+              value={formatFilter}
+              aria-label="媒体格式筛选"
+              onChange={(event) => {
+                setFormatFilter(event.target.value as MediaFormatFilter)
+                setCurrentPage(1)
+              }}
+              className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
+            >
+              <option value="all">全部格式</option>
+              <option value="webp">WebP</option>
+              <option value="svg">SVG</option>
+              <option value="gif">GIF</option>
+              <option value="png">PNG</option>
+              <option value="jpeg">JPEG</option>
+              <option value="other">其他</option>
             </select>
             <select
               value={orientationFilter}
