@@ -348,7 +348,15 @@ export default function HomeClient({
     () => getPostSearchSuggestions(allTags, allSeries, searchQuery).slice(0, 6),
     [allSeries, allTags, searchQuery]
   )
-  const showSearchSuggestions = isSearchFocused && searchQuery.trim().length > 0 && searchSuggestions.length > 0
+  const normalizedSearchQuery = searchQuery.trim()
+  const showSearchSuggestions = isSearchFocused && normalizedSearchQuery.length > 0
+  const searchPageHref = useMemo(() => {
+    if (!normalizedSearchQuery) return "/search"
+    const params = new URLSearchParams()
+    params.set("q", normalizedSearchQuery)
+    if (selectedTag) params.set("tag", selectedTag)
+    return `/search?${params.toString()}`
+  }, [normalizedSearchQuery, selectedTag])
 
   const showFeaturedSection = !searchQuery && selectedTag === null && currentPage === 1
   const featuredPosts = showFeaturedSection
@@ -406,7 +414,7 @@ export default function HomeClient({
                   placeholder="搜索文章或标签..."
                   value={searchQuery}
                   onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 120)}
                   onChange={(e) => {
                     setSearchQuery(e.target.value)
                     setCurrentPage(1)
@@ -452,6 +460,22 @@ export default function HomeClient({
                           </span>
                         </button>
                       ))}
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setIsSearchFocused(false)
+                          router.push(searchPageHref)
+                        }}
+                        className="flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-accent"
+                      >
+                        <span className="truncate">
+                          在搜索页查看 “{renderHighlightedText(normalizedSearchQuery, searchQuery)}”
+                        </span>
+                        <span className="ml-3 shrink-0 text-[11px] text-muted-foreground">
+                          全部结果
+                        </span>
+                      </button>
                     </div>
                   </div>
                 ) : null}
