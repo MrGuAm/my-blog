@@ -20,6 +20,11 @@ export interface PostSearchMatchScope {
   content: boolean
 }
 
+export interface PostSearchSuggestion {
+  type: "tag" | "series"
+  value: string
+}
+
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, " ")
 }
@@ -92,6 +97,37 @@ export function splitHighlightedText(text: string, searchQuery: string): Highlig
     text: part,
     match: part.toLowerCase() === normalizedQuery,
   }))
+}
+
+function sortSuggestionValues(values: string[], searchQuery: string) {
+  const normalizedQuery = normalizeSearchQuery(searchQuery)
+
+  return [...values].sort((left, right) => {
+    const leftStarts = left.toLowerCase().startsWith(normalizedQuery)
+    const rightStarts = right.toLowerCase().startsWith(normalizedQuery)
+
+    if (leftStarts && !rightStarts) return -1
+    if (!leftStarts && rightStarts) return 1
+
+    return left.localeCompare(right, "zh-CN")
+  })
+}
+
+export function getPostSearchSuggestions(tags: string[], series: string[], searchQuery: string) {
+  const normalizedQuery = normalizeSearchQuery(searchQuery)
+  if (!normalizedQuery) return []
+
+  const matchingTags = sortSuggestionValues(
+    tags.filter((tag) => tag.toLowerCase().includes(normalizedQuery)),
+    normalizedQuery
+  ).map<PostSearchSuggestion>((value) => ({ type: "tag", value }))
+
+  const matchingSeries = sortSuggestionValues(
+    series.filter((item) => item.toLowerCase().includes(normalizedQuery)),
+    normalizedQuery
+  ).map<PostSearchSuggestion>((value) => ({ type: "series", value }))
+
+  return [...matchingTags, ...matchingSeries]
 }
 
 export function sortPostsForDisplay(posts: Post[]) {

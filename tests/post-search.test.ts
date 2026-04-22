@@ -1,7 +1,13 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import type { Post } from "../src/lib/posts"
-import { filterPostsForListing, getPostSearchMatchScope, matchesPostSearch, splitHighlightedText } from "../src/lib/post-search"
+import {
+  filterPostsForListing,
+  getPostSearchMatchScope,
+  getPostSearchSuggestions,
+  matchesPostSearch,
+  splitHighlightedText,
+} from "../src/lib/post-search"
 
 const posts: Post[] = [
   {
@@ -70,5 +76,18 @@ test("splitHighlightedText preserves text order and marks matched segments", () 
   assert.deepEqual(parts, [
     { text: "React", match: true },
     { text: " Hooks 心得", match: false },
+  ])
+})
+
+test("getPostSearchSuggestions returns matching tags and series with starts-with priority", () => {
+  const suggestions = getPostSearchSuggestions(
+    ["React", "Hooks", "前端工程"],
+    ["React 深入", "音乐设计", "Hooks 细节"],
+    "re"
+  )
+
+  assert.deepEqual(suggestions, [
+    { type: "tag", value: "React" },
+    { type: "series", value: "React 深入" },
   ])
 })

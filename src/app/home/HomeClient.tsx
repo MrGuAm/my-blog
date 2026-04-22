@@ -12,12 +12,13 @@ import SiteFooter from "@/components/SiteFooter"
 import MarqueeText from "@/components/music/MarqueeText"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
-import { filterPostsForListing, getPostSearchMatchScope, splitHighlightedText } from "@/lib/post-search"
+import { filterPostsForListing, getPostSearchMatchScope, getPostSearchSuggestions, splitHighlightedText } from "@/lib/post-search"
 import type { SiteSettings } from "@/lib/site-settings"
 
 interface HomeClientProps {
   posts: Post[]
   allTags: string[]
+  allSeries: string[]
   siteSettings: SiteSettings
   initialSearchQuery?: string
   initialSelectedTag?: string | null
@@ -259,6 +260,7 @@ function renderHomeTitle(title: string) {
 export default function HomeClient({
   posts,
   allTags,
+  allSeries,
   siteSettings,
   initialSearchQuery = "",
   initialSelectedTag = null,
@@ -298,6 +300,7 @@ export default function HomeClient({
   const [showList, setShowList] = useState(false)
   const [isSidebarHovering, setIsSidebarHovering] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [selectedTag, setSelectedTag] = useState<string | null>(initialSelectedTag)
   const [currentPage, setCurrentPage] = useState(initialPage)
@@ -341,6 +344,11 @@ export default function HomeClient({
       }),
     [effectiveShowDrafts, searchQuery, selectedTag, visiblePosts]
   )
+  const searchSuggestions = useMemo(
+    () => getPostSearchSuggestions(allTags, allSeries, searchQuery).slice(0, 6),
+    [allSeries, allTags, searchQuery]
+  )
+  const showSearchSuggestions = isSearchFocused && searchQuery.trim().length > 0 && searchSuggestions.length > 0
 
   const showFeaturedSection = !searchQuery && selectedTag === null && currentPage === 1
   const featuredPosts = showFeaturedSection
@@ -397,6 +405,8 @@ export default function HomeClient({
                   type="text"
                   placeholder="搜索文章或标签..."
                   value={searchQuery}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
                   onChange={(e) => {
                     setSearchQuery(e.target.value)
                     setCurrentPage(1)
@@ -412,6 +422,39 @@ export default function HomeClient({
                     ✕
                   </button>
                 )}
+                {showSearchSuggestions ? (
+                  <div className="apple-panel absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-[1.4rem] p-2 shadow-2xl">
+                    <div className="space-y-1">
+                      {searchSuggestions.map((suggestion) => (
+                        <button
+                          key={`${suggestion.type}-${suggestion.value}`}
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            if (suggestion.type === "tag") {
+                              setSelectedTag(suggestion.value)
+                              setSearchQuery("")
+                            } else {
+                              setSearchQuery(suggestion.value)
+                              setSelectedTag(null)
+                            }
+                            setCurrentPage(1)
+                            setIsSearchFocused(false)
+                          }}
+                          className="flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+                        >
+                          <span className="truncate">
+                            {suggestion.type === "tag" ? "#" : "系列："}
+                            {renderHighlightedText(suggestion.value, searchQuery)}
+                          </span>
+                          <span className="ml-3 shrink-0 text-[11px] text-muted-foreground">
+                            {suggestion.type === "tag" ? "标签" : "系列"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
               {selectedTag && (
                 <span className="apple-pill">
