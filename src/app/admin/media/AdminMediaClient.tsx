@@ -30,6 +30,14 @@ function formatDimensions(width?: number | null, height?: number | null) {
   return `${width} × ${height}`
 }
 
+function summaryFilterButtonClass(active: boolean) {
+  return `rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+    active
+      ? "bg-primary text-primary-foreground"
+      : "border border-border/60 text-muted-foreground hover:bg-accent"
+  }`
+}
+
 export default function AdminMediaClient({
   initialAssets,
   initialWarning = null,
@@ -629,17 +637,90 @@ export default function AdminMediaClient({
         <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">来源分布</p>
           <p className="mt-2 text-2xl font-semibold">{filteredSummary.blobCount} / {filteredSummary.localCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Blob / 本地</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setStorageFilter("blob")
+                setCurrentPage(1)
+              }}
+              className={summaryFilterButtonClass(storageFilter === "blob")}
+            >
+              Blob
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStorageFilter("local")
+                setCurrentPage(1)
+              }}
+              className={summaryFilterButtonClass(storageFilter === "local")}
+            >
+              本地
+            </button>
+          </div>
         </div>
         <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">形态分布</p>
           <p className="mt-2 text-2xl font-semibold">{filteredSummary.landscapeCount} / {filteredSummary.portraitCount} / {filteredSummary.squareCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">横图 / 竖图 / 方图</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setOrientationFilter("landscape")
+                setCurrentPage(1)
+              }}
+              className={summaryFilterButtonClass(orientationFilter === "landscape")}
+            >
+              横图
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOrientationFilter("portrait")
+                setCurrentPage(1)
+              }}
+              className={summaryFilterButtonClass(orientationFilter === "portrait")}
+            >
+              竖图
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOrientationFilter("square")
+                setCurrentPage(1)
+              }}
+              className={summaryFilterButtonClass(orientationFilter === "square")}
+            >
+              方图
+            </button>
+          </div>
         </div>
         <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">使用情况</p>
           <p className="mt-2 text-2xl font-semibold">{filteredSummary.usedCount} / {filteredSummary.unusedCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">使用中 / 未使用</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setUsageFilter("used")
+                setCurrentPage(1)
+              }}
+              className={summaryFilterButtonClass(usageFilter === "used")}
+            >
+              使用中
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUsageFilter("unused")
+                setCurrentPage(1)
+              }}
+              className={summaryFilterButtonClass(usageFilter === "unused")}
+            >
+              未使用
+            </button>
+          </div>
         </div>
         <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">总体积</p>
