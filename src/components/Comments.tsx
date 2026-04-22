@@ -5,31 +5,7 @@ import { Post } from "@/lib/posts"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import { useUserSession } from "@/hooks/useUserSession"
 import CommentAuthModal from "@/components/CommentAuthModal"
-
-function parseMarkdown(text: string): string {
-  const escape = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-
-  // Escape HTML first, then apply safe markdown
-  const escaped = escape(text)
-
-  // Code blocks (```code```)
-  const withCode = escaped.replace(/```([\s\S]*?)```/g, (_, code) => {
-    return `<pre class="bg-secondary/80 text-xs rounded-lg p-3 my-2 overflow-x-auto"><code>${code.trim()}</code></pre>`
-  })
-  // Inline code (`code`)
-  const withInlineCode = withCode.replace(/`([^`]+)`/g, '<code class="bg-secondary/80 px-1.5 py-0.5 rounded text-xs">$1</code>')
-  // Bold (**text**)
-  const withBold = withInlineCode.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  // Italic (*text*)
-  const withItalic = withBold.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  // Links [text](url)
-  const withLinks = withItalic.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener">$1</a>')
-  // Line breaks
-  const withBreaks = withLinks.replace(/\n/g, '<br/>')
-
-  return withBreaks
-}
+import { parseCommentMarkdown } from "@/lib/comment-markdown"
 
 interface Comment {
   id: string
@@ -236,7 +212,7 @@ export default function Comments({ post }: CommentsProps) {
               </button>
             )}
           </div>
-          <p className="text-sm text-muted-foreground"><span dangerouslySetInnerHTML={{ __html: parseMarkdown(comment.content) }} /></p>
+          <p className="text-sm text-muted-foreground"><span dangerouslySetInnerHTML={{ __html: parseCommentMarkdown(comment.content) }} /></p>
           <div className="mt-3 flex items-center gap-3">
             <button
               type="button"
