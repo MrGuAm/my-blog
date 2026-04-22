@@ -270,6 +270,9 @@ export default function AdminMediaClient({
   const allSelectableVisibleSelected =
     visibleAssets.length > 0 &&
     visibleAssets.every((asset) => selectedAssetIds.includes(asset.id))
+  const visibleUnusedAssetIds = visibleAssets
+    .filter((asset) => asset.deletable && (asset.usageCount ?? 0) === 0)
+    .map((asset) => asset.id)
 
   useEffect(() => {
     if (currentPage !== safeCurrentPage) {
@@ -293,6 +296,12 @@ export default function AdminMediaClient({
       }
       return [...new Set([...current, ...visibleIds])]
     })
+  }
+
+  const handleSelectVisibleUnused = () => {
+    if (visibleUnusedAssetIds.length === 0) return
+    setSelectedAssetIds((current) => [...new Set([...current, ...visibleUnusedAssetIds])])
+    setMessage(`已选中当前可见的 ${visibleUnusedAssetIds.length} 张未使用素材`)
   }
 
   const handleCopySelected = async (format: "url" | "markdown" | "html", label: string) => {
@@ -590,6 +599,14 @@ export default function AdminMediaClient({
             className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {allSelectableVisibleSelected ? "取消全选可见项" : "全选可见项"}
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectVisibleUnused}
+            disabled={visibleUnusedAssetIds.length === 0}
+            className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            选中未使用可见项
           </button>
           {selectedCount > 0 ? (
             <button
