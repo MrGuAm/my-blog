@@ -354,6 +354,16 @@ export default function AdminMediaClient({
     }
   }
 
+  const handleCopyFiltered = async (format: "url" | "markdown" | "html", label: string) => {
+    if (filteredAssets.length === 0) return
+    try {
+      await navigator.clipboard.writeText(buildMediaAssetBatchText(filteredAssets, format))
+      setMessage(`已复制当前筛选结果 ${filteredAssets.length} 项${label}`)
+    } catch {
+      setMessage("复制失败，请重试")
+    }
+  }
+
   const handleExportSelectedCsv = () => {
     if (selectedAssets.length === 0 || typeof window === "undefined") return
 
@@ -653,6 +663,30 @@ export default function AdminMediaClient({
               className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent"
             >
               刷新
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCopyFiltered("url", "素材链接")}
+              disabled={filteredAssets.length === 0}
+              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              复制筛选链接
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCopyFiltered("markdown", "个 Markdown")}
+              disabled={filteredAssets.length === 0}
+              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              复制筛选 Markdown
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCopyFiltered("html", "个 HTML 片段")}
+              disabled={filteredAssets.length === 0}
+              className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              复制筛选 HTML
             </button>
             <button
               type="button"
