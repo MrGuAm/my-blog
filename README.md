@@ -72,6 +72,7 @@
 - RSS、`sitemap.xml` 与基础 SEO 支持
 - 首页、About 和文章页已补充结构化数据（JSON-LD），更利于搜索引擎识别站点与文章主体
 - 站点还补了 `robots.txt` 与 `manifest.webmanifest`，搜索和站点安装信息更完整
+- 站点还补了自定义 `loading` / `error` 体验，慢加载或异常时不会直接掉回默认空白页
 - 响应式布局、移动端优化与系统深色模式适配
 
 ## 技术栈
