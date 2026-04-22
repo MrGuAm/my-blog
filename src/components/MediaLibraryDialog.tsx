@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import {
@@ -56,6 +57,7 @@ export default function MediaLibraryDialog({
   const [usageFilter, setUsageFilter] = useState<"all" | "used" | "unused">("all")
   const [sortBy, setSortBy] = useState<MediaSortOption>("newest")
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
+  const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null)
   const uploadHintText = uploadHint ?? getMediaUploadHint()
 
   const loadAssets = async () => {
@@ -382,10 +384,7 @@ export default function MediaLibraryDialog({
                 <div key={asset.id} className="rounded-2xl border border-border/50 bg-background/60 p-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      onSelect(asset.url)
-                      onClose()
-                    }}
+                    onClick={() => setPreviewAsset(asset)}
                     className="block w-full overflow-hidden rounded-xl border border-border/40"
                   >
                     <img src={asset.url} alt={asset.name} className="h-44 w-full object-cover" />
@@ -406,6 +405,13 @@ export default function MediaLibraryDialog({
                     />
                   </div>
                   <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewAsset(asset)}
+                      className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                    >
+                      预览
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -452,6 +458,13 @@ export default function MediaLibraryDialog({
             </div>
           )}
         </div>
+        <MediaAssetPreviewDialog
+          asset={previewAsset}
+          isOpen={Boolean(previewAsset)}
+          onClose={() => setPreviewAsset(null)}
+          onSelect={(asset) => onSelect(asset.url)}
+          openUsageInNewTab
+        />
       </div>
     </div>
   )

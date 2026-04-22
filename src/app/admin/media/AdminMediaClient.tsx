@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import MediaAssetPreviewDialog from "@/components/MediaAssetPreviewDialog"
 import MediaUploadDropzone from "@/components/MediaUploadDropzone"
 import MediaUsageReferenceList from "@/components/MediaUsageReferenceList"
 import SectionPageShell from "@/components/SectionPageShell"
@@ -71,6 +72,7 @@ export default function AdminMediaClient({
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
+  const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null)
   const uploadHint = getMediaUploadHint()
 
   useEffect(() => {
@@ -650,9 +652,13 @@ export default function AdminMediaClient({
                   {asset.storage === "blob" ? "Blob" : "本地"}
                 </span>
               </div>
-              <div className="overflow-hidden rounded-xl border border-border/40">
+              <button
+                type="button"
+                onClick={() => setPreviewAsset(asset)}
+                className="block w-full overflow-hidden rounded-xl border border-border/40"
+              >
                 <img src={asset.url} alt={asset.name} className="h-52 w-full object-cover" />
-              </div>
+              </button>
               <div className="mt-3 space-y-1">
                 <p className="truncate text-sm font-medium">{asset.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -665,6 +671,13 @@ export default function AdminMediaClient({
                 <MediaUsageReferenceList assetId={asset.id} usagePosts={asset.usagePosts} />
               </div>
               <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreviewAsset(asset)}
+                  className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                >
+                  预览
+                </button>
                 <button
                   type="button"
                   onClick={() => copyValue(asset.url, "素材链接")}
@@ -734,6 +747,11 @@ export default function AdminMediaClient({
           </button>
         </div>
       ) : null}
+      <MediaAssetPreviewDialog
+        asset={previewAsset}
+        isOpen={Boolean(previewAsset)}
+        onClose={() => setPreviewAsset(null)}
+      />
     </SectionPageShell>
   )
 }
