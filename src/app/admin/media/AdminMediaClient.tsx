@@ -31,6 +31,7 @@ export default function AdminMediaClient({
   initialTimeFilter = "all",
   initialStorageFilter = "all",
   initialSortBy = "newest",
+  initialPage = 1,
 }: {
   initialAssets: MediaAsset[]
   initialWarning?: string | null
@@ -40,8 +41,10 @@ export default function AdminMediaClient({
   initialTimeFilter?: "all" | "7d" | "30d"
   initialStorageFilter?: "all" | "blob" | "local"
   initialSortBy?: MediaSortOption
+  initialPage?: number
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const assetsPerPage = 12
   const [assets, setAssets] = useState(initialAssets)
   const [isUploading, setIsUploading] = useState(false)
   const [message, setMessage] = useState("")
@@ -51,6 +54,7 @@ export default function AdminMediaClient({
   const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">(initialTimeFilter)
   const [storageFilter, setStorageFilter] = useState<"all" | "blob" | "local">(initialStorageFilter)
   const [sortBy, setSortBy] = useState<MediaSortOption>(initialSortBy)
+  const [currentPage, setCurrentPage] = useState(initialPage)
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
   const uploadHint = getMediaUploadHint()
@@ -64,6 +68,7 @@ export default function AdminMediaClient({
     if (timeFilter !== "all") nextParams.set("time", timeFilter)
     if (storageFilter !== "all") nextParams.set("storage", storageFilter)
     if (sortBy !== "newest") nextParams.set("sort", sortBy)
+    if (currentPage > 1) nextParams.set("page", String(currentPage))
 
     const currentNormalized = new URLSearchParams(window.location.search).toString()
     const nextNormalized = nextParams.toString()
@@ -72,7 +77,7 @@ export default function AdminMediaClient({
 
     const nextUrl = nextNormalized ? `${window.location.pathname}?${nextNormalized}` : window.location.pathname
     window.history.replaceState(null, "", nextUrl)
-  }, [keyword, sortBy, storageFilter, timeFilter])
+  }, [currentPage, keyword, sortBy, storageFilter, timeFilter])
 
   const refreshAssets = async () => {
     const response = await fetch("/api/admin/media", { cache: "no-store" })
@@ -185,6 +190,12 @@ export default function AdminMediaClient({
     })
     return sortMediaAssets(nextAssets, sortBy)
   }, [assets, keyword, referenceNow, sortBy, storageFilter, timeFilter])
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetsPerPage))
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
+  const visibleAssets = filteredAssets.slice(
+    (safeCurrentPage - 1) * assetsPerPage,
+    safeCurrentPage * assetsPerPage
+  )
 
   const selectedAssets = useMemo(
     () => assets.filter((asset) => selectedAssetIds.includes(asset.id)),
@@ -197,8 +208,14 @@ export default function AdminMediaClient({
   const selectedCount = selectedAssetIds.length
   const deletableSelectedCount = deletableSelectedAssets.length
   const allSelectableVisibleSelected =
-    filteredAssets.length > 0 &&
-    filteredAssets.every((asset) => selectedAssetIds.includes(asset.id))
+    visibleAssets.length > 0 &&
+    visibleAssets.every((asset) => selectedAssetIds.includes(asset.id))
+
+  useEffect(() => {
+    if (currentPage !== safeCurrentPage) {
+      setCurrentPage(safeCurrentPage)
+    }
+  }, [currentPage, safeCurrentPage])
 
   const toggleSelectedAsset = (assetId: string) => {
     setSelectedAssetIds((current) =>
@@ -207,7 +224,7 @@ export default function AdminMediaClient({
   }
 
   const handleToggleSelectAllVisible = () => {
-    const visibleIds = filteredAssets.map((asset) => asset.id)
+    const visibleIds = visibleAssets.map((asset) => asset.id)
     if (visibleIds.length === 0) return
 
     setSelectedAssetIds((current) => {
@@ -288,7 +305,10 @@ export default function AdminMediaClient({
             <input
               type="text"
               value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
+              onChange={(event) => {
+                setKeyword(event.target.value)
+                setCurrentPage(1)
+              }}
               placeholder="搜索素材名称"
               className="w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm sm:w-64"
             />
@@ -301,7 +321,10 @@ export default function AdminMediaClient({
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setTimeFilter(value as "all" | "7d" | "30d")}
+                  onClick={() => {
+                    setTimeFilter(value as "all" | "7d" | "30d")
+                    setCurrentPage(1)
+                  }}
                   className={`rounded-full px-3 py-1 transition-colors ${
                     timeFilter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                   }`}
@@ -312,7 +335,10 @@ export default function AdminMediaClient({
             </div>
             <select
               value={storageFilter}
-              onChange={(event) => setStorageFilter(event.target.value as "all" | "blob" | "local")}
+              onChange={(event) => {
+                setStorageFilter(event.target.value as "all" | "blob" | "local")
+                setCurrentPage(1)
+              }}
               className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
             >
               <option value="all">全部来源</option>
@@ -321,7 +347,10 @@ export default function AdminMediaClient({
             </select>
             <select
               value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as MediaSortOption)}
+              onChange={(event) => {
+                setSortBy(event.target.value as MediaSortOption)
+                setCurrentPage(1)
+              }}
               className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm"
             >
               <option value="newest">最新优先</option>
@@ -405,13 +434,13 @@ export default function AdminMediaClient({
         <p className="text-muted-foreground">
           {selectedCount > 0
             ? `已选中 ${selectedCount} 张素材${deletableSelectedCount < selectedCount ? `，其中 ${deletableSelectedCount} 张可删除` : ""}`
-            : "可以先筛选，再批量选中素材后复制或删除"}
+            : `共 ${filteredAssets.length} 张素材，当前第 ${safeCurrentPage} / ${totalPages} 页`}
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleToggleSelectAllVisible}
-            disabled={filteredAssets.length === 0}
+            disabled={visibleAssets.length === 0}
             className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {allSelectableVisibleSelected ? "取消全选可见项" : "全选可见项"}
@@ -428,9 +457,9 @@ export default function AdminMediaClient({
         </div>
       </div>
 
-      {filteredAssets.length > 0 ? (
+      {visibleAssets.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredAssets.map((asset) => (
+          {visibleAssets.map((asset) => (
             <div
               key={asset.id}
               className={`rounded-2xl border bg-card p-3 transition-colors ${
@@ -493,6 +522,10 @@ export default function AdminMediaClient({
             </div>
           ))}
         </div>
+      ) : filteredAssets.length > 0 ? (
+        <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
+          当前页没有素材，试试切换页码。
+        </div>
       ) : assets.length > 0 ? (
         <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
           当前筛选条件下没有素材，换个关键词或时间范围试试。
@@ -502,6 +535,29 @@ export default function AdminMediaClient({
           还没有任何素材，先上传一张图片试试。
         </div>
       )}
+      {filteredAssets.length > assetsPerPage ? (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={safeCurrentPage === 1}
+            className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            上一页
+          </button>
+          <span className="text-sm text-muted-foreground">
+            第 {safeCurrentPage} / {totalPages} 页
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={safeCurrentPage === totalPages}
+            className="rounded-xl border border-border/60 px-4 py-2 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            下一页
+          </button>
+        </div>
+      ) : null}
     </SectionPageShell>
   )
 }

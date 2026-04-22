@@ -8,12 +8,14 @@ test("parseMediaQueryState normalizes media admin query params", () => {
     time: "7d",
     storage: "blob",
     sort: "largest",
+    page: "3",
   })
 
   assert.equal(state.keyword, "cover")
   assert.equal(state.timeFilter, "7d")
   assert.equal(state.storageFilter, "blob")
   assert.equal(state.sortBy, "largest")
+  assert.equal(state.currentPage, 3)
 })
 
 test("parseMediaQueryState falls back to safe defaults", () => {
@@ -27,4 +29,5 @@ test("parseMediaQueryState falls back to safe defaults", () => {
   assert.equal(state.timeFilter, "all")
   assert.equal(state.storageFilter, "all")
   assert.equal(state.sortBy, "newest")
+  assert.equal(state.currentPage, 1)
 })

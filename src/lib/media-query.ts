@@ -5,6 +5,7 @@ export interface MediaQueryState {
   timeFilter: "all" | "7d" | "30d"
   storageFilter: "all" | "blob" | "local"
   sortBy: MediaSortOption
+  currentPage: number
 }
 
 const MEDIA_TIME_FILTERS = new Set<MediaQueryState["timeFilter"]>(["all", "7d", "30d"])
@@ -20,6 +21,11 @@ const MEDIA_SORT_OPTIONS = new Set<MediaSortOption>([
 
 function getSingleParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] || null : value || null
+}
+
+function normalizePage(value?: string | string[]) {
+  const next = Number(getSingleParam(value))
+  return Number.isFinite(next) && next > 0 ? Math.floor(next) : 1
 }
 
 export function parseMediaQueryState(params?: Record<string, string | string[] | undefined>): MediaQueryState {
@@ -40,5 +46,6 @@ export function parseMediaQueryState(params?: Record<string, string | string[] |
     sortBy: MEDIA_SORT_OPTIONS.has(sortParam as MediaSortOption)
       ? (sortParam as MediaSortOption)
       : "newest",
+    currentPage: normalizePage(source.page),
   }
 }
