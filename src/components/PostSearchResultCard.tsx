@@ -8,13 +8,13 @@ import HighlightedText from "@/components/HighlightedText"
 interface PostSearchResultCardProps {
   post: Post
   searchQuery: string
-  getTagHref: (tag: string) => string
+  tagHrefs: Record<string, string>
 }
 
 export default function PostSearchResultCard({
   post,
   searchQuery,
-  getTagHref,
+  tagHrefs,
 }: PostSearchResultCardProps) {
   const postHref = `/posts/${post.slug || post.id}`
   const matchScope = getPostSearchMatchScope(post, searchQuery)
@@ -54,7 +54,7 @@ export default function PostSearchResultCard({
         {post.tags.map((tag) => (
           <Link
             key={tag}
-            href={getTagHref(tag)}
+            href={tagHrefs[tag] || "#"}
             className="apple-pill hover:bg-white dark:hover:bg-white/12"
           >
             #<HighlightedText text={tag} query={searchQuery} />

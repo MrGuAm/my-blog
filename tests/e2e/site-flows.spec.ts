@@ -70,6 +70,34 @@ test("public visitor can search and filter articles on the homepage", async ({ p
   await expect(page.locator("main")).toContainText("最近更新")
 })
 
+test("public visitor can refine results on the search page", async ({ page }) => {
+  await page.goto("/search?q=React")
+
+  await expect(page.getByRole("heading", { name: "搜索内容" })).toBeVisible()
+  await expect(page).toHaveURL(/\/search\?q=React/)
+  await expect(page.getByText("共找到")).toBeVisible()
+
+  const categoryOptions = await page.locator('select[name="category"] option').evaluateAll((options) =>
+    options.map((option) => ({
+      value: (option as HTMLOptionElement).value,
+      label: option.textContent?.trim() || "",
+    }))
+  )
+  const categoryValue = categoryOptions.find((option) => option.value !== "")?.value
+  if (!categoryValue) {
+    throw new Error("Search category select did not expose any non-empty options")
+  }
+
+  await page.selectOption('select[name="category"]', categoryValue)
+  await page.selectOption('select[name="sort"]', { value: "newest" })
+  await page.getByRole("button", { name: "搜索" }).click()
+
+  await expect(page).toHaveURL(new RegExp(`category=${encodeURIComponent(categoryValue)}`))
+  await expect(page).toHaveURL(/sort=newest/)
+  await expect(page.getByText("共找到")).toBeVisible()
+  await expect(page.locator("article").first()).toBeVisible()
+})
+
 test("admin can update site settings through an authenticated browser context", async ({ page }) => {
   await loginAsAdmin(page)
   await page.goto("/admin/settings")

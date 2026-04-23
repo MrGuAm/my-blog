@@ -307,13 +307,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 key={post.id}
                 post={post}
                 searchQuery={state.searchQuery}
-                getTagHref={(tag) =>
-                  buildSearchHref({
-                    ...state,
-                    selectedTag: tag,
-                    currentPage: 1,
-                  })
-                }
+                tagHrefs={Object.fromEntries(
+                  post.tags.map((tag) => [
+                    tag,
+                    buildSearchHref({
+                      ...state,
+                      selectedTag: tag,
+                      currentPage: 1,
+                    }),
+                  ])
+                )}
               />
             ))}
           </div>
