@@ -5,7 +5,7 @@ import PostSearchResultCard from "@/components/PostSearchResultCard"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
 import { getAllPosts, getAllSeries, getAllTags } from "@/lib/posts"
-import { filterPostsForListing, getPostCategoryBreakdown, sortSearchResults } from "@/lib/post-search"
+import { filterPostsForListing, getPostCategoryBreakdown, getPostSearchFallbackSuggestions, sortSearchResults } from "@/lib/post-search"
 import { buildSearchHref, parseSearchQueryState } from "@/lib/search-query"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
@@ -81,6 +81,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const featuredPosts = posts.filter((post) => post.featured).slice(0, 3)
   const allCategories = Array.from(new Set(posts.map((post) => post.category))).sort((left, right) => left.localeCompare(right, "zh-CN"))
   const categoryBreakdown = getPostCategoryBreakdown(sortedPosts).slice(0, 8)
+  const fallbackSuggestions =
+    state.searchQuery && sortedPosts.length === 0
+      ? getPostSearchFallbackSuggestions(allTags, allSeries, allCategories, state.searchQuery)
+      : []
   const showSuggestions = !state.searchQuery || sortedPosts.length === 0
 
   return (
@@ -234,8 +238,32 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             ))}
           </div>
         ) : (
-          <div className="rounded-[1.75rem] border border-border/50 bg-card p-8 text-center text-muted-foreground">
-            没有找到匹配的文章，试试换个关键词或标签。
+          <div className="space-y-4">
+            <div className="rounded-[1.75rem] border border-border/50 bg-card p-8 text-center text-muted-foreground">
+              没有找到匹配的文章，试试换个关键词或标签。
+            </div>
+            {fallbackSuggestions.length > 0 ? (
+              <div className="rounded-[1.75rem] border border-border/50 bg-card p-5">
+                <p className="section-kicker">Did You Mean</p>
+                <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em]">你是不是想搜</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {fallbackSuggestions.map((suggestion) => (
+                    <Link
+                      key={`${suggestion.type}-${suggestion.value}`}
+                      href={buildSearchHref({
+                        ...state,
+                        searchQuery: suggestion.value,
+                        currentPage: 1,
+                      })}
+                      className="apple-pill hover:bg-white dark:hover:bg-white/12"
+                    >
+                      {suggestion.type === "tag" ? "#" : suggestion.type === "series" ? "系列：" : "分类："}
+                      {suggestion.value}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         )
       ) : null}

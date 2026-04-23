@@ -4,6 +4,7 @@ import type { Post } from "../src/lib/posts"
 import {
   filterPostsForListing,
   getPostCategoryBreakdown,
+  getPostSearchFallbackSuggestions,
   getPostSearchMatchScope,
   getPostSearchSuggestions,
   matchesPostSearch,
@@ -121,5 +122,18 @@ test("getPostCategoryBreakdown summarizes categories by count", () => {
   assert.deepEqual(getPostCategoryBreakdown(posts), [
     { category: "产品", count: 1 },
     { category: "前端", count: 1 },
+  ])
+})
+
+test("getPostSearchFallbackSuggestions returns near matches for misspelled searches", () => {
+  const suggestions = getPostSearchFallbackSuggestions(
+    ["React", "Hooks"],
+    ["React 深入", "音乐设计"],
+    ["前端", "产品"],
+    "Ract"
+  )
+
+  assert.deepEqual(suggestions, [
+    { type: "tag", value: "React" },
   ])
 })

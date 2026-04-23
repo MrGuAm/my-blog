@@ -32,6 +32,11 @@ export interface PostCategoryBreakdownItem {
   count: number
 }
 
+export interface PostSearchFallbackSuggestion {
+  type: "tag" | "series" | "category"
+  value: string
+}
+
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, " ")
 }
@@ -42,6 +47,34 @@ function normalizeSearchQuery(value: string) {
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function levenshteinDistance(left: string, right: string) {
+  if (left === right) return 0
+  if (!left) return right.length
+  if (!right) return left.length
+
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index)
+  const current = new Array(right.length + 1)
+
+  for (let row = 0; row < left.length; row += 1) {
+    current[0] = row + 1
+
+    for (let column = 0; column < right.length; column += 1) {
+      const cost = left[row] === right[column] ? 0 : 1
+      current[column + 1] = Math.min(
+        current[column] + 1,
+        previous[column + 1] + 1,
+        previous[column] + cost
+      )
+    }
+
+    for (let column = 0; column < previous.length; column += 1) {
+      previous[column] = current[column]
+    }
+  }
+
+  return previous[right.length]
 }
 
 function buildPostSearchText(post: Post) {
@@ -135,6 +168,42 @@ export function getPostSearchSuggestions(tags: string[], series: string[], searc
   ).map<PostSearchSuggestion>((value) => ({ type: "series", value }))
 
   return [...matchingTags, ...matchingSeries]
+}
+
+export function getPostSearchFallbackSuggestions(
+  tags: string[],
+  series: string[],
+  categories: string[],
+  searchQuery: string
+) {
+  const normalizedQuery = normalizeSearchQuery(searchQuery)
+  if (!normalizedQuery) return []
+
+  const threshold = Math.max(2, Math.floor(normalizedQuery.length / 2))
+  const candidates = [
+    ...tags.map((value) => ({ type: "tag" as const, value })),
+    ...series.map((value) => ({ type: "series" as const, value })),
+    ...categories.map((value) => ({ type: "category" as const, value })),
+  ]
+
+  return candidates
+    .map((candidate) => {
+      const normalizedCandidate = normalizeSearchQuery(candidate.value)
+
+      const includesMatch =
+        normalizedCandidate.includes(normalizedQuery) || normalizedQuery.includes(normalizedCandidate)
+
+      const distance = includesMatch ? 0 : levenshteinDistance(normalizedQuery, normalizedCandidate)
+
+      return {
+        ...candidate,
+        distance,
+      }
+    })
+    .filter((candidate) => candidate.distance <= threshold)
+    .sort((left, right) => left.distance - right.distance || left.value.localeCompare(right.value, "zh-CN"))
+    .slice(0, 6)
+    .map<PostSearchFallbackSuggestion>(({ type, value }) => ({ type, value }))
 }
 
 export function sortPostsForDisplay(posts: Post[]) {
