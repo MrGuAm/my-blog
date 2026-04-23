@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import HighlightedText from "@/components/HighlightedText"
 import PostSearchResultCard from "@/components/PostSearchResultCard"
+import SearchRecentSearches from "@/components/SearchRecentSearches"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
 import { getAllPosts, getAllSeries, getAllTags } from "@/lib/posts"
@@ -174,6 +175,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           输入关键词开始搜索，支持标题、摘要、分类、标签、系列和正文内容。
         </div>
       )}
+
+      {!state.searchQuery && !state.selectedTag && !state.selectedCategory ? (
+        <SearchRecentSearches sortBy={state.sortBy} className="mb-6" />
+      ) : null}
 
       {sortedPosts.length > 0 && categoryBreakdown.length > 1 ? (
         <section className="mb-6 rounded-[1.75rem] border border-border/50 bg-card p-5">

@@ -25,15 +25,33 @@ export function writeRecentSearches(values: string[]) {
   window.localStorage.setItem(recentSearchesStorageKey, JSON.stringify(values.slice(0, recentSearchesLimit)))
 }
 
-export function pushRecentSearch(value: string) {
+export function buildRecentSearches(values: string[], value: string) {
   const normalizedValue = value.trim()
-  if (!normalizedValue) return []
+  if (!normalizedValue) return values.slice(0, recentSearchesLimit)
 
-  const nextValues = [
+  return [
     normalizedValue,
-    ...readRecentSearches().filter((item) => item.toLowerCase() !== normalizedValue.toLowerCase()),
+    ...values.filter((item) => item.toLowerCase() !== normalizedValue.toLowerCase()),
   ].slice(0, recentSearchesLimit)
+}
+
+export function pushRecentSearch(value: string) {
+  const nextValues = buildRecentSearches(readRecentSearches(), value)
 
   writeRecentSearches(nextValues)
   return nextValues
+}
+
+export function removeRecentSearch(value: string) {
+  const normalizedValue = value.trim().toLowerCase()
+  if (!normalizedValue) return readRecentSearches()
+
+  const nextValues = readRecentSearches().filter((item) => item.toLowerCase() !== normalizedValue)
+  writeRecentSearches(nextValues)
+  return nextValues
+}
+
+export function clearRecentSearches() {
+  if (!canUseStorage()) return
+  window.localStorage.removeItem(recentSearchesStorageKey)
 }
