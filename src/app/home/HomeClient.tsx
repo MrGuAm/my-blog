@@ -8,6 +8,7 @@ import HighlightedText from "@/components/HighlightedText"
 import { Post } from "@/lib/posts"
 import { PaletteHeroTrio } from "@/components/PaletteCharacters"
 import PrimaryNavLinks from "@/components/PrimaryNavLinks"
+import SearchQueryInput from "@/components/SearchQueryInput"
 import SiteBrand from "@/components/SiteBrand"
 import SiteFooter from "@/components/SiteFooter"
 import MarqueeText from "@/components/music/MarqueeText"
@@ -411,26 +412,23 @@ export default function HomeClient({
             <SiteBrand label={siteSettings.brandName} className="text-foreground" />
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 lg:gap-3">
               <div className="relative min-w-0 w-full sm:w-auto">
-                <input
-                  type="text"
+                <SearchQueryInput
                   placeholder="搜索文章或标签..."
                   value={searchQuery}
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setTimeout(() => setIsSearchFocused(false), 120)}
-                  onChange={(e) => {
-                    applySearchQuery(e.target.value)
+                  onChange={(event) => {
+                    applySearchQuery(event.target.value)
                   }}
-                  className="apple-input w-full pl-9 pr-9 sm:w-48 lg:w-40 xl:w-56"
+                  className="relative"
+                  inputClassName="apple-input w-full pl-9 pr-9 sm:w-48 lg:w-40 xl:w-56"
+                  showClearButton={Boolean(searchQuery || selectedTag)}
+                  onClear={() => {
+                    setSearchQuery("")
+                    setSelectedTag(null)
+                    setCurrentPage(1)
+                  }}
                 />
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">🔍</span>
-                {(searchQuery || selectedTag) && (
-                  <button
-                    onClick={() => { setSearchQuery(""); setSelectedTag(null); setCurrentPage(1) }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs flex items-center gap-1"
-                  >
-                    ✕
-                  </button>
-                )}
                 {showSearchSuggestions ? (
                   <div className="apple-panel absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-[1.4rem] p-2 shadow-2xl">
                     <div className="space-y-1">

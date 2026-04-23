@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import HighlightedText from "@/components/HighlightedText"
 import PostSearchResultCard from "@/components/PostSearchResultCard"
+import SearchQueryInput from "@/components/SearchQueryInput"
 import SearchRecentSearches from "@/components/SearchRecentSearches"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
@@ -101,12 +102,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       backLinkLabel="← 返回首页"
       headerActions={
         <form action="/search" className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
-          <input
-            type="text"
+          <SearchQueryInput
             name="q"
             defaultValue={state.searchQuery}
             placeholder="搜索文章、标签、系列或正文..."
-            className="apple-input w-full sm:min-w-[20rem]"
+            className="relative w-full sm:min-w-[20rem] sm:flex-1"
+            inputClassName="apple-input w-full pl-9 pr-4"
           />
           <select
             name="category"
