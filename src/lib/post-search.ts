@@ -42,6 +42,12 @@ export interface PostSearchFallbackSuggestion {
   value: string
 }
 
+export interface PopularSearchTerm {
+  type: "tag" | "series" | "category"
+  value: string
+  count: number
+}
+
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, " ")
 }
@@ -285,4 +291,60 @@ export function getPostTagBreakdown(posts: Post[]) {
   return [...counts.entries()]
     .map<PostTagBreakdownItem>(([tag, count]) => ({ tag, count }))
     .sort((left, right) => right.count - left.count || left.tag.localeCompare(right.tag, "zh-CN"))
+}
+
+export function getPopularSearchTerms(posts: Post[]) {
+  const tagTerms = getPostTagBreakdown(posts).map<PopularSearchTerm>(({ tag, count }) => ({
+    type: "tag",
+    value: tag,
+    count,
+  }))
+
+  const seriesCounts = new Map<string, number>()
+  const categoryCounts = new Map<string, number>()
+
+  for (const post of posts) {
+    if (post.series?.trim()) {
+      const key = post.series.trim()
+      seriesCounts.set(key, (seriesCounts.get(key) || 0) + 1)
+    }
+
+    categoryCounts.set(post.category, (categoryCounts.get(post.category) || 0) + 1)
+  }
+
+  const seriesTerms = [...seriesCounts.entries()].map<PopularSearchTerm>(([value, count]) => ({
+    type: "series",
+    value,
+    count,
+  }))
+
+  const categoryTerms = [...categoryCounts.entries()].map<PopularSearchTerm>(([value, count]) => ({
+    type: "category",
+    value,
+    count,
+  }))
+
+  const typePriority = {
+    tag: 0,
+    series: 1,
+    category: 2,
+  } as const
+
+  const seen = new Set<string>()
+
+  return [...tagTerms, ...seriesTerms, ...categoryTerms]
+    .sort((left, right) => {
+      if (left.count !== right.count) return right.count - left.count
+      if (typePriority[left.type] !== typePriority[right.type]) {
+        return typePriority[left.type] - typePriority[right.type]
+      }
+      return left.value.localeCompare(right.value, "zh-CN")
+    })
+    .filter((term) => {
+      const key = term.value.trim().toLowerCase()
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 10)
 }

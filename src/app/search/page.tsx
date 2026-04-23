@@ -6,7 +6,7 @@ import SearchRecentSearches from "@/components/SearchRecentSearches"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
 import { getAllPosts, getAllSeries, getAllTags } from "@/lib/posts"
-import { filterPostsForListing, getPostCategoryBreakdown, getPostSearchFallbackSuggestions, getPostTagBreakdown, sortSearchResults } from "@/lib/post-search"
+import { filterPostsForListing, getPopularSearchTerms, getPostCategoryBreakdown, getPostSearchFallbackSuggestions, getPostTagBreakdown, sortSearchResults } from "@/lib/post-search"
 import { buildSearchHref, parseSearchQueryState } from "@/lib/search-query"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
@@ -79,6 +79,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const paginatedPosts = sortedPosts.slice((safeCurrentPage - 1) * postsPerPage, safeCurrentPage * postsPerPage)
   const popularTags = getPopularTags(posts, allTags)
   const popularSeries = getPopularSeries(posts, allSeries)
+  const popularSearchTerms = getPopularSearchTerms(posts)
   const featuredPosts = posts.filter((post) => post.featured).slice(0, 3)
   const allCategories = Array.from(new Set(posts.map((post) => post.category))).sort((left, right) => left.localeCompare(right, "zh-CN"))
   const categoryBreakdown = getPostCategoryBreakdown(sortedPosts).slice(0, 8)
@@ -178,6 +179,33 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
       {!state.searchQuery && !state.selectedTag && !state.selectedCategory ? (
         <SearchRecentSearches sortBy={state.sortBy} className="mb-6" />
+      ) : null}
+
+      {!state.searchQuery && !state.selectedTag && !state.selectedCategory && popularSearchTerms.length > 0 ? (
+        <section className="mb-6 rounded-[1.75rem] border border-border/50 bg-card p-5">
+          <div className="mb-3">
+            <p className="section-kicker">Trending Searches</p>
+            <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em]">热门搜索词</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {popularSearchTerms.map((term) => (
+              <Link
+                key={`${term.type}-${term.value}`}
+                href={buildSearchHref({
+                  searchQuery: term.type === "category" ? "" : term.value,
+                  selectedTag: term.type === "tag" ? term.value : null,
+                  selectedCategory: term.type === "category" ? term.value : null,
+                  currentPage: 1,
+                  sortBy: "default",
+                })}
+                className="apple-pill hover:bg-white dark:hover:bg-white/12"
+              >
+                {term.type === "tag" ? "#" : term.type === "series" ? "系列：" : "分类："}
+                {term.value} · {term.count}
+              </Link>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       {sortedPosts.length > 0 && categoryBreakdown.length > 1 ? (

@@ -8,6 +8,7 @@ import {
   getPostSearchFallbackSuggestions,
   getPostSearchMatchScope,
   getPostSearchSuggestions,
+  getPopularSearchTerms,
   matchesPostSearch,
   sortSearchResults,
   splitHighlightedText,
@@ -144,5 +145,28 @@ test("getPostSearchFallbackSuggestions returns near matches for misspelled searc
 
   assert.deepEqual(suggestions, [
     { type: "tag", value: "React" },
+  ])
+})
+
+test("getPopularSearchTerms merges tag, series, and category candidates", () => {
+  const popularTerms = getPopularSearchTerms([
+    ...posts,
+    {
+      id: "react-series",
+      title: "React 状态管理",
+      excerpt: "再聊一次 React",
+      date: "2026-04-21",
+      category: "前端",
+      tags: ["React"],
+      content: "<p>zustand</p>",
+      series: "React 深入",
+    },
+  ])
+
+  assert.deepEqual(popularTerms.slice(0, 4), [
+    { type: "tag", value: "React", count: 2 },
+    { type: "category", value: "前端", count: 2 },
+    { type: "tag", value: "Hooks", count: 1 },
+    { type: "tag", value: "Music", count: 1 },
   ])
 })
