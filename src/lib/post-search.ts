@@ -27,6 +27,11 @@ export interface PostSearchSuggestion {
   value: string
 }
 
+export interface PostCategoryBreakdownItem {
+  category: string
+  count: number
+}
+
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, " ")
 }
@@ -180,4 +185,16 @@ export function sortSearchResults(posts: Post[], sortBy: SearchSortOption) {
   }
 
   return posts
+}
+
+export function getPostCategoryBreakdown(posts: Post[]) {
+  const counts = new Map<string, number>()
+
+  for (const post of posts) {
+    counts.set(post.category, (counts.get(post.category) || 0) + 1)
+  }
+
+  return [...counts.entries()]
+    .map<PostCategoryBreakdownItem>(([category, count]) => ({ category, count }))
+    .sort((left, right) => right.count - left.count || left.category.localeCompare(right.category, "zh-CN"))
 }

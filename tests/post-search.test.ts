@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import type { Post } from "../src/lib/posts"
 import {
   filterPostsForListing,
+  getPostCategoryBreakdown,
   getPostSearchMatchScope,
   getPostSearchSuggestions,
   matchesPostSearch,
@@ -114,4 +115,11 @@ test("sortSearchResults supports newest and oldest ordering", () => {
     sortSearchResults(posts, "oldest").map((post) => post.id),
     ["music-draft", "react-note"]
   )
+})
+
+test("getPostCategoryBreakdown summarizes categories by count", () => {
+  assert.deepEqual(getPostCategoryBreakdown(posts), [
+    { category: "产品", count: 1 },
+    { category: "前端", count: 1 },
+  ])
 })

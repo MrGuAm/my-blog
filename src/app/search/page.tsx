@@ -5,7 +5,7 @@ import PostSearchResultCard from "@/components/PostSearchResultCard"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
 import { getAllPosts, getAllSeries, getAllTags } from "@/lib/posts"
-import { filterPostsForListing, sortSearchResults } from "@/lib/post-search"
+import { filterPostsForListing, getPostCategoryBreakdown, sortSearchResults } from "@/lib/post-search"
 import { buildSearchHref, parseSearchQueryState } from "@/lib/search-query"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
@@ -80,6 +80,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const popularSeries = getPopularSeries(posts, allSeries)
   const featuredPosts = posts.filter((post) => post.featured).slice(0, 3)
   const allCategories = Array.from(new Set(posts.map((post) => post.category))).sort((left, right) => left.localeCompare(right, "zh-CN"))
+  const categoryBreakdown = getPostCategoryBreakdown(sortedPosts).slice(0, 8)
   const showSuggestions = !state.searchQuery || sortedPosts.length === 0
 
   return (
@@ -168,6 +169,51 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           输入关键词开始搜索，支持标题、摘要、分类、标签、系列和正文内容。
         </div>
       )}
+
+      {sortedPosts.length > 0 && categoryBreakdown.length > 1 ? (
+        <section className="mb-6 rounded-[1.75rem] border border-border/50 bg-card p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="section-kicker">Category Breakdown</p>
+              <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em]">结果分类分布</h2>
+            </div>
+            {state.selectedCategory ? (
+              <Link
+                href={buildSearchHref({
+                  ...state,
+                  selectedCategory: null,
+                  currentPage: 1,
+                })}
+                className="text-sm text-primary hover:underline"
+              >
+                查看全部分类
+              </Link>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {categoryBreakdown.map(({ category, count }) => {
+              const isActive = state.selectedCategory === category
+              return (
+                <Link
+                  key={category}
+                  href={buildSearchHref({
+                    ...state,
+                    selectedCategory: category,
+                    currentPage: 1,
+                  })}
+                  className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "border border-border/60 text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  {category} · {count}
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
 
       {state.searchQuery || state.selectedTag ? (
         paginatedPosts.length > 0 ? (
