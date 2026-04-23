@@ -14,6 +14,7 @@ import MarqueeText from "@/components/music/MarqueeText"
 import { useMusic } from "@/context/MusicContext"
 import { useAuthStatus } from "@/hooks/useAuthStatus"
 import { filterPostsForListing, getPostSearchMatchScope, getPostSearchSuggestions } from "@/lib/post-search"
+import { pushRecentSearch, readRecentSearches } from "@/lib/recent-searches"
 import type { SiteSettings } from "@/lib/site-settings"
 
 interface HomeClientProps {
@@ -290,6 +291,7 @@ export default function HomeClient({
   const [isSidebarHovering, setIsSidebarHovering] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentSearches())
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [selectedTag, setSelectedTag] = useState<string | null>(initialSelectedTag)
   const [currentPage, setCurrentPage] = useState(initialPage)
@@ -338,14 +340,17 @@ export default function HomeClient({
     [allSeries, allTags, searchQuery]
   )
   const normalizedSearchQuery = searchQuery.trim()
-  const showSearchSuggestions = isSearchFocused && normalizedSearchQuery.length > 0
-  const searchPageHref = useMemo(() => {
+  const visibleRecentSearches = recentSearches
+    .filter((item) => item.toLowerCase() !== normalizedSearchQuery.toLowerCase())
+    .slice(0, 5)
+  const showSearchSuggestions = isSearchFocused && (normalizedSearchQuery.length > 0 || visibleRecentSearches.length > 0)
+  const searchPageHref = (() => {
     if (!normalizedSearchQuery) return "/search"
     const params = new URLSearchParams()
     params.set("q", normalizedSearchQuery)
     if (selectedTag) params.set("tag", selectedTag)
     return `/search?${params.toString()}`
-  }, [normalizedSearchQuery, selectedTag])
+  })()
 
   const showFeaturedSection = !searchQuery && selectedTag === null && currentPage === 1
   const featuredPosts = showFeaturedSection
@@ -389,6 +394,14 @@ export default function HomeClient({
     window.history.replaceState(null, "", nextUrl)
   }, [effectiveShowDrafts, safeCurrentPage, searchQuery, selectedTag])
 
+  const applySearchQuery = (value: string) => {
+    setSearchQuery(value)
+    setCurrentPage(1)
+    const normalizedValue = value.trim()
+    if (!normalizedValue) return
+    setRecentSearches(pushRecentSearch(normalizedValue))
+  }
+
   return (
     <div className="min-h-screen text-foreground">
       {/* Navigation */}
@@ -405,8 +418,7 @@ export default function HomeClient({
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setTimeout(() => setIsSearchFocused(false), 120)}
                   onChange={(e) => {
-                    setSearchQuery(e.target.value)
-                    setCurrentPage(1)
+                    applySearchQuery(e.target.value)
                   }}
                   className="apple-input w-full pl-9 pr-9 sm:w-48 lg:w-40 xl:w-56"
                 />
@@ -422,6 +434,22 @@ export default function HomeClient({
                 {showSearchSuggestions ? (
                   <div className="apple-panel absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-[1.4rem] p-2 shadow-2xl">
                     <div className="space-y-1">
+                      {visibleRecentSearches.map((recentSearch) => (
+                        <button
+                          key={`recent-${recentSearch}`}
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            applySearchQuery(recentSearch)
+                            setSelectedTag(null)
+                            setIsSearchFocused(false)
+                          }}
+                          className="flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+                        >
+                          <span className="truncate">{recentSearch}</span>
+                          <span className="ml-3 shrink-0 text-[11px] text-muted-foreground">最近搜索</span>
+                        </button>
+                      ))}
                       {searchSuggestions.map((suggestion) => (
                         <button
                           key={`${suggestion.type}-${suggestion.value}`}
@@ -432,10 +460,9 @@ export default function HomeClient({
                               setSelectedTag(suggestion.value)
                               setSearchQuery("")
                             } else {
-                              setSearchQuery(suggestion.value)
+                              applySearchQuery(suggestion.value)
                               setSelectedTag(null)
                             }
-                            setCurrentPage(1)
                             setIsSearchFocused(false)
                           }}
                           className="flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
