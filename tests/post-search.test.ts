@@ -4,6 +4,7 @@ import type { Post } from "../src/lib/posts"
 import {
   filterPostsForListing,
   getPostCategoryBreakdown,
+  getPostTagBreakdown,
   getPostSearchFallbackSuggestions,
   getPostSearchMatchScope,
   getPostSearchSuggestions,
@@ -122,6 +123,14 @@ test("getPostCategoryBreakdown summarizes categories by count", () => {
   assert.deepEqual(getPostCategoryBreakdown(posts), [
     { category: "产品", count: 1 },
     { category: "前端", count: 1 },
+  ])
+})
+
+test("getPostTagBreakdown summarizes tags by count", () => {
+  assert.deepEqual(getPostTagBreakdown(posts), [
+    { tag: "Hooks", count: 1 },
+    { tag: "Music", count: 1 },
+    { tag: "React", count: 1 },
   ])
 })
 

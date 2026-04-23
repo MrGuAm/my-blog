@@ -32,6 +32,11 @@ export interface PostCategoryBreakdownItem {
   count: number
 }
 
+export interface PostTagBreakdownItem {
+  tag: string
+  count: number
+}
+
 export interface PostSearchFallbackSuggestion {
   type: "tag" | "series" | "category"
   value: string
@@ -266,4 +271,18 @@ export function getPostCategoryBreakdown(posts: Post[]) {
   return [...counts.entries()]
     .map<PostCategoryBreakdownItem>(([category, count]) => ({ category, count }))
     .sort((left, right) => right.count - left.count || left.category.localeCompare(right.category, "zh-CN"))
+}
+
+export function getPostTagBreakdown(posts: Post[]) {
+  const counts = new Map<string, number>()
+
+  for (const post of posts) {
+    for (const tag of post.tags) {
+      counts.set(tag, (counts.get(tag) || 0) + 1)
+    }
+  }
+
+  return [...counts.entries()]
+    .map<PostTagBreakdownItem>(([tag, count]) => ({ tag, count }))
+    .sort((left, right) => right.count - left.count || left.tag.localeCompare(right.tag, "zh-CN"))
 }

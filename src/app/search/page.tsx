@@ -5,7 +5,7 @@ import PostSearchResultCard from "@/components/PostSearchResultCard"
 import SectionPageShell from "@/components/SectionPageShell"
 import type { Post } from "@/lib/posts"
 import { getAllPosts, getAllSeries, getAllTags } from "@/lib/posts"
-import { filterPostsForListing, getPostCategoryBreakdown, getPostSearchFallbackSuggestions, sortSearchResults } from "@/lib/post-search"
+import { filterPostsForListing, getPostCategoryBreakdown, getPostSearchFallbackSuggestions, getPostTagBreakdown, sortSearchResults } from "@/lib/post-search"
 import { buildSearchHref, parseSearchQueryState } from "@/lib/search-query"
 import { getResolvedSeoSettings } from "@/lib/server/site-metadata"
 import { getSiteSettings } from "@/lib/server/site-settings"
@@ -81,6 +81,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const featuredPosts = posts.filter((post) => post.featured).slice(0, 3)
   const allCategories = Array.from(new Set(posts.map((post) => post.category))).sort((left, right) => left.localeCompare(right, "zh-CN"))
   const categoryBreakdown = getPostCategoryBreakdown(sortedPosts).slice(0, 8)
+  const tagBreakdown = getPostTagBreakdown(sortedPosts).slice(0, 12)
   const fallbackSuggestions =
     state.searchQuery && sortedPosts.length === 0
       ? getPostSearchFallbackSuggestions(allTags, allSeries, allCategories, state.searchQuery)
@@ -212,6 +213,51 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   }`}
                 >
                   {category} · {count}
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {sortedPosts.length > 0 && tagBreakdown.length > 1 ? (
+        <section className="mb-6 rounded-[1.75rem] border border-border/50 bg-card p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="section-kicker">Tag Breakdown</p>
+              <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em]">结果标签分布</h2>
+            </div>
+            {state.selectedTag ? (
+              <Link
+                href={buildSearchHref({
+                  ...state,
+                  selectedTag: null,
+                  currentPage: 1,
+                })}
+                className="text-sm text-primary hover:underline"
+              >
+                查看全部标签
+              </Link>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tagBreakdown.map(({ tag, count }) => {
+              const isActive = state.selectedTag === tag
+              return (
+                <Link
+                  key={tag}
+                  href={buildSearchHref({
+                    ...state,
+                    selectedTag: tag,
+                    currentPage: 1,
+                  })}
+                  className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "border border-border/60 text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  #{tag} · {count}
                 </Link>
               )
             })}
