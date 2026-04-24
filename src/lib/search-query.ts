@@ -1,4 +1,5 @@
 export type SearchSortOption = "default" | "newest" | "oldest"
+export type SearchViewMode = "cards" | "compact"
 
 export interface SearchQueryState {
   searchQuery: string
@@ -6,6 +7,7 @@ export interface SearchQueryState {
   selectedCategory: string | null
   currentPage: number
   sortBy: SearchSortOption
+  viewMode: SearchViewMode
 }
 
 function getSingleParam(value?: string | string[]) {
@@ -20,6 +22,7 @@ function normalizePage(value?: string | string[]) {
 export function parseSearchQueryState(params?: Record<string, string | string[] | undefined>): SearchQueryState {
   const source = params || {}
   const sort = getSingleParam(source.sort)?.trim() || "default"
+  const view = getSingleParam(source.view)?.trim() || "cards"
 
   return {
     searchQuery: getSingleParam(source.q)?.trim() || "",
@@ -27,6 +30,7 @@ export function parseSearchQueryState(params?: Record<string, string | string[] 
     selectedCategory: getSingleParam(source.category)?.trim() || null,
     currentPage: normalizePage(source.page),
     sortBy: sort === "newest" || sort === "oldest" ? sort : "default",
+    viewMode: view === "compact" ? "compact" : "cards",
   }
 }
 
@@ -36,6 +40,7 @@ export function buildSearchHref(state: SearchQueryState) {
   if (state.selectedTag) params.set("tag", state.selectedTag)
   if (state.selectedCategory) params.set("category", state.selectedCategory)
   if (state.sortBy !== "default") params.set("sort", state.sortBy)
+  if (state.viewMode !== "cards") params.set("view", state.viewMode)
   if (state.currentPage > 1) params.set("page", String(state.currentPage))
   const next = params.toString()
   return next ? `/search?${next}` : "/search"

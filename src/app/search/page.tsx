@@ -130,6 +130,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <option value="newest">最新优先</option>
             <option value="oldest">最早优先</option>
           </select>
+          <select
+            name="view"
+            defaultValue={state.viewMode}
+            className="apple-input w-full sm:w-[11rem]"
+          >
+            <option value="cards">卡片视图</option>
+            <option value="compact">紧凑列表</option>
+          </select>
           {state.selectedTag ? <input type="hidden" name="tag" value={state.selectedTag} /> : null}
           <button type="submit" className="brand-solid-button whitespace-nowrap px-5 py-2.5">
             搜索
@@ -179,7 +187,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       )}
 
       {!state.searchQuery && !state.selectedTag && !state.selectedCategory ? (
-        <SearchRecentSearches sortBy={state.sortBy} className="mb-6" />
+        <SearchRecentSearches sortBy={state.sortBy} viewMode={state.viewMode} className="mb-6" />
       ) : null}
 
       {!state.searchQuery && !state.selectedTag && !state.selectedCategory && popularSearchTerms.length > 0 ? (
@@ -198,6 +206,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   selectedCategory: term.type === "category" ? term.value : null,
                   currentPage: 1,
                   sortBy: "default",
+                  viewMode: state.viewMode,
                 })}
                 className="apple-pill hover:bg-white dark:hover:bg-white/12"
               >
@@ -307,6 +316,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 key={post.id}
                 post={post}
                 searchQuery={state.searchQuery}
+                viewMode={state.viewMode}
                 tagHrefs={Object.fromEntries(
                   post.tags.map((tag) => [
                     tag,
@@ -371,6 +381,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                       selectedCategory: null,
                       currentPage: 1,
                       sortBy: "default",
+                      viewMode: state.viewMode,
                     })}
                     className="apple-pill hover:bg-white dark:hover:bg-white/12"
                   >
@@ -392,6 +403,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                       selectedCategory: null,
                       currentPage: 1,
                       sortBy: "default",
+                      viewMode: state.viewMode,
                     })}
                     className="rounded-2xl border border-border/50 px-4 py-3 text-sm transition-colors hover:bg-accent"
                   >
@@ -414,6 +426,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                       selectedCategory: null,
                       currentPage: 1,
                       sortBy: "default",
+                      viewMode: state.viewMode,
                     })}
                     className="block rounded-2xl border border-border/50 px-4 py-3 transition-colors hover:bg-accent"
                   >

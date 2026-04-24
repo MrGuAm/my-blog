@@ -2,16 +2,18 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { buildSearchHref, type SearchSortOption } from "@/lib/search-query"
+import { buildSearchHref, type SearchSortOption, type SearchViewMode } from "@/lib/search-query"
 import { clearRecentSearches, readRecentSearches, removeRecentSearch } from "@/lib/recent-searches"
 
 interface SearchRecentSearchesProps {
   sortBy: SearchSortOption
+  viewMode: SearchViewMode
   className?: string
 }
 
 export default function SearchRecentSearches({
   sortBy,
+  viewMode,
   className = "rounded-[1.75rem] border border-border/50 bg-card p-5",
 }: SearchRecentSearchesProps) {
   const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentSearches())
@@ -46,6 +48,7 @@ export default function SearchRecentSearches({
                 selectedCategory: null,
                 currentPage: 1,
                 sortBy,
+                viewMode,
               })}
               className="rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >

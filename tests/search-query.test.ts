@@ -17,6 +17,7 @@ test("parseSearchQueryState normalizes search page params", () => {
     selectedCategory: "前端",
     currentPage: 3,
     sortBy: "oldest",
+    viewMode: "cards",
   })
 })
 
@@ -32,6 +33,7 @@ test("parseSearchQueryState falls back to safe defaults", () => {
     selectedCategory: null,
     currentPage: 1,
     sortBy: "default",
+    viewMode: "cards",
   })
 })
 
@@ -42,7 +44,8 @@ test("buildSearchHref omits default search params and preserves active filters",
     selectedCategory: "前端",
     currentPage: 2,
     sortBy: "newest",
+    viewMode: "compact",
   })
 
-  assert.equal(href, "/search?q=React&tag=Hooks&category=%E5%89%8D%E7%AB%AF&sort=newest&page=2")
+  assert.equal(href, "/search?q=React&tag=Hooks&category=%E5%89%8D%E7%AB%AF&sort=newest&view=compact&page=2")
 })
