@@ -181,6 +181,18 @@ npm run lint
 npm test
 ```
 
+导出站点快照：
+
+```bash
+npm run backup:snapshot
+```
+
+恢复站点快照：
+
+```bash
+npm run restore:snapshot -- backups/site-snapshot-*/snapshot.json
+```
+
 浏览器端 E2E：
 
 ```bash
@@ -190,6 +202,8 @@ npm run test:e2e
 说明：
 
 - Playwright 会启动一套带临时数据目录的本地服务器，不会污染你当前的 `data/blog.db`
+- 后台的“导出站点快照”会导出一份完整 JSON；本地 `backup:snapshot` 还会额外复制 `public/uploads` 目录，适合封版归档
+- `restore:snapshot` 默认只恢复到本地 SQLite；如果你之后要恢复到远程 Postgres，建议先在本地核对无误后再做迁移
 
 完整本地校验：
 

@@ -30,12 +30,15 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/*.bak-*
+public/uploads.backup-*
+public/uploads/ok-*.svg
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+/backups
 
 # env files (can opt-in for committing if needed)
 .env*

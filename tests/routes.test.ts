@@ -5,6 +5,7 @@ import { GET as postsGet, POST as postsPost } from "../src/app/api/posts/route"
 import { DELETE as adminMediaDelete, POST as adminMediaPost } from "../src/app/api/admin/media/route"
 import { POST as adminMediaReindexPost } from "../src/app/api/admin/media/reindex/route"
 import { GET as adminSettingsGet, PATCH as adminSettingsPatch } from "../src/app/api/admin/settings/route"
+import { GET as adminBackupGet } from "../src/app/api/admin/backup/route"
 import { GET as authStatusGet } from "../src/app/api/auth/status/route"
 import { GET as feedGet } from "../src/app/api/feed/route"
 import { GET as adminMediaGet } from "../src/app/api/admin/media/route"
@@ -80,6 +81,28 @@ test("admin media reindex route rejects unauthenticated access", async () => {
 
   assert.equal(response.status, 401)
   assert.equal(payload.error, "请先登录管理员账号")
+})
+
+test("admin backup route rejects unauthenticated access and exports snapshot data for admins", async () => {
+  const guestRequest = new NextRequest("https://champion.cc.cd/api/admin/backup")
+  const guestResponse = await adminBackupGet(guestRequest)
+  const guestPayload = await guestResponse.json()
+
+  assert.equal(guestResponse.status, 401)
+  assert.equal(guestPayload.error, "请先登录管理员账号")
+
+  const authRequest = new NextRequest("https://champion.cc.cd/api/admin/backup", {
+    headers: { cookie: buildSessionCookie(createSessionToken()) },
+  })
+  const authResponse = await adminBackupGet(authRequest)
+  const authPayload = await authResponse.json()
+
+  assert.equal(authResponse.status, 200)
+  assert.equal(authPayload.manifest.snapshotVersion, 1)
+  assert.equal(Array.isArray(authPayload.data.posts), true)
+  assert.equal(Array.isArray(authPayload.data.comments), true)
+  assert.equal(typeof authPayload.data.siteSettings.settings.brandName, "string")
+  assert.match(authResponse.headers.get("Content-Disposition") || "", /site-snapshot-/)
 })
 
 test("admin settings route rejects unauthenticated access and validates payload", async () => {

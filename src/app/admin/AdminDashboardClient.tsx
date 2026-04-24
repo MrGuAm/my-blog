@@ -561,6 +561,43 @@ export default function AdminDashboardClient({
           </div>
         </div>
       </section>
+
+      <section className="mt-8 rounded-3xl border border-border/50 bg-card p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="text-lg font-bold">备份与恢复中心</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              在项目告一段落前，把文章、版本、评论、评论账号、站点设置、媒体元数据和引用关系导出成站点快照。
+            </p>
+          </div>
+          <a
+            href="/api/admin/backup"
+            className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            导出站点快照
+          </a>
+        </div>
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-border/40 bg-background/60 p-4">
+            <p className="text-sm font-medium">本地导出</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              会在仓库根目录生成 `backups/site-snapshot-*/`，其中包含 `snapshot.json` 和本地 `uploads/` 目录副本。
+            </p>
+            <code className="mt-3 block rounded-xl bg-secondary/50 px-3 py-2 text-xs text-foreground">
+              npm run backup:snapshot
+            </code>
+          </div>
+          <div className="rounded-2xl border border-border/40 bg-background/60 p-4">
+            <p className="text-sm font-medium">本地恢复</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              恢复前会自动备份当前 SQLite 和本地上传目录，适合把博客恢复到某个快照状态。
+            </p>
+            <code className="mt-3 block rounded-xl bg-secondary/50 px-3 py-2 text-xs text-foreground">
+              npm run restore:snapshot -- backups/site-snapshot-*/snapshot.json
+            </code>
+          </div>
+        </div>
+      </section>
     </SectionPageShell>
   )
 }
