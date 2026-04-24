@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import type { Post } from "@/lib/posts"
-import { getPostSearchMatchScope } from "@/lib/post-search"
+import { getPostContentSnippet, getPostSearchMatchScope } from "@/lib/post-search"
 import type { SearchViewMode } from "@/lib/search-query"
 import HighlightedText from "@/components/HighlightedText"
 
@@ -29,6 +29,7 @@ export default function PostSearchResultCard({
     !matchScope.category &&
     !matchScope.series &&
     !matchScope.tags
+  const contentSnippet = matchScope.content ? getPostContentSnippet(post.content, searchQuery) : null
 
   if (viewMode === "compact") {
     return (
@@ -47,6 +48,11 @@ export default function PostSearchResultCard({
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             <HighlightedText text={post.excerpt} query={searchQuery} />
           </p>
+          {contentSnippet ? (
+            <p className="mt-2 text-xs leading-6 text-muted-foreground">
+              正文片段：<HighlightedText text={contentSnippet} query={searchQuery} />
+            </p>
+          ) : null}
         </Link>
         <div className="mt-3 flex flex-wrap gap-2">
           {post.tags.map((tag) => (
@@ -85,6 +91,11 @@ export default function PostSearchResultCard({
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
           <HighlightedText text={post.excerpt} query={searchQuery} />
         </p>
+        {contentSnippet ? (
+          <p className="mt-3 text-sm leading-7 text-muted-foreground">
+            正文片段：<HighlightedText text={contentSnippet} query={searchQuery} />
+          </p>
+        ) : null}
       </Link>
       <div className="mt-4 flex flex-wrap gap-2">
         {post.tags.map((tag) => (

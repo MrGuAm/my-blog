@@ -101,6 +101,10 @@ function buildPostSearchText(post: Post) {
     .toLowerCase()
 }
 
+function normalizePlainText(value: string) {
+  return stripHtml(value).replace(/\s+/g, " ").trim()
+}
+
 export function matchesPostSearch(post: Post, searchQuery: string) {
   const normalizedQuery = normalizeSearchQuery(searchQuery)
   if (!normalizedQuery) return true
@@ -109,6 +113,7 @@ export function matchesPostSearch(post: Post, searchQuery: string) {
 
 export function getPostSearchMatchScope(post: Post, searchQuery: string): PostSearchMatchScope {
   const normalizedQuery = normalizeSearchQuery(searchQuery)
+  const normalizedContent = normalizePlainText(post.content).toLowerCase()
 
   if (!normalizedQuery) {
     return {
@@ -127,8 +132,27 @@ export function getPostSearchMatchScope(post: Post, searchQuery: string): PostSe
     category: post.category.toLowerCase().includes(normalizedQuery),
     series: (post.series || "").toLowerCase().includes(normalizedQuery),
     tags: post.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery)),
-    content: stripHtml(post.content).toLowerCase().includes(normalizedQuery),
+    content: normalizedContent.includes(normalizedQuery),
   }
+}
+
+export function getPostContentSnippet(content: string, searchQuery: string, radius = 48) {
+  const normalizedQuery = normalizeSearchQuery(searchQuery)
+  if (!normalizedQuery) return null
+
+  const plainText = normalizePlainText(content)
+  if (!plainText) return null
+
+  const matchIndex = plainText.toLowerCase().indexOf(normalizedQuery)
+  if (matchIndex < 0) return null
+
+  const start = Math.max(0, matchIndex - radius)
+  const end = Math.min(plainText.length, matchIndex + normalizedQuery.length + radius)
+  const snippet = plainText.slice(start, end).trim()
+
+  if (!snippet) return null
+
+  return `${start > 0 ? "…" : ""}${snippet}${end < plainText.length ? "…" : ""}`
 }
 
 export function splitHighlightedText(text: string, searchQuery: string): HighlightPart[] {

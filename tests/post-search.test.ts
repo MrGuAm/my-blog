@@ -4,6 +4,7 @@ import type { Post } from "../src/lib/posts"
 import {
   filterPostsForListing,
   getPostCategoryBreakdown,
+  getPostContentSnippet,
   getPostTagBreakdown,
   getPostSearchFallbackSuggestions,
   getPostSearchMatchScope,
@@ -146,6 +147,16 @@ test("getPostSearchFallbackSuggestions returns near matches for misspelled searc
   assert.deepEqual(suggestions, [
     { type: "tag", value: "React" },
   ])
+})
+
+test("getPostContentSnippet extracts surrounding content for search matches", () => {
+  const snippet = getPostContentSnippet(
+    "<p>这里记录歌词滚动、收藏和最近播放的交互。</p>",
+    "收藏"
+  )
+
+  assert.equal(snippet, "这里记录歌词滚动、收藏和最近播放的交互。")
+  assert.equal(getPostContentSnippet("<p>只是一段普通文本</p>", "不存在"), null)
 })
 
 test("getPopularSearchTerms merges tag, series, and category candidates", () => {
