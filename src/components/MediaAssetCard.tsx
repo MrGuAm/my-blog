@@ -21,6 +21,7 @@ interface MediaAssetCardProps {
   onPreview: () => void
   topBar?: ReactNode
   actions?: ReactNode
+  actionsClassName?: string
   openUsageInNewTab?: boolean
   className?: string
   surfaceClassName?: string
@@ -32,13 +33,14 @@ export default function MediaAssetCard({
   onPreview,
   topBar,
   actions,
+  actionsClassName = "mt-4 flex flex-nowrap items-stretch gap-2 overflow-x-auto pb-1",
   openUsageInNewTab = false,
   className = "rounded-2xl border border-border/50 bg-card p-3",
   surfaceClassName = "block w-full overflow-hidden rounded-xl border border-border/40",
   imageClassName = "h-52 w-full object-cover",
 }: MediaAssetCardProps) {
   return (
-    <div className={className}>
+    <div className={`${className} flex h-full flex-col`}>
       {topBar ? <div className="mb-3">{topBar}</div> : null}
       <button
         type="button"
@@ -47,7 +49,7 @@ export default function MediaAssetCard({
       >
         <img src={asset.url} alt={asset.name} className={imageClassName} />
       </button>
-      <div className="mt-3 space-y-1">
+      <div className="mt-3 flex-1 space-y-1">
         <p className="truncate text-sm font-medium">{asset.name}</p>
         <p className="text-xs text-muted-foreground">
           {formatSize(asset.size)}
@@ -63,7 +65,7 @@ export default function MediaAssetCard({
           openInNewTab={openUsageInNewTab}
         />
       </div>
-      {actions ? <div className="mt-3 flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className={actionsClassName}>{actions}</div> : null}
     </div>
   )
 }

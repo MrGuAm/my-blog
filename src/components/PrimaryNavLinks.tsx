@@ -164,8 +164,14 @@ export default function PrimaryNavLinks({
               >
                 管理
               </button>
-              {isDesktopAdminMenuOpen ? (
-                <div className="apple-panel absolute right-0 top-full z-30 mt-3 w-44 rounded-3xl border-white/90 bg-white/92 p-3 shadow-[0_28px_85px_-34px_rgba(15,23,42,0.28)] ring-1 ring-black/6 dark:border-white/20 dark:bg-slate-950/92 dark:ring-white/10 dark:shadow-[0_28px_85px_-34px_rgba(0,0,0,0.82)]">
+              <div
+                aria-hidden={!isDesktopAdminMenuOpen}
+                className={`apple-panel absolute right-0 top-full z-30 mt-3 w-44 origin-top-right rounded-3xl border-white/90 bg-white/92 p-3 shadow-[0_28px_85px_-34px_rgba(15,23,42,0.28)] ring-1 ring-black/6 transition-all duration-200 ease-out dark:border-white/20 dark:bg-slate-950/92 dark:ring-white/10 dark:shadow-[0_28px_85px_-34px_rgba(0,0,0,0.82)] ${
+                  isDesktopAdminMenuOpen
+                    ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
+                    : "pointer-events-none -translate-y-1 scale-95 opacity-0"
+                }`}
+              >
                   <div className="grid gap-1.5">
                     {authItems.map((item) => (
                       <Link
@@ -188,7 +194,6 @@ export default function PrimaryNavLinks({
                     </button>
                   </div>
                 </div>
-              ) : null}
             </div>
           </>
         ) : (

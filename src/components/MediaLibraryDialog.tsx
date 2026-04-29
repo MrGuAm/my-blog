@@ -54,6 +54,8 @@ export default function MediaLibraryDialog({
   const [referenceNow, setReferenceNow] = useState(() => Date.now())
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null)
   const uploadHintText = uploadHint ?? getMediaUploadHint()
+  const cardActionClass =
+    "flex min-h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border px-3 py-2 text-xs leading-none transition-colors"
 
   const loadAssets = async () => {
     setIsLoading(true)
@@ -341,7 +343,7 @@ export default function MediaLibraryDialog({
                     <button
                       type="button"
                       onClick={() => setPreviewAsset(asset)}
-                      className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                      className={`${cardActionClass} min-w-[4.5rem] border-border/60 hover:bg-accent`}
                     >
                       预览
                     </button>
@@ -351,21 +353,21 @@ export default function MediaLibraryDialog({
                         onSelect(asset.url)
                         onClose()
                       }}
-                      className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
+                      className={`${cardActionClass} min-w-[4.5rem] border-primary bg-primary text-primary-foreground hover:bg-primary/90`}
                     >
                       选用
                     </button>
                     <button
                       type="button"
                       onClick={() => copyAssetValue(`![${asset.name}](${asset.url})`, "Markdown ")}
-                      className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                      className={`${cardActionClass} min-w-[6.5rem] border-border/60 hover:bg-accent`}
                     >
                       Markdown
                     </button>
                     <button
                       type="button"
                       onClick={() => copyAssetValue(`<img src="${asset.url}" alt="${asset.name}" />`, "HTML ")}
-                      className="rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:bg-accent"
+                      className={`${cardActionClass} min-w-[5.25rem] border-border/60 hover:bg-accent`}
                     >
                       HTML
                     </button>
@@ -375,7 +377,7 @@ export default function MediaLibraryDialog({
                       disabled={!asset.deletable || (asset.usageCount ?? 0) > 0}
                       aria-label={(asset.usageCount ?? 0) > 0 ? `素材 ${asset.name} 使用中，无法删除` : `删除素材 ${asset.name}`}
                       title={(asset.usageCount ?? 0) > 0 ? `素材 ${asset.name} 使用中，无法删除` : `删除素材 ${asset.name}`}
-                      className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={`${cardActionClass} min-w-[5.25rem] border-red-500/30 text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       {(asset.usageCount ?? 0) > 0 ? "使用中" : "删除"}
                     </button>

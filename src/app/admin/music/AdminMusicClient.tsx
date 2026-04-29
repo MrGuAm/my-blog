@@ -58,6 +58,8 @@ export default function AdminMusicClient({
   const [isUploading, setIsUploading] = useState(false)
   const [processingTrackId, setProcessingTrackId] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState("")
+  const actionButtonClass =
+    "flex min-h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 py-2 text-sm leading-none transition-colors"
 
   const filteredTracks = useMemo(() => {
     const normalized = keyword.trim().toLowerCase()
@@ -298,7 +300,7 @@ export default function AdminMusicClient({
           {filteredTracks.length > 0 ? (
             filteredTracks.map((track) => (
               <div key={track.id} className="rounded-2xl border border-border/40 px-4 py-4">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-4">
                   <div className="flex min-w-0 gap-4">
                     <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-secondary/40">
                       {track.coverUrl ? (
@@ -328,18 +330,18 @@ export default function AdminMusicClient({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
                     <button
                       type="button"
                       onClick={() => navigator.clipboard.writeText(track.src).then(() => setMessage("歌曲链接已复制"))}
-                      className="apple-button-secondary"
+                      className={`${actionButtonClass} min-w-[5.75rem] border-border/60 bg-white/82 hover:bg-white dark:border-white/10 dark:bg-white/8 dark:hover:bg-white/12`}
                     >
                       复制链接
                     </button>
                     <button
                       type="button"
                       onClick={() => window.open(track.src, "_blank", "noopener,noreferrer")}
-                      className="apple-button-secondary"
+                      className={`${actionButtonClass} min-w-[6.5rem] border-border/60 bg-white/82 hover:bg-white dark:border-white/10 dark:bg-white/8 dark:hover:bg-white/12`}
                     >
                       打开原文件
                     </button>
@@ -348,7 +350,7 @@ export default function AdminMusicClient({
                       onClick={() => void handleDelete(track)}
                       disabled={!track.deletable || processingTrackId === track.id}
                       aria-label={`删除歌曲 ${track.title}`}
-                      className="rounded-full border border-red-500/20 px-4 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/8 disabled:opacity-40"
+                      className={`${actionButtonClass} min-w-[5.25rem] border-red-500/20 text-red-500 hover:bg-red-500/8 disabled:opacity-40`}
                     >
                       删除
                     </button>

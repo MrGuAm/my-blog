@@ -324,10 +324,10 @@ export default function AdminDashboardClient({
             {filteredManagedPosts.length > 0 ? (
               filteredManagedPosts.slice(0, 8).map((post) => (
                 <div key={post.id} className="rounded-2xl border border-border/40 px-4 py-3">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex flex-col gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link href={post.draft ? `/write/${post.id}?from=/admin` : `/posts/${post.slug || post.id}`} className="truncate font-medium hover:text-primary">
+                        <Link href={post.draft ? `/write/${post.id}?from=/admin` : `/posts/${post.slug || post.id}`} className="min-w-0 truncate font-medium hover:text-primary">
                           {post.title}
                         </Link>
                         {post.draft ? (
@@ -344,22 +344,28 @@ export default function AdminDashboardClient({
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-2 text-xs text-muted-foreground">
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-muted-foreground">
                         {post.category} · 发布 {post.date} · 更新 {new Date(post.updatedAt || post.date).toLocaleString("zh-CN")}
                       </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+
+                      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
                         {post.views || 0} 阅读
                       </span>
-                      <Link href={`/write/${post.id}?from=/admin`} className="text-xs text-primary hover:underline">
+                      <Link
+                        href={`/write/${post.id}?from=/admin`}
+                        className="shrink-0 whitespace-nowrap rounded-full border border-border/60 px-3 py-1 text-xs text-primary transition-colors hover:bg-accent"
+                      >
                         编辑
                       </Link>
                       <button
                         type="button"
                         onClick={() => handlePostAction(post, "pin")}
                         disabled={processingPostId === post.id}
-                        className="text-xs text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
+                        className="shrink-0 whitespace-nowrap rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-primary disabled:opacity-50"
                       >
                         {post.pinned ? "取消置顶" : "置顶"}
                       </button>
@@ -367,10 +373,11 @@ export default function AdminDashboardClient({
                         type="button"
                         onClick={() => handlePostAction(post, "delete")}
                         disabled={processingPostId === post.id}
-                        className="text-xs text-red-500 transition-colors hover:text-red-600 disabled:opacity-50"
+                        className="shrink-0 whitespace-nowrap rounded-full border border-red-500/25 px-3 py-1 text-xs text-red-500 transition-colors hover:bg-red-500/8 hover:text-red-600 disabled:opacity-50"
                       >
                         删除
                       </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -399,7 +406,7 @@ export default function AdminDashboardClient({
                       </Link>
                       <p className="mt-1 text-xs text-muted-foreground">{post.category} · {post.date}</p>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">{post.views || 0} 阅读</span>
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">{post.views || 0} 阅读</span>
                   </div>
                 </div>
               ))}
