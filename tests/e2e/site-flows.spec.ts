@@ -185,7 +185,8 @@ test("admin can filter media by usage state and see protected deletion controls"
   await createMediaPost(page, `素材引用测试-${token}`, usedUpload.asset.url)
 
   await page.goto("/admin/media?usage=used")
-  await expect(page.getByRole("heading", { name: "站内媒体素材" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "素材库" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "图片素材" })).toBeVisible()
   await expect(page).toHaveURL(/usage=used/)
   const usedCard = page.locator("div").filter({ hasText: new RegExp(usedBase) }).first()
   await expect(usedCard).toBeVisible()
