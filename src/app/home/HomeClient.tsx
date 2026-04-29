@@ -499,7 +499,6 @@ export default function HomeClient({
               </span>
               <PrimaryNavLinks
                 active="home"
-                compactDesktop
                 loginRequested={loginRequested}
                 nextPath={nextPath}
                 onDismissLoginRequest={() => router.replace("/home")}

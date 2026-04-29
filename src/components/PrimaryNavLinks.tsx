@@ -13,7 +13,6 @@ interface PrimaryNavLinksProps {
   loginRequested?: boolean
   nextPath?: string | null
   onDismissLoginRequest?: () => void
-  compactDesktop?: boolean
 }
 
 function navClass(isActive: boolean) {
@@ -44,14 +43,11 @@ export default function PrimaryNavLinks({
   loginRequested = false,
   nextPath = null,
   onDismissLoginRequest,
-  compactDesktop = false,
 }: PrimaryNavLinksProps) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isDesktopAdminMenuOpen, setIsDesktopAdminMenuOpen] = useState(false)
-  const [isDesktopNavMenuOpen, setIsDesktopNavMenuOpen] = useState(false)
   const desktopAdminMenuRef = useRef<HTMLDivElement | null>(null)
-  const desktopNavMenuRef = useRef<HTMLDivElement | null>(null)
   const { isAuthenticated, logout } = useAuthStatus()
   const siteSettings = useSiteSettings()
   const loginModalOpen = isLoginModalOpen || (loginRequested && !isAuthenticated)
@@ -70,30 +66,19 @@ export default function PrimaryNavLinks({
   const tagItem = active === "tags" ? [{ href: "/tags", label: "全部标签", key: "tags" as NavKey }] : []
   const desktopPrimaryItems = [...baseItems, ...tagItem]
   const mobileNavItems = [...baseItems, ...tagItem, ...(isAuthenticated ? authItems : [])]
-  const compactPrimaryItem =
-    desktopPrimaryItems.find((item) => item.key === active) ||
-    desktopPrimaryItems[0] ||
-    null
-  const compactSecondaryItems = compactPrimaryItem
-    ? desktopPrimaryItems.filter((item) => item.key !== compactPrimaryItem.key)
-    : desktopPrimaryItems
 
   useEffect(() => {
-    if (!isDesktopAdminMenuOpen && !isDesktopNavMenuOpen) return
+    if (!isDesktopAdminMenuOpen) return
 
     const handlePointerDown = (event: MouseEvent) => {
       if (!desktopAdminMenuRef.current?.contains(event.target as Node)) {
         setIsDesktopAdminMenuOpen(false)
-      }
-      if (!desktopNavMenuRef.current?.contains(event.target as Node)) {
-        setIsDesktopNavMenuOpen(false)
       }
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsDesktopAdminMenuOpen(false)
-        setIsDesktopNavMenuOpen(false)
       }
     }
 
@@ -103,7 +88,7 @@ export default function PrimaryNavLinks({
       window.removeEventListener("mousedown", handlePointerDown)
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [isDesktopAdminMenuOpen, isDesktopNavMenuOpen])
+  }, [isDesktopAdminMenuOpen])
 
   const handleClose = () => {
     setIsLoginModalOpen(false)
@@ -123,99 +108,34 @@ export default function PrimaryNavLinks({
   const handleOpenLogin = () => {
     setIsMobileMenuOpen(false)
     setIsDesktopAdminMenuOpen(false)
-    setIsDesktopNavMenuOpen(false)
     setIsLoginModalOpen(true)
   }
 
   const handleLogout = async () => {
     setIsMobileMenuOpen(false)
     setIsDesktopAdminMenuOpen(false)
-    setIsDesktopNavMenuOpen(false)
     await logout()
   }
 
   return (
     <>
       <div className="hidden items-center gap-3 md:flex lg:gap-4">
-        {compactDesktop ? (
-          <>
-            {compactPrimaryItem ? (
-              <Link
-                key={compactPrimaryItem.href}
-                href={compactPrimaryItem.href}
-                className={desktopNavClass(active === compactPrimaryItem.key)}
-              >
-                {compactPrimaryItem.label}
-              </Link>
-            ) : null}
-            {compactSecondaryItems.length > 0 ? (
-              <div ref={desktopNavMenuRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsDesktopNavMenuOpen((current) => !current)}
-                  className="apple-button-secondary px-3 py-1.5"
-                  aria-expanded={isDesktopNavMenuOpen}
-                  aria-haspopup="menu"
-                >
-                  导航
-                </button>
-                {isDesktopNavMenuOpen ? (
-                  <div className="apple-panel absolute right-0 top-full z-30 mt-3 w-40 rounded-3xl p-3 shadow-2xl">
-                    <div className="grid gap-1.5">
-                      {compactSecondaryItems.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setIsDesktopNavMenuOpen(false)}
-                          className={`rounded-2xl px-3 py-2 text-sm font-medium transition-colors ${
-                            active === item.key ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-                          }`}
-                        >
-                          {item.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </>
-        ) : (
-          desktopPrimaryItems.map((item) => (
-            <Link key={item.href} href={item.href} className={desktopNavClass(active === item.key)}>
-              {item.label}
-            </Link>
-          ))
-        )}
+        {desktopPrimaryItems.map((item) => (
+          <Link key={item.href} href={item.href} className={desktopNavClass(active === item.key)}>
+            {item.label}
+          </Link>
+        ))}
         {isAuthenticated ? (
           <>
-            <div className="hidden items-center gap-4 2xl:flex">
-              {authItems.map((item) => (
-                <Link key={item.href} href={item.href} className={desktopNavClass(active === item.key)}>
-                  {item.label}
-                </Link>
-              ))}
+            <div ref={desktopAdminMenuRef} className="relative">
               <button
                 type="button"
-                onClick={handleLogout}
-                className="text-sm font-medium text-red-500 transition-colors hover:text-red-600"
-              >
-                退出
-              </button>
-            </div>
-
-            <div ref={desktopAdminMenuRef} className="relative 2xl:hidden">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDesktopNavMenuOpen(false)
-                  setIsDesktopAdminMenuOpen((current) => !current)
-                }}
+                onClick={() => setIsDesktopAdminMenuOpen((current) => !current)}
                 className="apple-button-secondary px-3 py-1.5"
                 aria-expanded={isDesktopAdminMenuOpen}
                 aria-haspopup="menu"
               >
-                管理台
+                Admin
               </button>
               {isDesktopAdminMenuOpen ? (
                 <div className="apple-panel absolute right-0 top-full z-30 mt-3 w-44 rounded-3xl p-3 shadow-2xl">
