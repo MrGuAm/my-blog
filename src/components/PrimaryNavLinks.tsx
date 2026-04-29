@@ -127,7 +127,12 @@ export default function PrimaryNavLinks({
         ))}
         {isAuthenticated ? (
           <>
-            <div ref={desktopAdminMenuRef} className="relative">
+            <div
+              ref={desktopAdminMenuRef}
+              className="relative"
+              onMouseEnter={() => setIsDesktopAdminMenuOpen(true)}
+              onMouseLeave={() => setIsDesktopAdminMenuOpen(false)}
+            >
               <button
                 type="button"
                 onClick={() => setIsDesktopAdminMenuOpen((current) => !current)}
@@ -138,7 +143,7 @@ export default function PrimaryNavLinks({
                 管理
               </button>
               {isDesktopAdminMenuOpen ? (
-                <div className="apple-panel absolute right-0 top-full z-30 mt-3 w-44 rounded-3xl bg-white/92 p-3 shadow-2xl dark:bg-slate-950/92">
+                <div className="apple-panel absolute right-0 top-full z-30 mt-3 w-44 rounded-3xl border-white/90 bg-white/92 p-3 shadow-[0_28px_85px_-34px_rgba(15,23,42,0.28)] ring-1 ring-black/6 dark:border-white/20 dark:bg-slate-950/92 dark:ring-white/10 dark:shadow-[0_28px_85px_-34px_rgba(0,0,0,0.82)]">
                   <div className="grid gap-1.5">
                     {authItems.map((item) => (
                       <Link
