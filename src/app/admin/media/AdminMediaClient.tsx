@@ -40,6 +40,7 @@ export default function AdminMediaClient({
   initialWarning = null,
   initialCanUpload = true,
   brandName,
+  embedded = false,
   initialKeyword = "",
   initialTimeFilter = "all",
   initialStorageFilter = "all",
@@ -54,6 +55,7 @@ export default function AdminMediaClient({
   initialWarning?: string | null
   initialCanUpload?: boolean
   brandName: string
+  embedded?: boolean
   initialKeyword?: string
   initialTimeFilter?: "all" | "7d" | "30d"
   initialStorageFilter?: "all" | "blob" | "local"
@@ -521,76 +523,77 @@ export default function AdminMediaClient({
     setCurrentPage(1)
   }
 
-  return (
-    <SectionPageShell
-      navLabel="媒体库"
-      activeNav="media"
-      brandLabel={brandName}
-      title="站内媒体素材"
-      description="集中管理文章中要复用的图片素材。"
-      headerActions={
-        <MediaAdminHeaderActions
-          keyword={keyword}
-          onKeywordChange={(value) => {
-            setKeyword(value)
-            setCurrentPage(1)
-          }}
-          timeFilter={timeFilter}
-          onTimeFilterChange={(value) => {
-            setTimeFilter(value)
-            setCurrentPage(1)
-          }}
-          storageFilter={storageFilter}
-          onStorageFilterChange={(value) => {
-            setStorageFilter(value)
-            setCurrentPage(1)
-          }}
-          formatFilter={formatFilter}
-          onFormatFilterChange={(value) => {
-            setFormatFilter(value)
-            setCurrentPage(1)
-          }}
-          orientationFilter={orientationFilter}
-          onOrientationFilterChange={(value) => {
-            setOrientationFilter(value)
-            setCurrentPage(1)
-          }}
-          usageFilter={usageFilter}
-          onUsageFilterChange={(value) => {
-            setUsageFilter(value)
-            setCurrentPage(1)
-          }}
-          usageKindFilter={usageKindFilter}
-          onUsageKindFilterChange={(value) => {
-            setUsageKindFilter(value)
-            setCurrentPage(1)
-          }}
-          sortBy={sortBy}
-          onSortByChange={(value) => {
-            setSortBy(value)
-            setCurrentPage(1)
-          }}
-          showReset={hasActiveFilters}
-          onReset={resetFilters}
-          selectedCount={selectedCount}
-          deletableSelectedCount={deletableSelectedCount}
-          filteredCount={filteredAssets.length}
-          canUpload={canUpload}
-          isUploading={isUploading}
-          isReindexing={isReindexing}
-          uploadHint={uploadHint}
-          onCopySelected={handleCopySelected}
-          onExportSelectedCsv={handleExportSelectedCsv}
-          onDeleteSelected={handleDeleteSelected}
-          onOpenUploadPicker={() => fileInputRef.current?.click()}
-          onRefresh={refreshAssets}
-          onCopyCurrentViewLink={handleCopyCurrentViewLink}
-          onCopyFiltered={handleCopyFiltered}
-          onExportFilteredCsv={handleExportFilteredCsv}
-          onReindexUsage={handleReindexUsage}
-        />
-      }
-    >
+  const content = (
+    <>
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-lg font-bold">图片素材</h2>
+          <p className="mt-1 text-sm text-muted-foreground">集中管理文章中要复用的封面图、插图和历史图片素材。</p>
+        </div>
+        <div className="flex flex-col gap-3 lg:items-end">
+          <MediaAdminHeaderActions
+            keyword={keyword}
+            onKeywordChange={(value) => {
+              setKeyword(value)
+              setCurrentPage(1)
+            }}
+            timeFilter={timeFilter}
+            onTimeFilterChange={(value) => {
+              setTimeFilter(value)
+              setCurrentPage(1)
+            }}
+            storageFilter={storageFilter}
+            onStorageFilterChange={(value) => {
+              setStorageFilter(value)
+              setCurrentPage(1)
+            }}
+            formatFilter={formatFilter}
+            onFormatFilterChange={(value) => {
+              setFormatFilter(value)
+              setCurrentPage(1)
+            }}
+            orientationFilter={orientationFilter}
+            onOrientationFilterChange={(value) => {
+              setOrientationFilter(value)
+              setCurrentPage(1)
+            }}
+            usageFilter={usageFilter}
+            onUsageFilterChange={(value) => {
+              setUsageFilter(value)
+              setCurrentPage(1)
+            }}
+            usageKindFilter={usageKindFilter}
+            onUsageKindFilterChange={(value) => {
+              setUsageKindFilter(value)
+              setCurrentPage(1)
+            }}
+            sortBy={sortBy}
+            onSortByChange={(value) => {
+              setSortBy(value)
+              setCurrentPage(1)
+            }}
+            showReset={hasActiveFilters}
+            onReset={resetFilters}
+            selectedCount={selectedCount}
+            deletableSelectedCount={deletableSelectedCount}
+            filteredCount={filteredAssets.length}
+            canUpload={canUpload}
+            isUploading={isUploading}
+            isReindexing={isReindexing}
+            uploadHint={uploadHint}
+            onCopySelected={handleCopySelected}
+            onExportSelectedCsv={handleExportSelectedCsv}
+            onDeleteSelected={handleDeleteSelected}
+            onOpenUploadPicker={() => fileInputRef.current?.click()}
+            onRefresh={refreshAssets}
+            onCopyCurrentViewLink={handleCopyCurrentViewLink}
+            onCopyFiltered={handleCopyFiltered}
+            onExportFilteredCsv={handleExportFilteredCsv}
+            onReindexUsage={handleReindexUsage}
+          />
+        </div>
+      </div>
+
       {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
       {warning ? <p className="mb-4 text-sm text-amber-600">{warning}</p> : null}
       <input
@@ -754,6 +757,22 @@ export default function AdminMediaClient({
         thumbnailAssets={visibleAssets}
         onJumpToAsset={(asset) => setPreviewAsset(asset)}
       />
+    </>
+  )
+
+  if (embedded) {
+    return content
+  }
+
+  return (
+    <SectionPageShell
+      navLabel="媒体库"
+      activeNav="media"
+      brandLabel={brandName}
+      title="站内媒体素材"
+      description="集中管理文章中要复用的图片素材。"
+    >
+      {content}
     </SectionPageShell>
   )
 }

@@ -40,12 +40,14 @@ export default function AdminMusicClient({
   initialCanUpload = true,
   directBlobUploadEnabled,
   brandName,
+  embedded = false,
 }: {
   initialTracks: ManagedMusicTrack[]
   initialWarning?: string | null
   initialCanUpload?: boolean
   directBlobUploadEnabled: boolean
   brandName: string
+  embedded?: boolean
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [tracks, setTracks] = useState(initialTracks)
@@ -220,14 +222,13 @@ export default function AdminMusicClient({
     }
   }
 
-  return (
-    <SectionPageShell
-      navLabel="在线曲库"
-      activeNav="media"
-      brandLabel={brandName}
-      title="在线上传音乐"
-      description="把歌单管理、上传和删除都收进后台，上传后会直接进入站内播放器和文章 BGM 选择器。"
-    >
+  const content = (
+    <>
+      <div className="mb-8">
+        <h2 className="text-lg font-bold">在线曲库</h2>
+        <p className="mt-1 text-sm text-muted-foreground">把歌单管理、上传和删除都收进后台，上传后会直接进入站内播放器和文章 BGM 选择器。</p>
+      </div>
+
       {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
       {warning ? <p className="mb-4 text-sm text-amber-600">{warning}</p> : null}
 
@@ -362,6 +363,22 @@ export default function AdminMusicClient({
           )}
         </div>
       </section>
+    </>
+  )
+
+  if (embedded) {
+    return content
+  }
+
+  return (
+    <SectionPageShell
+      navLabel="在线曲库"
+      activeNav="media"
+      brandLabel={brandName}
+      title="在线上传音乐"
+      description="把歌单管理、上传和删除都收进后台，上传后会直接进入站内播放器和文章 BGM 选择器。"
+    >
+      {content}
     </SectionPageShell>
   )
 }

@@ -149,8 +149,9 @@ test("admin can upload and delete tracks in the music admin UI", async ({ page }
   await loginAsAdmin(page)
 
   const uniqueName = `E2E歌手 - E2E歌曲-${Date.now()}.wav`
-  await page.goto("/admin/music")
-  await expect(page.getByRole("heading", { name: "在线上传音乐" })).toBeVisible()
+  await page.goto("/admin/media?tab=music")
+  await expect(page.getByRole("heading", { name: "素材库" })).toBeVisible()
+  await expect(page.getByText("在线曲库")).toBeVisible()
 
   await page.locator('input[type="file"]').setInputFiles({
     name: uniqueName,
