@@ -138,7 +138,7 @@ export default function PrimaryNavLinks({
                 Admin
               </button>
               {isDesktopAdminMenuOpen ? (
-                <div className="apple-panel absolute right-0 top-full z-30 mt-3 w-44 rounded-3xl p-3 shadow-2xl">
+                <div className="apple-panel absolute right-0 top-full z-30 mt-3 w-44 rounded-3xl bg-white/92 p-3 shadow-2xl dark:bg-slate-950/92">
                   <div className="grid gap-1.5">
                     {authItems.map((item) => (
                       <Link
