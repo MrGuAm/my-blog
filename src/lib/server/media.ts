@@ -99,6 +99,16 @@ function createAssetName(fileName: string) {
   return path.basename(fileName)
 }
 
+function inferMediaContentType(fileName: string) {
+  const extension = path.extname(fileName).toLowerCase()
+  if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg'
+  if (extension === '.png') return 'image/png'
+  if (extension === '.webp') return 'image/webp'
+  if (extension === '.gif') return 'image/gif'
+  if (extension === '.svg') return 'image/svg+xml'
+  return 'image/*'
+}
+
 async function prepareImageUpload(file: File) {
   const sourceBuffer = Buffer.from(await file.arrayBuffer())
 
@@ -192,6 +202,61 @@ async function listStaticMediaAssets(): Promise<MediaAsset[]> {
   return assets.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 }
 
+function listReferencedLocalMediaAssets(posts: Awaited<ReturnType<typeof listPosts>>) {
+  const references = new Map<
+    string,
+    {
+      name: string
+      pathname: string
+      url: string
+      updatedAt: string
+    }
+  >()
+
+  const register = (rawUrl?: string | null, updatedAt?: string | null) => {
+    if (!rawUrl || !rawUrl.startsWith('/uploads/')) return
+    const pathname = decodeURIComponent(rawUrl.replace(/^\/uploads\//, ''))
+    if (!pathname) return
+
+    const current = references.get(pathname)
+    const nextUpdatedAt = updatedAt || new Date().toISOString()
+
+    if (!current || new Date(nextUpdatedAt).getTime() > new Date(current.updatedAt).getTime()) {
+      references.set(pathname, {
+        name: createAssetName(pathname),
+        pathname,
+        url: rawUrl,
+        updatedAt: nextUpdatedAt,
+      })
+    }
+  }
+
+  const imageRegex = /<img[^>]+src=["']([^"']+)["']/gi
+
+  for (const post of posts) {
+    register(post.coverImage, post.updatedAt || post.date)
+
+    let match: RegExpExecArray | null
+    while ((match = imageRegex.exec(post.content)) !== null) {
+      register(match[1], post.updatedAt || post.date)
+    }
+  }
+
+  return [...references.values()].map<MediaAsset>((asset) => ({
+    id: asset.pathname,
+    name: asset.name,
+    pathname: asset.pathname,
+    url: asset.url,
+    size: 0,
+    width: null,
+    height: null,
+    contentType: inferMediaContentType(asset.pathname),
+    updatedAt: asset.updatedAt,
+    storage: 'local',
+    deletable: canWriteLocalMediaLibrary(),
+  }))
+}
+
 function toStoredAsset(record: Awaited<ReturnType<typeof listMediaAssetRecords>>[number]): MediaAsset {
   return {
     id: record.id,
@@ -233,11 +298,17 @@ async function listBlobMediaAssets(): Promise<MediaAsset[]> {
 }
 
 export async function listMediaAssets(): Promise<MediaAsset[]> {
-  const staticAssets = await listStaticMediaAssets()
   const posts = await listPosts({ includeDrafts: true })
+  const staticAssets = await listStaticMediaAssets()
+  const referencedLocalAssets = listReferencedLocalMediaAssets(posts)
+  const staticAssetPathnames = new Set(staticAssets.map((asset) => asset.pathname))
+  const mergedStaticAssets = [
+    ...staticAssets,
+    ...referencedLocalAssets.filter((asset) => !staticAssetPathnames.has(asset.pathname)),
+  ]
 
   if (!isBlobMediaLibraryEnabled()) {
-    return attachUsageDetails(staticAssets, posts)
+    return attachUsageDetails(mergedStaticAssets, posts)
   }
 
   const storedAssets = await listBlobMediaAssets()
@@ -245,7 +316,7 @@ export async function listMediaAssets(): Promise<MediaAsset[]> {
   const seenPathnames = new Set(storedAssets.map((asset) => asset.pathname))
   const merged = [
     ...storedAssets,
-    ...staticAssets.filter((asset) => !seenPathnames.has(asset.pathname)),
+    ...mergedStaticAssets.filter((asset) => !seenPathnames.has(asset.pathname)),
   ]
 
   const sortedAssets = merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -254,6 +325,7 @@ export async function listMediaAssets(): Promise<MediaAsset[]> {
 
 async function attachUsageDetails(assets: MediaAsset[], posts: Awaited<ReturnType<typeof listPosts>>) {
   let references = await listPostMediaReferenceDetails()
+  const fallbackUsage = describeMediaAssetUsage(assets, posts)
 
   if (assets.length > 0 && posts.length > 0 && references.length === 0) {
     await syncAllPostMediaReferences(posts)
@@ -261,11 +333,10 @@ async function attachUsageDetails(assets: MediaAsset[], posts: Awaited<ReturnTyp
   }
 
   if (references.length === 0) {
-    const usage = describeMediaAssetUsage(assets, posts)
     return assets.map((asset) => ({
       ...asset,
-      usageCount: usage.get(asset.id)?.count ?? 0,
-      usagePosts: usage.get(asset.id)?.posts ?? [],
+      usageCount: fallbackUsage.get(asset.id)?.count ?? 0,
+      usagePosts: fallbackUsage.get(asset.id)?.posts ?? [],
     }))
   }
 
@@ -285,8 +356,8 @@ async function attachUsageDetails(assets: MediaAsset[], posts: Awaited<ReturnTyp
 
   return assets.map((asset) => ({
     ...asset,
-    usageCount: usageMap.get(asset.id)?.count ?? 0,
-    usagePosts: usageMap.get(asset.id)?.posts ?? [],
+    usageCount: usageMap.get(asset.id)?.count ?? fallbackUsage.get(asset.id)?.count ?? 0,
+    usagePosts: usageMap.get(asset.id)?.posts ?? fallbackUsage.get(asset.id)?.posts ?? [],
   }))
 }
 
