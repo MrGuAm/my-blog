@@ -223,7 +223,7 @@ export default function AdminMusicClient({
   return (
     <SectionPageShell
       navLabel="在线曲库"
-      activeNav="musicAdmin"
+      activeNav="media"
       brandLabel={brandName}
       title="在线上传音乐"
       description="把歌单管理、上传和删除都收进后台，上传后会直接进入站内播放器和文章 BGM 选择器。"
