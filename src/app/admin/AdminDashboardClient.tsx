@@ -324,8 +324,8 @@ export default function AdminDashboardClient({
             {filteredManagedPosts.length > 0 ? (
               filteredManagedPosts.slice(0, 8).map((post) => (
                 <div key={post.id} className="rounded-2xl border border-border/40 px-4 py-3">
-                  <div className="flex flex-col gap-3">
-                    <div className="min-w-0">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <Link href={post.draft ? `/write/${post.id}?from=/admin` : `/posts/${post.slug || post.id}`} className="min-w-0 truncate font-medium hover:text-primary">
                           {post.title}
@@ -346,37 +346,37 @@ export default function AdminDashboardClient({
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 md:min-w-fit md:items-end">
                       <p className="text-xs text-muted-foreground">
                         {post.category} · 发布 {post.date} · 更新 {new Date(post.updatedAt || post.date).toLocaleString("zh-CN")}
                       </p>
 
-                      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
-                        {post.views || 0} 阅读
-                      </span>
-                      <Link
-                        href={`/write/${post.id}?from=/admin`}
-                        className="shrink-0 whitespace-nowrap rounded-full border border-border/60 px-3 py-1 text-xs text-primary transition-colors hover:bg-accent"
-                      >
-                        编辑
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handlePostAction(post, "pin")}
-                        disabled={processingPostId === post.id}
-                        className="shrink-0 whitespace-nowrap rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-primary disabled:opacity-50"
-                      >
-                        {post.pinned ? "取消置顶" : "置顶"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handlePostAction(post, "delete")}
-                        disabled={processingPostId === post.id}
-                        className="shrink-0 whitespace-nowrap rounded-full border border-red-500/25 px-3 py-1 text-xs text-red-500 transition-colors hover:bg-red-500/8 hover:text-red-600 disabled:opacity-50"
-                      >
-                        删除
-                      </button>
+                      <div className="flex flex-nowrap items-center gap-2">
+                        <span className="shrink-0 whitespace-nowrap rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                          {post.views || 0} 阅读
+                        </span>
+                        <Link
+                          href={`/write/${post.id}?from=/admin`}
+                          className="shrink-0 whitespace-nowrap rounded-full border border-border/60 px-3 py-1 text-xs text-primary transition-colors hover:bg-accent"
+                        >
+                          编辑
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handlePostAction(post, "pin")}
+                          disabled={processingPostId === post.id}
+                          className="shrink-0 whitespace-nowrap rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-primary disabled:opacity-50"
+                        >
+                          {post.pinned ? "取消置顶" : "置顶"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePostAction(post, "delete")}
+                          disabled={processingPostId === post.id}
+                          className="shrink-0 whitespace-nowrap rounded-full border border-red-500/25 px-3 py-1 text-xs text-red-500 transition-colors hover:bg-red-500/8 hover:text-red-600 disabled:opacity-50"
+                        >
+                          删除
+                        </button>
                       </div>
                     </div>
                   </div>

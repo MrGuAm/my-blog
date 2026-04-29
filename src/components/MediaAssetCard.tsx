@@ -33,7 +33,7 @@ export default function MediaAssetCard({
   onPreview,
   topBar,
   actions,
-  actionsClassName = "mt-4 flex flex-nowrap items-stretch gap-2 overflow-x-auto pb-1",
+  actionsClassName = "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3",
   openUsageInNewTab = false,
   className = "rounded-2xl border border-border/50 bg-card p-3",
   surfaceClassName = "block w-full overflow-hidden rounded-xl border border-border/40",
