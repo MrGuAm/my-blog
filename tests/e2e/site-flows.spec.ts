@@ -165,7 +165,7 @@ test("admin can upload and delete tracks in the music admin UI", async ({ page }
   page.once("dialog", async (dialog) => {
     await dialog.accept()
   })
-  await uploadedCard.getByRole("button", { name: "删除" }).click()
+  await page.getByRole("button", { name: /删除歌曲 E2E歌曲-/ }).click()
   await expect(page.getByText("歌曲已删除")).toBeVisible()
   await expect(page.locator("div").filter({ hasText: /E2E歌曲-/ })).toHaveCount(0)
 })

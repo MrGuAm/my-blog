@@ -346,6 +346,7 @@ export default function AdminMusicClient({
                       type="button"
                       onClick={() => void handleDelete(track)}
                       disabled={!track.deletable || processingTrackId === track.id}
+                      aria-label={`删除歌曲 ${track.title}`}
                       className="rounded-full border border-red-500/20 px-4 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/8 disabled:opacity-40"
                     >
                       删除
