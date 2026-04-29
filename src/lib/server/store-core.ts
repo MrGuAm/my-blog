@@ -491,6 +491,29 @@ export function getDb() {
       `)
     })
 
+    runSqliteMigration(db, '017-music-tracks', () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS music_tracks (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          pathname TEXT NOT NULL UNIQUE,
+          url TEXT NOT NULL,
+          storage TEXT NOT NULL,
+          content_type TEXT NOT NULL,
+          size INTEGER NOT NULL DEFAULT 0,
+          title TEXT NOT NULL,
+          artist TEXT NOT NULL,
+          album TEXT NOT NULL DEFAULT '',
+          cover_url TEXT NOT NULL DEFAULT '',
+          lyrics TEXT NOT NULL DEFAULT '',
+          uploaded_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_music_tracks_updated_at ON music_tracks(updated_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_music_tracks_title ON music_tracks(title);
+      `)
+    })
+
     global.__championBlogDb = db
   }
 
@@ -731,6 +754,29 @@ async function ensureRemoteSchema() {
       )
     `
     await sql`CREATE INDEX IF NOT EXISTS idx_post_media_references_asset_id ON post_media_references(asset_id)`
+  })
+
+  await runRemoteMigration('017-music-tracks', async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS music_tracks (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        pathname TEXT NOT NULL UNIQUE,
+        url TEXT NOT NULL,
+        storage TEXT NOT NULL,
+        content_type TEXT NOT NULL,
+        size INTEGER NOT NULL DEFAULT 0,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL,
+        album TEXT NOT NULL DEFAULT '',
+        cover_url TEXT NOT NULL DEFAULT '',
+        lyrics TEXT NOT NULL DEFAULT '',
+        uploaded_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `
+    await sql`CREATE INDEX IF NOT EXISTS idx_music_tracks_updated_at ON music_tracks(updated_at DESC)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_music_tracks_title ON music_tracks(title)`
   })
 
   const postCountRows = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as Array<{ count: number }>

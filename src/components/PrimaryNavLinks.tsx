@@ -6,7 +6,7 @@ import { useAuthStatus } from "@/hooks/useAuthStatus"
 import { useSiteSettings } from "@/hooks/useSiteSettings"
 import LoginModal from "@/components/LoginModal"
 
-export type NavKey = "home" | "about" | "music" | "write" | "moderation" | "admin" | "media" | "settings" | "tags"
+export type NavKey = "home" | "about" | "music" | "write" | "moderation" | "admin" | "musicAdmin" | "media" | "settings" | "tags"
 
 interface PrimaryNavLinksProps {
   active?: NavKey
@@ -60,6 +60,7 @@ export default function PrimaryNavLinks({
     { href: "/write", label: "写文章", key: "write" as NavKey },
     { href: "/moderation", label: "审核评论", key: "moderation" as NavKey },
     { href: "/admin", label: "后台", key: "admin" as NavKey },
+    { href: "/admin/music", label: "曲库", key: "musicAdmin" as NavKey },
     { href: "/admin/media", label: "媒体库", key: "media" as NavKey },
     { href: "/admin/settings", label: "设置", key: "settings" as NavKey },
   ]

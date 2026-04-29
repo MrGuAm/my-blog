@@ -11,7 +11,7 @@ function getArgValue(flag: string) {
 async function main() {
   const inputArg = process.argv[2]
   if (!inputArg) {
-    console.error("用法: npm run restore:snapshot -- <snapshot.json | snapshot-dir> [--db /path/to/blog.db] [--uploads /path/to/uploads]")
+    console.error("用法: npm run restore:snapshot -- <snapshot.json | snapshot-dir> [--db /path/to/blog.db] [--uploads /path/to/uploads] [--music /path/to/music]")
     process.exit(1)
   }
 
@@ -19,6 +19,7 @@ async function main() {
   const stats = fs.statSync(inputPath)
   const snapshotPath = stats.isDirectory() ? path.join(inputPath, "snapshot.json") : inputPath
   const uploadsSourceDir = stats.isDirectory() ? path.join(inputPath, "uploads") : path.join(path.dirname(inputPath), "uploads")
+  const musicSourceDir = stats.isDirectory() ? path.join(inputPath, "music") : path.join(path.dirname(inputPath), "music")
 
   const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf-8")) as SiteBackupSnapshot
   if (snapshot.manifest?.snapshotVersion !== 1) {
@@ -27,6 +28,7 @@ async function main() {
 
   const dbArg = getArgValue("--db")
   const uploadsArg = getArgValue("--uploads")
+  const musicArg = getArgValue("--music")
   const targetDbPath = dbArg
     ? path.resolve(dbArg)
     : process.env.BLOG_DB_PATH
@@ -37,6 +39,9 @@ async function main() {
   const targetUploadsDir = uploadsArg
     ? path.resolve(uploadsArg)
     : process.env.BLOG_MEDIA_DIR || path.join(process.cwd(), "public", "uploads")
+  const targetMusicDir = musicArg
+    ? path.resolve(musicArg)
+    : process.env.BLOG_MUSIC_DIR || path.join(process.cwd(), "public", "music")
   const restoreStamp = new Date().toISOString().replace(/[:.]/g, "-")
 
   fs.mkdirSync(targetDataDir, { recursive: true })
@@ -53,9 +58,18 @@ async function main() {
     fs.cpSync(uploadsSourceDir, targetUploadsDir, { recursive: true })
   }
 
+  if (fs.existsSync(musicSourceDir)) {
+    if (fs.existsSync(targetMusicDir)) {
+      fs.cpSync(targetMusicDir, `${targetMusicDir}.backup-${restoreStamp}`, { recursive: true })
+      fs.rmSync(targetMusicDir, { recursive: true, force: true })
+    }
+    fs.cpSync(musicSourceDir, targetMusicDir, { recursive: true })
+  }
+
   process.env.BLOG_DATA_DIR = targetDataDir
   process.env.BLOG_DB_PATH = targetDbPath
   process.env.BLOG_MEDIA_DIR = targetUploadsDir
+  process.env.BLOG_MUSIC_DIR = targetMusicDir
   delete process.env.DATABASE_URL
   delete process.env.VERCEL
   delete process.env.BLOB_READ_WRITE_TOKEN
@@ -69,6 +83,7 @@ async function main() {
     db.prepare("DELETE FROM post_versions").run()
     db.prepare("DELETE FROM comments").run()
     db.prepare("DELETE FROM user_music_library").run()
+    db.prepare("DELETE FROM music_tracks").run()
     db.prepare("DELETE FROM users").run()
     db.prepare("DELETE FROM media_assets").run()
     db.prepare("DELETE FROM posts").run()
@@ -174,6 +189,29 @@ async function main() {
         last_track_src: library.lastTrackSrc || null,
         last_track_time: library.lastTrackTime || 0,
         updated_at: library.updatedAt,
+      })
+    }
+
+    const insertMusicTrack = db.prepare(`
+      INSERT INTO music_tracks (id, name, pathname, url, storage, content_type, size, title, artist, album, cover_url, lyrics, uploaded_at, updated_at)
+      VALUES (@id, @name, @pathname, @url, @storage, @content_type, @size, @title, @artist, @album, @cover_url, @lyrics, @uploaded_at, @updated_at)
+    `)
+    for (const track of snapshot.data.musicTracks || []) {
+      insertMusicTrack.run({
+        id: track.id,
+        name: track.name,
+        pathname: track.pathname,
+        url: track.url,
+        storage: track.storage,
+        content_type: track.contentType,
+        size: track.size,
+        title: track.title,
+        artist: track.artist,
+        album: track.album || "",
+        cover_url: track.coverUrl || "",
+        lyrics: track.lyrics || "",
+        uploaded_at: track.uploadedAt,
+        updated_at: track.updatedAt,
       })
     }
 

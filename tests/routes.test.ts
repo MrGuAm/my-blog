@@ -4,6 +4,9 @@ import { NextRequest } from "next/server"
 import { GET as postsGet, POST as postsPost } from "../src/app/api/posts/route"
 import { DELETE as adminMediaDelete, POST as adminMediaPost } from "../src/app/api/admin/media/route"
 import { POST as adminMediaReindexPost } from "../src/app/api/admin/media/reindex/route"
+import { GET as adminMusicGet, POST as adminMusicPost, DELETE as adminMusicDelete } from "../src/app/api/admin/music/route"
+import { POST as adminMusicClientUploadPost } from "../src/app/api/admin/music/client-upload/route"
+import { POST as adminMusicFinalizePost } from "../src/app/api/admin/music/finalize/route"
 import { GET as adminSettingsGet, PATCH as adminSettingsPatch } from "../src/app/api/admin/settings/route"
 import { GET as adminBackupGet } from "../src/app/api/admin/backup/route"
 import { GET as authStatusGet } from "../src/app/api/auth/status/route"
@@ -74,6 +77,24 @@ test("admin media route rejects unauthenticated access", async () => {
   assert.equal(payload.error, "请先登录管理员账号")
 })
 
+test("admin music routes reject unauthenticated access", async () => {
+  const guestListResponse = await adminMusicGet(new NextRequest("https://champion.cc.cd/api/admin/music"))
+  const guestListPayload = await guestListResponse.json()
+  assert.equal(guestListResponse.status, 401)
+  assert.equal(guestListPayload.error, "请先登录管理员账号")
+
+  const guestFinalizeResponse = await adminMusicFinalizePost(
+    new NextRequest("https://champion.cc.cd/api/admin/music/finalize", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pathname: "music-library/demo.mp3", url: "https://example.com/demo.mp3" }),
+    }),
+  )
+  const guestFinalizePayload = await guestFinalizeResponse.json()
+  assert.equal(guestFinalizeResponse.status, 401)
+  assert.equal(guestFinalizePayload.error, "请先登录管理员账号")
+})
+
 test("admin media reindex route rejects unauthenticated access", async () => {
   const request = new NextRequest("https://champion.cc.cd/api/admin/media/reindex", { method: "POST" })
   const response = await adminMediaReindexPost(request)
@@ -101,6 +122,7 @@ test("admin backup route rejects unauthenticated access and exports snapshot dat
   assert.equal(authPayload.manifest.snapshotVersion, 1)
   assert.equal(Array.isArray(authPayload.data.posts), true)
   assert.equal(Array.isArray(authPayload.data.comments), true)
+  assert.equal(Array.isArray(authPayload.data.musicTracks), true)
   assert.equal(typeof authPayload.data.siteSettings.settings.brandName, "string")
   assert.match(authResponse.headers.get("Content-Disposition") || "", /site-snapshot-/)
 })
@@ -226,6 +248,90 @@ test("admin media route validates authenticated upload and delete input", async 
   const invalidBatchDeletePayload = await invalidBatchDeleteResponse.json()
   assert.equal(invalidBatchDeleteResponse.status, 400)
   assert.equal(invalidBatchDeletePayload.error, "缺少素材标识")
+})
+
+test("admin music route validates authenticated upload and delete input", async () => {
+  const cookie = buildSessionCookie(createSessionToken())
+
+  const uploadRequest = new NextRequest("https://champion.cc.cd/api/admin/music", {
+    method: "POST",
+    headers: { cookie },
+    body: new FormData(),
+  })
+  const uploadResponse = await adminMusicPost(uploadRequest)
+  const uploadPayload = await uploadResponse.json()
+  assert.equal(uploadResponse.status, 400)
+  assert.equal(uploadPayload.error, "请选择要上传的音频文件")
+
+  const deleteRequest = new NextRequest("https://champion.cc.cd/api/admin/music", {
+    method: "DELETE",
+    headers: { cookie },
+  })
+  const deleteResponse = await adminMusicDelete(deleteRequest)
+  const deletePayload = await deleteResponse.json()
+  assert.equal(deleteResponse.status, 400)
+  assert.equal(deletePayload.error, "缺少歌曲标识")
+
+  const unsupportedUploadFormData = new FormData()
+  unsupportedUploadFormData.append("file", new File(["hello"], "note.txt", { type: "text/plain" }))
+  const unsupportedUploadResponse = await adminMusicPost(
+    new NextRequest("https://champion.cc.cd/api/admin/music", {
+      method: "POST",
+      headers: { cookie },
+      body: unsupportedUploadFormData,
+    }),
+  )
+  const unsupportedUploadPayload = await unsupportedUploadResponse.json()
+  assert.equal(unsupportedUploadResponse.status, 400)
+  assert.match(unsupportedUploadPayload.error, /MP3、WAV、M4A、AAC、FLAC、OGG/)
+
+  const emptyUploadFormData = new FormData()
+  emptyUploadFormData.append("file", new File([], "empty.mp3", { type: "audio/mpeg" }))
+  const emptyUploadResponse = await adminMusicPost(
+    new NextRequest("https://champion.cc.cd/api/admin/music", {
+      method: "POST",
+      headers: { cookie },
+      body: emptyUploadFormData,
+    }),
+  )
+  const emptyUploadPayload = await emptyUploadResponse.json()
+  assert.equal(emptyUploadResponse.status, 400)
+  assert.equal(emptyUploadPayload.error, "音频内容为空，请重新选择")
+
+  const invalidFinalizeResponse = await adminMusicFinalizePost(
+    new NextRequest("https://champion.cc.cd/api/admin/music/finalize", {
+      method: "POST",
+      headers: {
+        cookie,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ pathname: "", url: "" }),
+    }),
+  )
+  const invalidFinalizePayload = await invalidFinalizeResponse.json()
+  assert.equal(invalidFinalizeResponse.status, 400)
+  assert.equal(invalidFinalizePayload.error, "缺少上传完成后的音频信息")
+
+  const clientUploadResponse = await adminMusicClientUploadPost(
+    new NextRequest("https://champion.cc.cd/api/admin/music/client-upload", {
+      method: "POST",
+      headers: {
+        cookie,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "blob.generate-client-token",
+        payload: {
+          pathname: "bad/demo.mp3",
+          multipart: false,
+          clientPayload: null,
+        },
+      }),
+    }),
+  )
+  const clientUploadPayload = await clientUploadResponse.json()
+  assert.equal(clientUploadResponse.status, 400)
+  assert.equal(typeof clientUploadPayload.error, "string")
 })
 
 test("posts route rejects unauthenticated creation requests", async () => {

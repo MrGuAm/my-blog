@@ -1,6 +1,6 @@
 import type { Post } from "@/lib/posts"
 import type { SiteSettings } from "@/lib/site-settings"
-import type { CommentRecord, MediaAssetRecord, PostVersionRecord, RateLimitBucketRecord, UserMusicLibrary } from "@/lib/server/store"
+import type { CommentRecord, MediaAssetRecord, MusicTrackRecord, PostVersionRecord, RateLimitBucketRecord, UserMusicLibrary } from "@/lib/server/store"
 
 export const SITE_SNAPSHOT_VERSION = 1
 
@@ -46,6 +46,7 @@ export interface SiteBackupManifest {
     userMusicLibraries: number
     mediaAssets: number
     mediaReferences: number
+    musicTracks: number
     rateLimitBuckets: number
   }
 }
@@ -58,6 +59,7 @@ export interface SiteBackupSnapshot {
     comments: SiteBackupCommentRecord[]
     users: SiteBackupUserRecord[]
     userMusicLibraries: UserMusicLibrary[]
+    musicTracks: MusicTrackRecord[]
     mediaAssets: MediaAssetRecord[]
     mediaReferences: SiteBackupMediaReference[]
     siteSettings: SiteBackupSiteSettingsRecord

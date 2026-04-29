@@ -23,6 +23,7 @@ interface DashboardStats {
   userCount: number
   bannedUserCount: number
   mediaCount: number
+  musicTrackCount: number
 }
 
 interface DashboardComment extends CommentRecord {
@@ -265,6 +266,7 @@ export default function AdminDashboardClient({
         <StatCard label="评论用户" value={stats.userCount} hint="已注册的评论账号数量" />
         <StatCard label="封禁账号" value={stats.bannedUserCount} hint="当前被管理员限制的评论账号" />
         <StatCard label="媒体素材" value={stats.mediaCount} hint="已上传到站内媒体库的图片数量" />
+        <StatCard label="曲库歌曲" value={stats.musicTrackCount} hint="包括本地歌单和在线上传的歌曲" />
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">

@@ -111,6 +111,40 @@ export interface UserMusicLibrary {
   updatedAt: string
 }
 
+export interface MusicTrackRow {
+  id: string
+  name: string
+  pathname: string
+  url: string
+  storage: string
+  content_type: string
+  size: number
+  title: string
+  artist: string
+  album?: string | null
+  cover_url?: string | null
+  lyrics?: string | null
+  uploaded_at: string
+  updated_at: string
+}
+
+export interface MusicTrackRecord {
+  id: string
+  name: string
+  pathname: string
+  url: string
+  storage: "blob" | "local"
+  contentType: string
+  size: number
+  title: string
+  artist: string
+  album?: string | null
+  coverUrl?: string | null
+  lyrics?: string | null
+  uploadedAt: string
+  updatedAt: string
+}
+
 export interface MediaAssetRow {
   id: string
   name: string
@@ -248,6 +282,25 @@ export function rowToUserMusic(row: UserMusicRow): UserMusicLibrary {
     recentSrcs: JSON.parse(row.recent_srcs_json || '[]') as string[],
     lastTrackSrc: row.last_track_src || null,
     lastTrackTime: typeof row.last_track_time === 'number' ? row.last_track_time : 0,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function rowToMusicTrackRecord(row: MusicTrackRow): MusicTrackRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    pathname: row.pathname,
+    url: row.url,
+    storage: row.storage === "blob" ? "blob" : "local",
+    contentType: row.content_type,
+    size: row.size,
+    title: row.title,
+    artist: row.artist,
+    album: row.album || null,
+    coverUrl: row.cover_url || null,
+    lyrics: row.lyrics || null,
+    uploadedAt: row.uploaded_at,
     updatedAt: row.updated_at,
   }
 }

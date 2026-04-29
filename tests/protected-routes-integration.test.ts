@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { NextRequest } from "next/server"
 import sharp from "sharp"
 import { buildSessionCookie, createSessionToken } from "../src/lib/server/auth"
+import { createTinyWavBuffer } from "./helpers/audio-fixtures"
 import { importFresh, withTempWorkspace } from "./helpers/temp-workspace"
 
 test("admin media routes can upload, list, and delete a file in an isolated workspace", async () => {
@@ -217,6 +218,57 @@ test("admin media routes reject unreadable image buffers in an isolated workspac
 
     assert.equal(response.status, 400)
     assert.match(payload.error, /无法解析/)
+  })
+})
+
+test("admin music routes can upload, list, and delete a track in an isolated workspace", async () => {
+  await withTempWorkspace(async () => {
+    const musicAdminRoute = await importFresh<typeof import("../src/app/api/admin/music/route")>("src/app/api/admin/music/route.ts")
+    const publicMusicRoute = await importFresh<typeof import("../src/app/api/music/route")>("src/app/api/music/route.ts")
+    const cookie = buildSessionCookie(createSessionToken())
+    const wavBuffer = createTinyWavBuffer()
+
+    const formData = new FormData()
+    formData.append("file", new File([wavBuffer], "测试歌手 - 测试歌曲.wav", { type: "audio/wav" }))
+
+    const uploadResponse = await musicAdminRoute.POST(
+      new NextRequest("https://champion.cc.cd/api/admin/music", {
+        method: "POST",
+        headers: { cookie },
+        body: formData,
+      }),
+    )
+    const uploadPayload = await uploadResponse.json()
+
+    assert.equal(uploadResponse.status, 201)
+    assert.equal(Array.isArray(uploadPayload.tracks), true)
+    assert.equal(uploadPayload.tracks.length, 1)
+    assert.equal(uploadPayload.tracks[0].storage, "local")
+    assert.match(uploadPayload.tracks[0].src, /\/music\//)
+
+    const adminListResponse = await musicAdminRoute.GET(
+      new NextRequest("https://champion.cc.cd/api/admin/music", {
+        headers: { cookie },
+      }),
+    )
+    const adminListPayload = await adminListResponse.json()
+    assert.equal(adminListResponse.status, 200)
+    assert.equal(adminListPayload.tracks.some((track: { id: string }) => track.id === uploadPayload.tracks[0].id), true)
+
+    const publicListResponse = await publicMusicRoute.GET()
+    const publicListPayload = await publicListResponse.json()
+    assert.equal(publicListResponse.status, 200)
+    assert.equal(publicListPayload.tracks.some((track: { src: string }) => track.src === uploadPayload.tracks[0].src), true)
+
+    const deleteResponse = await musicAdminRoute.DELETE(
+      new NextRequest(`https://champion.cc.cd/api/admin/music?id=${encodeURIComponent(uploadPayload.tracks[0].id)}`, {
+        method: "DELETE",
+        headers: { cookie },
+      }),
+    )
+    const deletePayload = await deleteResponse.json()
+    assert.equal(deleteResponse.status, 200)
+    assert.deepEqual(deletePayload.deletedIds, [uploadPayload.tracks[0].id])
   })
 })
 

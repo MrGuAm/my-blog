@@ -46,6 +46,14 @@ export {
 } from './store-user-media'
 
 export {
+  deleteMusicTrackRecord,
+  getMusicTrackRecordById,
+  getMusicTrackRecordByPathname,
+  listMusicTrackRecords,
+  upsertMusicTrackRecord,
+} from './store-music'
+
+export {
   getSiteSettingsRecord as getStoredSiteSettingsRecord,
   saveSiteSettingsRecord as saveStoredSiteSettingsRecord,
 } from './store-settings'
@@ -61,6 +69,7 @@ export type {
   CommentRow,
   CommentStatus,
   MediaAssetRecord,
+  MusicTrackRecord,
   RateLimitBucketRecord,
   PostVersionRecord,
   UserMusicLibrary,

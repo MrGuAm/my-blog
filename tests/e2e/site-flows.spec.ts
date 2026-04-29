@@ -1,11 +1,13 @@
 import { Buffer } from "node:buffer"
 import { expect, test, type Page } from "@playwright/test"
+import { createTinyWavBuffer } from "../helpers/audio-fixtures"
 
 test.describe.configure({ mode: "serial" })
 
 const tinySvgBuffer = Buffer.from(
   `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#ff9b6b"/></svg>`
 )
+const tinyWavBuffer = createTinyWavBuffer()
 const localBaseUrl = "http://127.0.0.1:3101"
 
 async function loginAsAdmin(page: Page) {
@@ -141,6 +143,31 @@ test("admin can see uploaded media and deletion results in the media library UI"
 
   await page.reload()
   await expect(page.locator("div").filter({ hasText: new RegExp(fileBase) })).toHaveCount(0)
+})
+
+test("admin can upload and delete tracks in the music admin UI", async ({ page }) => {
+  await loginAsAdmin(page)
+
+  const uniqueName = `E2E歌手 - E2E歌曲-${Date.now()}.wav`
+  await page.goto("/admin/music")
+  await expect(page.getByRole("heading", { name: "在线上传音乐" })).toBeVisible()
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: uniqueName,
+    mimeType: "audio/wav",
+    buffer: tinyWavBuffer,
+  })
+
+  await expect(page.getByText("成功上传 1 首歌曲")).toBeVisible()
+  const uploadedCard = page.locator("div").filter({ hasText: /E2E歌曲-/ }).first()
+  await expect(uploadedCard).toBeVisible()
+
+  page.once("dialog", async (dialog) => {
+    await dialog.accept()
+  })
+  await uploadedCard.getByRole("button", { name: "删除" }).click()
+  await expect(page.getByText("歌曲已删除")).toBeVisible()
+  await expect(page.locator("div").filter({ hasText: /E2E歌曲-/ })).toHaveCount(0)
 })
 
 test("admin can filter media by usage state and see protected deletion controls", async ({ page }) => {

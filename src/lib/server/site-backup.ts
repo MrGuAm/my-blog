@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
-import type { PostRow, PostVersionRow, UserMusicRow, UserRow, MediaAssetRow, CommentRow, RateLimitBucketRow } from "./store-types"
-import { rowToComment, rowToMediaAsset, rowToPost, rowToPostVersion, rowToRateLimitBucket, rowToUserMusic } from "./store-types"
+import type { PostRow, PostVersionRow, UserMusicRow, UserRow, MediaAssetRow, CommentRow, RateLimitBucketRow, MusicTrackRow } from "./store-types"
+import { rowToComment, rowToMediaAsset, rowToMusicTrackRecord, rowToPost, rowToPostVersion, rowToRateLimitBucket, rowToUserMusic } from "./store-types"
 import { ensureStoreReady, getDb, getSql, isRemoteDatabaseEnabled } from "./store-core"
 import { getSiteSettingsRecord } from "./store-settings"
 import { getSiteSettings } from "./site-settings"
@@ -155,6 +155,25 @@ async function listAllMediaReferenceRows() {
   `).all() as Array<{ post_id: string; asset_id: string; usage_kind: "cover" | "content" | "cover+content" }>
 }
 
+async function listAllMusicTrackRows() {
+  await ensureStoreReady()
+
+  if (isRemoteDatabaseEnabled()) {
+    const sql = getSql()
+    return (await sql`
+      SELECT id, name, pathname, url, storage, content_type, size, title, artist, album, cover_url, lyrics, uploaded_at, updated_at
+      FROM music_tracks
+      ORDER BY updated_at DESC, id DESC
+    `) as MusicTrackRow[]
+  }
+
+  return getDb().prepare(`
+    SELECT id, name, pathname, url, storage, content_type, size, title, artist, album, cover_url, lyrics, uploaded_at, updated_at
+    FROM music_tracks
+    ORDER BY updated_at DESC, id DESC
+  `).all() as MusicTrackRow[]
+}
+
 async function listAllRateLimitRows() {
   await ensureStoreReady()
 
@@ -183,6 +202,7 @@ export async function buildSiteBackupSnapshot(): Promise<SiteBackupSnapshot> {
     userMusicRows,
     mediaRows,
     mediaReferenceRows,
+    musicTrackRows,
     rateLimitRows,
     siteSettings,
     siteSettingsRecord,
@@ -194,6 +214,7 @@ export async function buildSiteBackupSnapshot(): Promise<SiteBackupSnapshot> {
     listAllUserMusicRows(),
     listAllMediaAssetRows(),
     listAllMediaReferenceRows(),
+    listAllMusicTrackRows(),
     listAllRateLimitRows(),
     getSiteSettings(),
     getSiteSettingsRecord(),
@@ -221,6 +242,7 @@ export async function buildSiteBackupSnapshot(): Promise<SiteBackupSnapshot> {
     assetId: row.asset_id,
     usageKind: row.usage_kind,
   }))
+  const musicTracks = musicTrackRows.map(rowToMusicTrackRecord)
   const rateLimitBuckets = rateLimitRows.map(rowToRateLimitBucket)
 
   return {
@@ -241,6 +263,7 @@ export async function buildSiteBackupSnapshot(): Promise<SiteBackupSnapshot> {
         userMusicLibraries: userMusicLibraries.length,
         mediaAssets: mediaAssets.length,
         mediaReferences: mediaReferences.length,
+        musicTracks: musicTracks.length,
         rateLimitBuckets: rateLimitBuckets.length,
       },
     },
@@ -250,6 +273,7 @@ export async function buildSiteBackupSnapshot(): Promise<SiteBackupSnapshot> {
       comments,
       users,
       userMusicLibraries,
+      musicTracks,
       mediaAssets,
       mediaReferences,
       siteSettings: {

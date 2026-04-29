@@ -22,6 +22,11 @@ async function main() {
     fs.cpSync(localUploadsDir, path.join(outputDir, "uploads"), { recursive: true })
   }
 
+  const localMusicDir = process.env.BLOG_MUSIC_DIR || path.join(process.cwd(), "public", "music")
+  if (fs.existsSync(localMusicDir)) {
+    fs.cpSync(localMusicDir, path.join(outputDir, "music"), { recursive: true })
+  }
+
   console.log(`站点快照已导出到: ${snapshotPath}`)
 }
 

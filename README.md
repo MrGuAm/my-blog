@@ -31,6 +31,9 @@
 - 独立音乐页可查看完整歌单、收藏、最近播放，并点击歌词跳转播放进度
 - 独立音乐页会像右下角播放器一样自动跟随当前歌词滚动
 - 登录评论账号后，收藏歌曲、最近播放和上次播放位置会同步保存到数据库
+- 后台新增独立在线曲库页，可直接上传、删除和管理歌曲
+- 如果配置了 Vercel Blob，后台会优先走直传模式，较大的音频文件也能在线上传
+- 上传后的歌曲会自动进入 `/music` 页面、悬浮播放器以及文章 BGM 选择器
 - 长歌名滚动、暂停时省略号截断
 - `/music` 页面切歌不会打断右下角播放器的正常折叠状态
 - 列表循环 / 单曲循环 / 随机播放
@@ -202,7 +205,7 @@ npm run test:e2e
 说明：
 
 - Playwright 会启动一套带临时数据目录的本地服务器，不会污染你当前的 `data/blog.db`
-- 后台的“导出站点快照”会导出一份完整 JSON；本地 `backup:snapshot` 还会额外复制 `public/uploads` 目录，适合封版归档
+- 后台的“导出站点快照”会导出一份完整 JSON；本地 `backup:snapshot` 还会额外复制 `public/uploads` 和 `public/music` 目录，适合封版归档
 - `restore:snapshot` 默认只恢复到本地 SQLite；如果你之后要恢复到远程 Postgres，建议先在本地核对无误后再做迁移
 
 完整本地校验：
@@ -233,6 +236,7 @@ src/
 │   ├── write/         # 写作与编辑
 │   ├── about/         # 关于页
 │   ├── api/           # 评论、文章、音乐、RSS 等接口
+│   ├── admin/music/   # 在线曲库管理
 │   └── login/         # 登录页
 ├── components/        # 通用 UI 组件
 ├── context/           # 全局播放器状态
@@ -247,6 +251,7 @@ src/
 - 音乐文件目录：`public/music/`
 - 文章插画与媒体素材目录：`public/uploads/`
 - Vercel Blob 媒体素材目录前缀：`media-library/`
+- Vercel Blob 音乐文件目录前缀：`music-library/`
 - 音乐列表接口：`src/app/api/music/route.ts`
 
 ### 数据说明
@@ -263,12 +268,14 @@ src/
 - 每次编辑文章时都会自动保存一个历史版本，便于回退内容
 - 存储层使用版本化 `schema_migrations` 记录数据库迁移，Neon 和本地 SQLite 会按同样顺序补结构
 - 用户音乐库除了收藏和最近播放，也会记录最近一次播放的歌曲与进度
+- 在线上传的歌曲元数据会持久化到 `music_tracks` 表，方便后台管理和快照恢复
 - 媒体库在本地开发会直接读写 `public/uploads`；线上若配置 `BLOB_READ_WRITE_TOKEN`，则会改为使用 Vercel Blob，并把元数据写入数据库
 - 站点设置会单独持久化到 `site_settings` 表，前台品牌名和核心文案会优先读取这里的值
 - 根布局、首页、About、音乐页、系列页、标签页、文章页和 RSS 也会优先读取站点设置里的 SEO 文案
 
 ### 音乐文件规则
 
+- 管理员现在也可以直接在 `/admin/music` 在线上传歌曲
 - 把歌曲文件放进 `public/music/` 后，刷新页面即可自动出现在播放列表
 - 支持的格式：`.mp3`、`.wav`、`.m4a`、`.aac`、`.flac`、`.ogg`
 - 推荐文件名格式：`歌手 - 歌名.mp3`
