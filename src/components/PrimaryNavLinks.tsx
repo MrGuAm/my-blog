@@ -48,6 +48,7 @@ export default function PrimaryNavLinks({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isDesktopAdminMenuOpen, setIsDesktopAdminMenuOpen] = useState(false)
   const desktopAdminMenuRef = useRef<HTMLDivElement | null>(null)
+  const desktopAdminCloseTimerRef = useRef<number | null>(null)
   const { isAuthenticated, logout } = useAuthStatus()
   const siteSettings = useSiteSettings()
   const loginModalOpen = isLoginModalOpen || (loginRequested && !isAuthenticated)
@@ -111,6 +112,26 @@ export default function PrimaryNavLinks({
     setIsLoginModalOpen(true)
   }
 
+  const clearDesktopAdminCloseTimer = () => {
+    if (desktopAdminCloseTimerRef.current !== null) {
+      window.clearTimeout(desktopAdminCloseTimerRef.current)
+      desktopAdminCloseTimerRef.current = null
+    }
+  }
+
+  const openDesktopAdminMenu = () => {
+    clearDesktopAdminCloseTimer()
+    setIsDesktopAdminMenuOpen(true)
+  }
+
+  const scheduleDesktopAdminMenuClose = () => {
+    clearDesktopAdminCloseTimer()
+    desktopAdminCloseTimerRef.current = window.setTimeout(() => {
+      setIsDesktopAdminMenuOpen(false)
+      desktopAdminCloseTimerRef.current = null
+    }, 120)
+  }
+
   const handleLogout = async () => {
     setIsMobileMenuOpen(false)
     setIsDesktopAdminMenuOpen(false)
@@ -130,12 +151,13 @@ export default function PrimaryNavLinks({
             <div
               ref={desktopAdminMenuRef}
               className="relative"
-              onMouseEnter={() => setIsDesktopAdminMenuOpen(true)}
-              onMouseLeave={() => setIsDesktopAdminMenuOpen(false)}
+              onMouseEnter={openDesktopAdminMenu}
+              onMouseLeave={scheduleDesktopAdminMenuClose}
             >
               <button
                 type="button"
-                onClick={() => setIsDesktopAdminMenuOpen((current) => !current)}
+                onClick={openDesktopAdminMenu}
+                onFocus={openDesktopAdminMenu}
                 className="apple-button-secondary px-3 py-1.5"
                 aria-expanded={isDesktopAdminMenuOpen}
                 aria-haspopup="menu"
