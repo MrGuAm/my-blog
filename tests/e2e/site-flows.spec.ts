@@ -132,7 +132,8 @@ test("admin can see uploaded media and deletion results in the media library UI"
   const uploadPayload = await uploadMediaAsset(page, fileBase)
 
   await page.goto("/admin/media")
-  await expect(page.getByRole("heading", { name: "站内媒体素材" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "素材库" })).toBeVisible()
+  await expect(page.getByText("图片素材")).toBeVisible()
   const uploadedCard = page.locator("div").filter({ hasText: new RegExp(fileBase) }).first()
   await expect(uploadedCard).toBeVisible()
 
