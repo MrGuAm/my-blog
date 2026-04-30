@@ -257,7 +257,7 @@ export default function AdminDashboardClient({
       {message ? <p className="mb-4 text-sm text-primary">{message}</p> : null}
       {mediaWarning ? <p className="mb-4 text-sm text-amber-600">{mediaWarning}</p> : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         <StatCard label="文章总数" value={stats.totalPosts} hint={`${stats.publishedPosts} 已发布 / ${stats.draftPosts} 草稿`} />
         <StatCard label="精选内容" value={stats.featuredPosts} hint={`${stats.pinnedPosts} 篇置顶 / ${featuredPosts.length} 篇公开精选`} />
         <StatCard label="内容系列" value={stats.seriesCount} hint={`${availableSeries.length} 个已命名系列可筛选`} />
@@ -269,7 +269,7 @@ export default function AdminDashboardClient({
         <StatCard label="曲库歌曲" value={stats.musicTrackCount} hint="包括本地歌单和在线上传的歌曲" />
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(21rem,0.8fr)] 2xl:grid-cols-[minmax(0,1.5fr)_minmax(23rem,0.75fr)]">
         <div className="rounded-3xl border border-border/50 bg-card p-5">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
