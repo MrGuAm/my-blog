@@ -185,10 +185,8 @@ export default function MediaFiltersBar({
             <option value="name-desc">名称 Z-A</option>
           </select>
         ) : null}
-      </div>
 
-      {showReset && onReset ? (
-        <div className="flex justify-start">
+        {showReset && onReset ? (
           <button
             type="button"
             onClick={onReset}
@@ -196,8 +194,8 @@ export default function MediaFiltersBar({
           >
             重置筛选
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {activeChips.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
