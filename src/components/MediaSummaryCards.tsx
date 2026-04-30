@@ -47,7 +47,7 @@ export default function MediaSummaryCards({
   onUsageFilterChange,
 }: MediaSummaryCardsProps) {
   return (
-    <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">素材总数</p>
         <p className="mt-2 text-2xl font-semibold">{filteredCount}</p>

@@ -34,13 +34,13 @@ export default function MediaSelectionToolbar({
   onClearSelection,
 }: MediaSelectionToolbarProps) {
   return (
-    <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-border/50 bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+    <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border/50 bg-card px-4 py-3 text-sm xl:flex-row xl:items-center xl:justify-between">
       <p className="text-muted-foreground">
         {selectedCount > 0
           ? `已选中 ${selectedCount} 张素材${deletableSelectedCount < selectedCount ? `，其中 ${deletableSelectedCount} 张可删除` : ""}`
           : `筛选结果共 ${filteredCount} 张素材，当前第 ${currentPage} / ${totalPages} 页`}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 xl:justify-end">
         <button
           type="button"
           onClick={onToggleSelectAllVisible}
