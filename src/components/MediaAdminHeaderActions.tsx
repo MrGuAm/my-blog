@@ -77,7 +77,7 @@ export default function MediaAdminHeaderActions({
   onReindexUsage,
 }: MediaAdminHeaderActionsProps) {
   return (
-    <>
+    <div className="w-full space-y-3">
       <MediaFiltersBar
         keyword={keyword}
         onKeywordChange={onKeywordChange}
@@ -98,7 +98,7 @@ export default function MediaAdminHeaderActions({
         showReset={showReset}
         onReset={onReset}
       />
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {selectedCount > 0 ? (
           <>
             <button
@@ -203,7 +203,7 @@ export default function MediaAdminHeaderActions({
           {isReindexing ? "重建中..." : "重建引用索引"}
         </button>
       </div>
-      <p className="text-xs text-muted-foreground sm:basis-full sm:text-right">{uploadHint}</p>
-    </>
+      <p className="text-xs text-muted-foreground">{uploadHint}</p>
+    </div>
   )
 }

@@ -527,12 +527,12 @@ export default function AdminMediaClient({
 
   const content = (
     <>
-      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="mb-6 space-y-4">
         <div>
           <h2 className="text-lg font-bold">图片素材</h2>
           <p className="mt-1 text-sm text-muted-foreground">集中管理文章中要复用的封面图、插图和历史图片素材。</p>
         </div>
-        <div className="flex flex-col gap-3 lg:items-end">
+        <div className="w-full">
           <MediaAdminHeaderActions
             keyword={keyword}
             onKeywordChange={(value) => {
