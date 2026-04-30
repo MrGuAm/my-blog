@@ -80,7 +80,7 @@ export default function MediaFiltersBar({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
         <input
           type="text"
           value={keyword}
@@ -104,7 +104,9 @@ export default function MediaFiltersBar({
             </button>
           ))}
         </div>
+      </div>
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <select
           value={storageFilter}
           aria-label="媒体来源筛选"
@@ -183,8 +185,10 @@ export default function MediaFiltersBar({
             <option value="name-desc">名称 Z-A</option>
           </select>
         ) : null}
+      </div>
 
-        {showReset && onReset ? (
+      {showReset && onReset ? (
+        <div className="flex justify-start">
           <button
             type="button"
             onClick={onReset}
@@ -192,8 +196,8 @@ export default function MediaFiltersBar({
           >
             重置筛选
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {activeChips.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
