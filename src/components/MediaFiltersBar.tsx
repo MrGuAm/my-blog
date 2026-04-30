@@ -20,6 +20,7 @@ interface MediaFiltersBarProps {
   onUsageKindFilterChange: (value: "all" | "cover" | "content" | "mixed") => void
   sortBy: MediaSortOption
   onSortByChange: (value: MediaSortOption) => void
+  showSortSelect?: boolean
   controlClassName?: string
   searchClassName?: string
   showReset?: boolean
@@ -49,6 +50,7 @@ export default function MediaFiltersBar({
   onUsageKindFilterChange,
   sortBy,
   onSortByChange,
+  showSortSelect = true,
   controlClassName = "rounded-xl border border-border/50 bg-card px-3 py-2 text-sm",
   searchClassName = "w-full rounded-xl border border-border/50 bg-card px-3 py-2 text-sm sm:w-64",
   showReset = false,
@@ -164,21 +166,23 @@ export default function MediaFiltersBar({
           <option value="mixed">封面+正文</option>
         </select>
 
-        <select
-          value={sortBy}
-          aria-label="媒体排序"
-          onChange={(event) => onSortByChange(event.target.value as MediaSortOption)}
-          className={controlClassName}
-        >
-          <option value="newest">最新优先</option>
-          <option value="oldest">最旧优先</option>
-          <option value="largest">文件最大</option>
-          <option value="smallest">文件最小</option>
-          <option value="most-used">引用最多</option>
-          <option value="least-used">引用最少</option>
-          <option value="name-asc">名称 A-Z</option>
-          <option value="name-desc">名称 Z-A</option>
-        </select>
+        {showSortSelect ? (
+          <select
+            value={sortBy}
+            aria-label="媒体排序"
+            onChange={(event) => onSortByChange(event.target.value as MediaSortOption)}
+            className={controlClassName}
+          >
+            <option value="newest">最新优先</option>
+            <option value="oldest">最旧优先</option>
+            <option value="largest">文件最大</option>
+            <option value="smallest">文件最小</option>
+            <option value="most-used">引用最多</option>
+            <option value="least-used">引用最少</option>
+            <option value="name-asc">名称 A-Z</option>
+            <option value="name-desc">名称 Z-A</option>
+          </select>
+        ) : null}
 
         {showReset && onReset ? (
           <button

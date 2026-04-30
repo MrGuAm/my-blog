@@ -95,10 +95,26 @@ export default function MediaAdminHeaderActions({
         onUsageKindFilterChange={onUsageKindFilterChange}
         sortBy={sortBy}
         onSortByChange={onSortByChange}
+        showSortSelect={false}
         showReset={showReset}
         onReset={onReset}
       />
       <div className="flex flex-wrap items-center gap-3">
+        <select
+          value={sortBy}
+          aria-label="媒体排序"
+          onChange={(event) => onSortByChange(event.target.value as MediaSortOption)}
+          className="rounded-xl border border-border/60 bg-card px-4 py-2 text-sm"
+        >
+          <option value="newest">最新优先</option>
+          <option value="oldest">最旧优先</option>
+          <option value="largest">文件最大</option>
+          <option value="smallest">文件最小</option>
+          <option value="most-used">引用最多</option>
+          <option value="least-used">引用最少</option>
+          <option value="name-asc">名称 A-Z</option>
+          <option value="name-desc">名称 Z-A</option>
+        </select>
         {selectedCount > 0 ? (
           <>
             <button
