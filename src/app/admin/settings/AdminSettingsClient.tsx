@@ -182,6 +182,11 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             />
           </FieldBlock>
 
+          <div>
+            <p className="section-kicker">SEO</p>
+            <h2 className="mt-2 text-xl font-bold">页脚与站点 SEO</h2>
+          </div>
+
           <FieldBlock label="页脚文案" hint="适合放版权信息或一句更个性化的收尾。">
             <input
               value={settings.footerText}
@@ -264,6 +269,11 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             />
           </FieldBlock>
 
+          <div>
+            <p className="section-kicker">About Highlights</p>
+            <h2 className="mt-2 text-xl font-bold">关于页高亮信息</h2>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-3">
             <FieldBlock label="高频关键词">
               <input
@@ -286,6 +296,11 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 className={getInputClassName({})}
               />
             </FieldBlock>
+          </div>
+
+          <div>
+            <p className="section-kicker">About Modules</p>
+            <h2 className="mt-2 text-xl font-bold">About 模块文案</h2>
           </div>
 
           <div className="grid gap-4">
