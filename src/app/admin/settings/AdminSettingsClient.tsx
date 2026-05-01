@@ -328,10 +328,15 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
 
         <aside className="space-y-6">
           <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
-            <p className="section-kicker">Preview</p>
+            <p className="section-kicker">Brand</p>
             <h2 className="mt-2 text-xl font-bold">{settings.brandName}</h2>
             <p className="mt-2 text-sm text-muted-foreground">作者：{settings.authorName}</p>
             <p className="mt-1 text-sm text-muted-foreground">Twitter：{settings.twitterHandle}</p>
+          </section>
+
+          <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
+            <p className="section-kicker">Links</p>
+            <h3 className="mt-2 text-lg font-semibold tracking-[-0.04em]">联系与外链</h3>
             <div className="mt-3 flex flex-wrap gap-2">
               {settings.contactEmail ? <span className="rounded-full bg-background/70 px-3 py-1 text-xs">邮箱</span> : null}
               {settings.githubUrl ? <span className="rounded-full bg-background/70 px-3 py-1 text-xs">GitHub</span> : null}
@@ -340,22 +345,40 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 <span className="rounded-full bg-background/70 px-3 py-1 text-xs">{settings.primaryLinkLabel}</span>
               ) : null}
             </div>
+            <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+              {settings.contactEmail ? <p>联系邮箱：{settings.contactEmail}</p> : null}
+              {settings.githubUrl ? <p>GitHub：{settings.githubUrl}</p> : null}
+              {settings.xProfileUrl ? <p>X / Twitter：{settings.xProfileUrl}</p> : null}
+              {settings.primaryLinkUrl ? <p>{settings.primaryLinkLabel}：{settings.primaryLinkUrl}</p> : null}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
+            <p className="section-kicker">SEO</p>
+            <h3 className="mt-2 text-lg font-semibold tracking-[-0.04em]">页脚与站点 SEO</h3>
             <p className="mt-3 text-sm text-muted-foreground">{settings.footerText}</p>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">SEO：{settings.siteDescription}</p>
             <p className="mt-2 text-xs leading-5 text-muted-foreground">关键词：{settings.seoKeywords}</p>
           </section>
 
           <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
-            <p className="section-kicker">{settings.homeKicker}</p>
+            <p className="section-kicker">Home</p>
+            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">{settings.homeKicker}</p>
             <h3 className="mt-3 text-2xl font-semibold tracking-[-0.06em]">{settings.homeTitle}</h3>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{settings.homeDescription}</p>
           </section>
 
           <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
-            <p className="section-kicker">{settings.aboutKicker}</p>
+            <p className="section-kicker">About</p>
+            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">{settings.aboutKicker}</p>
             <h3 className="mt-3 text-2xl font-semibold tracking-[-0.06em]">{settings.aboutTitle}</h3>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{settings.aboutDescription}</p>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">About SEO：{settings.aboutMetaDescription}</p>
+          </section>
+
+          <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
+            <p className="section-kicker">About Highlights</p>
+            <h3 className="mt-2 text-lg font-semibold tracking-[-0.04em]">关于页高亮信息</h3>
             <div className="mt-4 grid gap-3">
               {[
                 ["关键词", settings.aboutHighlightKeywords],
@@ -368,6 +391,11 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
+            <p className="section-kicker">About Modules</p>
+            <h3 className="mt-2 text-lg font-semibold tracking-[-0.04em]">About 模块预览</h3>
             <div className="mt-4 space-y-3">
               {[
                 [settings.aboutSectionOneTitle, settings.aboutSectionOneCopy],
@@ -385,6 +413,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
 
           <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
             <p className="section-kicker">Music SEO</p>
+            <h3 className="mt-2 text-lg font-semibold tracking-[-0.04em]">音乐页描述</h3>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{settings.musicMetaDescription}</p>
           </section>
         </aside>
