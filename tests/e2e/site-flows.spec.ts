@@ -150,7 +150,8 @@ test("admin can see uploaded media and deletion results in the media library UI"
 test("admin can upload and delete tracks in the music admin UI", async ({ page }) => {
   await loginAsAdmin(page)
 
-  const uniqueName = `E2E歌手 - E2E歌曲-${Date.now()}.wav`
+  const uniqueToken = `${Date.now()}`
+  const uniqueName = `E2E歌手 - E2E歌曲-${uniqueToken}.wav`
   await page.goto("/admin/media?tab=music")
   await expect(page.getByRole("heading", { name: "素材库" })).toBeVisible()
   await expect(page.getByRole("link", { name: "在线曲库" })).toBeVisible()
@@ -163,15 +164,16 @@ test("admin can upload and delete tracks in the music admin UI", async ({ page }
   })
 
   await expect(page.getByText("成功上传 1 首歌曲")).toBeVisible()
-  const uploadedCard = page.locator("div").filter({ hasText: /E2E歌曲-/ }).first()
+  await page.getByPlaceholder("歌名、歌手、文件名").fill(uniqueToken)
+  const uploadedCard = page.locator("div").filter({ hasText: uniqueToken }).first()
   await expect(uploadedCard).toBeVisible()
 
   page.once("dialog", async (dialog) => {
     await dialog.accept()
   })
-  await page.getByRole("button", { name: /删除歌曲 E2E歌曲-/ }).click()
+  await page.getByRole("button", { name: new RegExp(`删除歌曲 E2E歌曲-${uniqueToken}`) }).click()
   await expect(page.getByText("歌曲已删除")).toBeVisible()
-  await expect(page.locator("div").filter({ hasText: /E2E歌曲-/ })).toHaveCount(0)
+  await expect(page.locator("div").filter({ hasText: uniqueToken })).toHaveCount(0)
 })
 
 test("admin can filter media by usage state and see protected deletion controls", async ({ page }) => {
