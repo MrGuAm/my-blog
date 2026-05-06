@@ -341,7 +341,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
           </FieldBlock>
         </section>
 
-        <aside className="space-y-6">
+        <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto xl:pr-1">
           <section className="rounded-[2rem] border border-border/50 bg-card p-5 sm:p-6">
             <p className="section-kicker">Brand</p>
             <h2 className="mt-2 text-xl font-bold">{settings.brandName}</h2>
