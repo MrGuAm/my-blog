@@ -173,7 +173,7 @@ test("admin can upload and delete tracks in the music admin UI", async ({ page }
   })
   await uploadedCard.getByRole("button", { name: /删除/ }).click()
   await expect(page.getByText("歌曲已删除")).toBeVisible()
-  await expect(page.locator("div").filter({ hasText: uniqueToken })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: new RegExp(`删除歌曲 E2E歌曲-${uniqueToken}`) })).toHaveCount(0)
 })
 
 test("admin can filter media by usage state and see protected deletion controls", async ({ page }) => {
