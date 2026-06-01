@@ -868,7 +868,7 @@ export default function HomeClient({
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         className={`brand-solid-button fixed bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full text-lg transition-all duration-300 ${
           showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        } right-4 sm:right-6 ${floatingHovering ? "lg:right-[20rem]" : "lg:right-[80px]"}`}
+        } right-[84px] sm:right-6 ${floatingHovering ? "lg:right-[20rem]" : "lg:right-[80px]"}`}
         aria-label="回到顶部"
       >
         ↑
